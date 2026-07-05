@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Knowledge Angola — Formação em Excel que te muda a carreira</title>
+<meta name="description" content="Aprende Excel como as empresas de Luanda usam. Formação prática do básico ao avançado, presencial ou online, com certificado. Garante a tua vaga.">
+<style>
+:root{--navy:#1F3864;--navy2:#16294a;--gold:#BF9000;--ink:#141b2d;--grey:#5b6a86;--line:#e6e9f0;--soft:#f6f8fb}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;font-family:-apple-system,"Segoe UI",system-ui,Arial,sans-serif;color:var(--ink);background:#fff;line-height:1.6;-webkit-font-smoothing:antialiased}
+img{max-width:100%}a{color:inherit;text-decoration:none}
+.wrap{max-width:1140px;margin:0 auto;padding:0 24px}
+.eyebrow{text-transform:uppercase;letter-spacing:.18em;font-size:12px;font-weight:700;color:var(--gold)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--gold);color:#fff;font-weight:800;border:none;border-radius:3px;padding:16px 30px;font-size:15.5px;cursor:pointer;transition:transform .12s,filter .12s;letter-spacing:.01em}
+.btn:hover{filter:brightness(1.06);transform:translateY(-1px)}
+.btn-ghost{background:transparent;border:1px solid rgba(255,255,255,.55);color:#fff;font-weight:700}
+.btn-navy{background:var(--navy)}
+.btn-wa{background:#25D366}
+.btn-block{display:flex;width:100%}
+.center{text-align:center}
+/* header */
+header{position:sticky;top:0;z-index:40;background:rgba(255,255,255,.97);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.hd{display:flex;align-items:center;gap:13px;padding:12px 0}
+.hd .nm{display:flex;flex-direction:column;line-height:1.05}
+.hd .nmtxt{font-family:Georgia,'Times New Roman',serif;font-weight:700;font-size:22px;letter-spacing:-.005em}
+.hd .nmtxt .kn{color:var(--navy)}.hd .nmtxt .an{color:var(--gold)}
+.hd .nmtag{font-size:9px;letter-spacing:.3em;color:#8aa0c6;font-weight:700;margin-top:4px}
+.hd .sp{flex:1}.hd .btn{padding:11px 20px;font-size:13.5px}
+/* hero */
+.hero{background:var(--navy);color:#fff;position:relative;overflow:hidden}
+.hero .wrap{position:relative;z-index:2;padding:56px 24px 62px}
+.hero:before{content:"";position:absolute;inset:0;background:radial-gradient(1200px 500px at 78% -10%,rgba(46,84,150,.9),transparent 60%),radial-gradient(600px 400px at 100% 100%,rgba(191,144,0,.16),transparent 60%)}
+.hero:after{content:"";position:absolute;left:0;bottom:0;width:100%;height:5px;background:var(--gold)}
+.hero .eyebrow{color:#e9c96a}
+.hero h1{font-size:clamp(32px,5.6vw,56px);line-height:1.05;margin:16px 0 18px;font-weight:800;letter-spacing:-.02em;max-width:17ch}
+.hero h1 em{font-style:normal;color:#e9c96a}
+.hero p{font-size:clamp(16px,2.1vw,19px);color:#d7deec;max-width:620px;margin:0 0 30px}
+.cta-row{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.cta-row .mini{font-size:13px;color:#aeb9d0}
+/* strip */
+.strip{background:var(--navy2);color:#dbe2f0;border-top:1px solid rgba(255,255,255,.08)}
+.strip .wrap{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;padding:22px 24px}
+.strip .it{display:flex;gap:11px;align-items:center;font-weight:600;font-size:14px}
+.strip .it .d{color:var(--gold);font-size:20px;line-height:1}
+/* sections */
+section{padding:52px 0}
+.head{max-width:740px;margin:0 auto 30px;text-align:center}
+.head h2{font-size:clamp(25px,3.8vw,36px);color:var(--navy);font-weight:800;letter-spacing:-.02em;margin:10px 0 0;line-height:1.14}
+.head p{color:var(--grey);font-size:17px;margin:14px 0 0}
+.alt{background:var(--soft)}
+/* problema */
+.prob{max-width:760px;margin:0 auto;display:grid;gap:12px}
+.prob .it{display:flex;gap:13px;align-items:flex-start;background:#fff;border:1px solid var(--line);border-left:3px solid #C0392B;padding:16px 18px;font-size:16px}
+.prob .it .x{color:#C0392B;font-weight:800;flex:0 0 auto}
+.turn{max-width:760px;margin:26px auto 0;text-align:center;font-size:18px;color:var(--navy);font-weight:700}
+/* benef */
+.grid{display:grid;gap:1px;background:var(--line);border:1px solid var(--line)}
+.g3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.card{background:#fff;padding:28px}
+.benef{display:flex;gap:16px;align-items:flex-start;transition:background .15s}
+.benef:hover{background:var(--soft)}
+.benef .ic{flex:0 0 auto;width:40px;height:40px;border-radius:3px;background:var(--navy);color:var(--gold);display:grid;place-items:center;font-weight:800;font-size:14px}
+.benef b{display:block;color:var(--navy);font-size:16.5px;margin-bottom:3px;letter-spacing:-.01em}
+.benef div>span{color:var(--grey);font-size:14.5px}
+/* testemunhos */
+#tgrid{display:grid;gap:22px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.tcard{background:#fff;border:1px solid var(--line);padding:16px}
+.vid{position:relative;padding-top:56.25%;overflow:hidden;background:#0b1730}
+.vid iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.tcard .nm{font-weight:700;color:var(--navy);margin-top:14px;font-size:15.5px}
+.pill{display:inline-block;padding:3px 10px;border-radius:2px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-top:6px}
+.p-verde{background:#e5f4ec;color:#1E7B45}.p-azul{background:#e7edf7;color:var(--navy)}
+.muted{color:var(--grey);font-size:13px}
+/* oferta */
+.oferta{max-width:640px;margin:0 auto;background:#fff;border:1px solid var(--line);border-top:5px solid var(--gold);padding:36px;text-align:center;box-shadow:0 16px 40px rgba(20,30,60,.07)}
+.oferta .price{font-size:38px;font-weight:800;color:var(--navy);letter-spacing:-.02em;margin:4px 0}
+.oferta .facil{color:var(--grey);margin-bottom:20px}
+.oferta ul{list-style:none;padding:0;margin:0 0 22px;text-align:left}
+.oferta li{padding:11px 0;border-bottom:1px solid var(--line);display:flex;gap:11px;font-size:15.5px}
+.oferta li:before{content:"✓";color:#1E7B45;font-weight:800;flex:0 0 auto}
+.garantia{background:var(--soft);border:1px dashed #c9b26a;border-radius:4px;padding:14px 16px;color:var(--navy);font-size:14.5px;margin-bottom:22px}
+/* turma */
+.turma{background:#fff;border:1px solid var(--line);border-top:4px solid #C0392B;padding:34px;max-width:680px;margin:0 auto;text-align:center}
+.turma h3{color:var(--navy);font-size:23px;margin:0 0 4px;letter-spacing:-.01em}
+.turma .rows{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);margin:22px 0;text-align:left}
+.turma .rows div{background:#fff;padding:14px 16px;font-size:15px}
+.turma .rows b{display:block;color:var(--grey);font-size:11px;text-transform:uppercase;letter-spacing:.1em;font-weight:700;margin-bottom:3px}
+.vagas{font-weight:800;color:#C0392B}
+.scar{background:#fbe9e7;color:#a3311f;font-weight:700;border-radius:3px;padding:8px 12px;display:inline-block;margin-bottom:16px;font-size:14px}
+/* porque */
+.porque{display:grid;gap:20px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.pq{background:#fff;border:1px solid var(--line);padding:24px}
+.pq b{display:block;color:var(--navy);font-size:17px;margin-bottom:5px}
+.pq span{color:var(--grey);font-size:14.5px}
+/* faq */
+.faq .wrap{max-width:800px}
+.faq details{border-bottom:1px solid var(--line);padding:6px 4px}
+.faq summary{cursor:pointer;font-weight:700;color:var(--navy);padding:18px 0;list-style:none;font-size:17px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary:after{content:"+";float:right;color:var(--gold);font-weight:800;font-size:20px}
+.faq details[open] summary:after{content:"–"}
+.faq p{margin:0 0 18px;color:var(--grey);font-size:15.5px}
+/* forms */
+.formsec{background:var(--navy);color:#fff}
+.formsec .head h2{color:#fff}.formsec .head p{color:#d7deec}
+.formcard{background:#fff;color:var(--ink);border-radius:3px;padding:30px;max-width:560px;margin:0 auto;box-shadow:0 24px 60px rgba(0,0,0,.28)}
+label{display:block;font-weight:700;font-size:12.5px;margin:13px 0 6px;color:var(--navy);text-transform:uppercase;letter-spacing:.04em}
+input,select{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:3px;font-size:15px;font-family:inherit;background:#fff}
+input:focus,select:focus{outline:none;border-color:var(--navy)}
+.file{border:1.5px dashed var(--line);border-radius:3px;padding:16px;text-align:center;color:var(--grey);font-size:14px;cursor:pointer}
+.file:hover{border-color:var(--navy);color:var(--navy)}
+.bankbox{background:var(--soft);border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:3px;padding:14px 16px;margin-bottom:6px;font-size:14px}
+.bankbox .bt{font-weight:800;color:var(--navy);text-transform:uppercase;letter-spacing:.06em;font-size:12px;margin-bottom:7px}
+.bankbox .bn{color:var(--grey);font-size:12.5px;margin-top:8px}
+.wa-note{background:#eafbf0;border:1px solid #bfe8ce;border-radius:3px;padding:13px 15px;font-size:13.5px;color:#176b39;margin-top:14px}
+.wa-btn{display:inline-flex;gap:8px;align-items:center;background:#25D366;color:#fff;font-weight:700;border-radius:3px;padding:12px 18px;margin-top:8px}
+.ok{background:#e5f4ec;border:1px solid #9dd8b6;border-radius:3px;padding:24px;text-align:center;color:#176b39}
+.split{display:grid;grid-template-columns:1fr;gap:16px;max-width:560px;margin:0 auto 22px}
+.tabs{display:flex;gap:0;max-width:560px;margin:0 auto 18px;border:1px solid rgba(255,255,255,.25);border-radius:4px;overflow:hidden}
+.tabs button{flex:1;background:transparent;color:#fff;border:none;padding:14px;font-weight:700;cursor:pointer;font-size:14px}
+.tabs button.on{background:#fff;color:var(--navy)}
+.pane{display:none}.pane.on{display:block}
+/* footer */
+footer{background:var(--navy2);color:#aab6cf;padding:42px 0;font-size:14.5px}
+footer b{color:#fff}footer a{color:#fff}
+.fl{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
+@media(max-width:640px){section{padding:38px 0}.head{margin-bottom:24px}.strip .wrap{grid-template-columns:1fr;gap:14px}.turma .rows{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<header><div class="wrap hd">
+  <svg viewBox="0 0 100 100" width="40" height="40" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="48" fill="#1F3864"/><circle cx="50" cy="50" r="40" fill="none" stroke="#3a4d75" stroke-width="1.5"/><circle cx="50" cy="21" r="4" fill="#BF9000"/><text x="50" y="53" text-anchor="middle" dominant-baseline="central" font-family="Georgia,serif" font-size="50" font-weight="700" fill="#fff">K</text></svg>
+  <span class="nm"><span class="nmtxt"><span class="kn">Knowledge</span> <span class="an">Angola</span></span><span class="nmtag">ACADEMIA DE FORMAÇÃO</span></span>
+  <span class="sp"></span>
+  <a href="#reservar" class="btn">Garantir vaga</a>
+</div></header>
+
+<section class="hero"><div class="wrap">
+  <div class="eyebrow">Formação em Excel · Luanda &amp; Online</div>
+  <h1 id="h_head">O Excel que te destaca no mercado de trabalho — <em>mesmo que comeces do zero</em></h1>
+  <p id="h_sub">Domina o Excel que as empresas usam e parece um expert já nas primeiras 2 semanas — formação prática, do básico ao avançado, com certificado reconhecido pelo INEFOP.</p>
+  <div class="cta-row">
+    <a href="#reservar" class="btn" id="h_cta">Quero a minha vaga</a>
+    <a href="#oferta" class="btn btn-ghost">Ver a oferta</a>
+    <span class="mini" id="h_mini">Vagas limitadas · Certificado incluído</span>
+  </div>
+</div></section>
+
+<div class="strip"><div class="wrap">
+  <div class="it"><span class="d">◆</span> <span id="s_tiktok">+10 mil na comunidade @venturaexcel</span></div>
+  <div class="it"><span class="d">◆</span> Presencial em Luanda &amp; turmas online</div>
+  <div class="it"><span class="d">◆</span> Certificado de conclusão incluído</div>
+</div></div>
+
+<section><div class="wrap">
+  <div class="head"><div class="eyebrow">Reconhece-te?</div><h2>Saber Excel "mais ou menos" já não chega</h2></div>
+  <div class="prob" id="probbox"></div>
+  <div class="turn" id="turn">A boa notícia: isto aprende-se — e mais depressa do que pensas. ↓</div>
+</div></section>
+
+<section class="alt"><div class="wrap">
+  <div class="head"><div class="eyebrow">O que ganhas</div><h2>O que vais conseguir fazer</h2><p>Resultados no trabalho e no currículo — não apenas "funções".</p></div>
+  <div class="grid g3" id="benefgrid"></div>
+</div></section>
+
+<section id="testemunhos"><div class="wrap">
+  <div class="head"><div class="eyebrow">Prova real</div><h2>Quem já passou pela Knowledge Angola</h2><p>Formandos presenciais e online que mudaram a sua história.</p></div>
+  <div id="tgrid"><div class="muted center" style="grid-column:1/-1">Em breve, os testemunhos dos nossos formandos.</div></div>
+</div></section>
+
+<section class="alt" id="oferta"><div class="wrap">
+  <div class="head"><div class="eyebrow">A oferta</div><h2>Tudo o que levas contigo</h2></div>
+  <div class="oferta" id="ofertabox"></div>
+</div></section>
+
+<section id="turma"><div class="wrap">
+  <div class="head"><div class="eyebrow">Inscrições abertas</div><h2>Próxima turma presencial</h2><p>Atualizada automaticamente a partir do nosso sistema.</p></div>
+  <div id="turmacard"></div>
+</div></section>
+
+<section class="alt"><div class="wrap">
+  <div class="head"><div class="eyebrow">Porquê nós</div><h2>Porquê a Knowledge Angola</h2></div>
+  <div class="porque" id="porquegrid"></div>
+</div></section>
+
+<section class="faq"><div class="wrap">
+  <div class="head"><div class="eyebrow">Dúvidas</div><h2>Perguntas frequentes</h2></div>
+  <div id="faqbox"></div>
+</div></section>
+
+<section class="formsec" id="reservar"><div class="wrap">
+  <div class="head"><div class="eyebrow" style="color:#e9c96a">Dá o primeiro passo</div><h2>Garante a tua vaga</h2><p>Deixa o teu contacto e falamos contigo pelo WhatsApp. Sem compromisso. Para pagar ou enviar o comprovativo, usa o separador ao lado.</p></div>
+  <div class="tabs">
+    <button id="tab_r" class="on" onclick="tab('r')">Quero a minha vaga</button>
+    <button id="tab_p" onclick="tab('p')">Efectuar pagamento ou Envia o comprovativo</button>
+  </div>
+
+  <div class="pane on" id="pane_r"><div class="formcard" id="rcard">
+    <div id="rfields">
+      <label>Nome *</label><input id="r_nome" placeholder="O teu nome">
+      <label>WhatsApp *</label><input id="r_tel" placeholder="9XX XXX XXX">
+      <label>Curso de interesse</label><select id="r_curso"></select>
+      <label>Modalidade</label><select id="r_mod"><option>Presencial</option><option>Online</option></select>
+      <button class="btn btn-block" style="margin-top:20px" onclick="reservar()" id="r_btn">Garantir a minha vaga →</button>
+      <div class="muted center" style="margin-top:10px">Falamos contigo em breve. Vagas limitadas.</div>
+    </div>
+    <div id="rok" style="display:none"></div>
+  </div></div>
+
+  <div class="pane" id="pane_p"><div class="formcard" id="pcard">
+    <div id="formfields">
+      <div id="bankbox" style="display:none"></div>
+      <label>Nome completo *</label><input id="i_nome" placeholder="O teu nome">
+      <label>Telefone / WhatsApp *</label><input id="i_tel" placeholder="9XX XXX XXX">
+      <label>Curso *</label><select id="i_curso"></select>
+      <label>Modalidade</label><select id="i_mod"><option>Presencial</option><option>Online</option></select>
+      <label>Valor pago (Kz)</label><input id="i_valor" type="number" placeholder="ex.: 60000">
+      <label>Comprovativo de pagamento (foto)</label>
+      <input id="i_comp" type="file" accept="image/*" style="display:none" onchange="onComp(this)">
+      <div class="file" onclick="document.getElementById('i_comp').click()" id="i_complabel">📎 Toca para carregar a foto do comprovativo</div>
+      <div class="wa-note">Não consegues carregar aqui? Envia o comprovativo pelo nosso WhatsApp.<br><a class="wa-btn" id="wa_link" target="_blank">Enviar pelo WhatsApp</a></div>
+      <button class="btn btn-block" style="margin-top:20px" onclick="enviar()" id="i_btn">Concluir inscrição</button>
+    </div>
+    <div id="okbox" style="display:none"></div>
+  </div></div>
+</div></section>
+
+<footer><div class="wrap fl">
+  <div><b>Knowledge Angola</b> — Academia de Formação<br><span id="f_local">Morro Bento, junto ao IMETRO — Rua: Galeria dos Pães, Luanda</span></div>
+  <div>Tel: <span id="f_tel">+(244) 939 845 313</span><br><a href="mailto:academico@knowledgeangola.com">academico@knowledgeangola.com</a><br><a id="f_wa" target="_blank">WhatsApp</a></div>
+</div></footer>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+<script>
+const FB_CONFIG={apiKey:"AIzaSyBBgqJJ1SsbpxXVJBiypRMntNjSywrgGtg",authDomain:"knowledge-angola.firebaseapp.com",databaseURL:"https://knowledge-angola-default-rtdb.firebaseio.com",projectId:"knowledge-angola",storageBucket:"knowledge-angola.firebasestorage.app",messagingSenderId:"1060751471100",appId:"1:1060751471100:web:1b416c95cd040265da4279"};
+let _db=null;try{firebase.initializeApp(FB_CONFIG);_db=firebase.database();}catch(e){}
+
+const DEF={
+  headline:'O Excel que te destaca no mercado de trabalho — <em>mesmo que comeces do zero</em>',
+  sub:"Domina o Excel que as empresas usam e parece um expert já nas primeiras 2 semanas — formação prática, do básico ao avançado, com certificado reconhecido pelo INEFOP.",
+  cta:"Quero a minha vaga",
+  mini:"Vagas limitadas · Certificado incluído",
+  whatsapp:"244939845313",
+  banco:{nome:"",iban:"",titular:"",ref:""},
+  tiktok:"+10 mil na comunidade @venturaexcel",
+  problema:[
+    "Perdes horas em tarefas que uma fórmula resolve em segundos.",
+    "Candidatas-te a vagas que pedem \"Excel avançado\" e não te sentes seguro.",
+    "Vês colegas a subir porque dominam relatórios e dashboards — e tu ficas para trás.",
+    "Já passaste vergonha com um mapa ou relatório com erros."
+  ],
+  turn:"A boa notícia: isto aprende-se — e mais depressa do que pensas. ↓",
+  beneficios:[
+    {t:"Relatórios em minutos",d:"Faz em 2 minutos o que hoje te rouba a tarde toda."},
+    {t:"Tabelas dinâmicas",d:"Analisa milhares de linhas e tira conclusões num instante."},
+    {t:"Dashboards que impressionam",d:"Apresenta dados que convencem chefes e clientes."},
+    {t:"Automatização",d:"Deixa o Excel trabalhar por ti, sem repetição."},
+    {t:"Currículo mais forte",d:"Excel avançado que abre portas a melhores empregos."},
+    {t:"Certificado",d:"Prova que sabes, com certificado da Knowledge Angola."}
+  ],
+  testemunhos:[],
+  oferta:{
+    titulo:"Curso de Excel — do Básico ao Avançado",
+    preco:"⟨PREÇO⟩ Kz",
+    facilidade:"Com entrada + facilidades de pagamento em prestações",
+    itens:[
+      "Formação completa do básico ao avançado (presencial ou online)",
+      "⟨Certificado de conclusão⟩",
+      "⟨Material de apoio e modelos prontos de dashboards⟩",
+      "⟨Grupo de apoio no WhatsApp durante e após o curso⟩",
+      "⟨Aula extra de introdução ao Power BI⟩"
+    ],
+    garantia:"Garantia: assiste à primeira aula. Se não te agradar, devolvemos o valor."
+  },
+  porque:[
+    {t:"Turmas pequenas",d:"Atenção individual, não uma sala cheia."},
+    {t:"100% prático",d:"Sais a fazer, não só a ver."},
+    {t:"Formador que se vê",d:"Aprende com quem ensina Excel a +10 mil no TikTok."},
+    {t:"Presencial ou online",d:"Escolhes o que te dá mais jeito."}
+  ],
+  faq:[
+    {q:"Preciso de saber alguma coisa antes?",a:"Não. Começamos do zero, do básico ao avançado, ao teu ritmo."},
+    {q:"É presencial ou online?",a:"As duas. Tens turma presencial em Luanda e também turmas online."},
+    {q:"Recebo certificado?",a:"Sim, com certificado de conclusão da Knowledge Angola, devidamente reconhecido pelo INEFOP."},
+    {q:"E se eu tiver dúvidas depois das aulas?",a:"Tens acompanhamento do formador e grupo de apoio para tirar dúvidas."},
+    {q:"Como faço o pagamento?",a:"Podes pagar a pronto ou em prestações. Anexa o comprovativo na inscrição ou envia pelo WhatsApp."}
+  ],
+  cursos:["Excel (do básico ao avançado)","Power BI"],
+  local:"Morro Bento, junto ao IMETRO — Rua: Galeria dos Pães, Luanda",
+  tel:"+(244) 939 845 313"
+};
+
+let CFG=Object.assign({},DEF);
+let TURMA=null;
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function embedUrl(link){link=String(link||"");
+  let m=link.match(/[?&]v=([A-Za-z0-9_-]{6,})/)||link.match(/youtu\.be\/([A-Za-z0-9_-]{6,})/)||link.match(/youtube\.com\/embed\/([A-Za-z0-9_-]{6,})/)||link.match(/youtube\.com\/shorts\/([A-Za-z0-9_-]{6,})/);
+  if(m)return"https://www.youtube.com/embed/"+m[1];
+  let g=link.match(/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]+)/)||link.match(/[?&]id=([A-Za-z0-9_-]+)/);
+  if(g&&link.indexOf("drive.google")>=0)return"https://drive.google.com/file/d/"+g[1]+"/preview";
+  return link;
+}
+function waLink(txt){const n=(CFG.whatsapp||"244939845313").replace(/\D/g,"");return"https://wa.me/"+n+"?text="+encodeURIComponent(txt||"Olá! Quero a minha vaga na formação de Excel da Knowledge Angola.");}
+
+function turmaRecente(turmas){const pres=(turmas||[]).filter(t=>((t.modalidade||"Presencial")+"").toLowerCase().indexOf("presenc")>=0);
+  pres.sort((a,b)=>(new Date(b.inicio||0))-(new Date(a.inicio||0))||((+b.ed||0)-(+a.ed||0)));return pres[0]||null;}
+
+function render(){
+  document.getElementById("h_head").innerHTML=CFG.headline||DEF.headline;
+  document.getElementById("h_sub").textContent=CFG.sub||DEF.sub;
+  document.getElementById("h_cta").textContent=CFG.cta||DEF.cta;
+  document.getElementById("h_mini").textContent=CFG.mini||DEF.mini;
+  document.getElementById("s_tiktok").textContent=CFG.tiktok||DEF.tiktok;
+  document.getElementById("turn").textContent=CFG.turn||DEF.turn;
+  document.getElementById("probbox").innerHTML=(CFG.problema||[]).map(p=>`<div class="it"><span class="x">✕</span><span>${esc(p)}</span></div>`).join("");
+  document.getElementById("benefgrid").innerHTML=(CFG.beneficios||[]).map((b,i)=>`<div class="card benef"><div class="ic">${("0"+(i+1)).slice(-2)}</div><div><b>${esc(b.t||b)}</b>${b.d?"<span>"+esc(b.d)+"</span>":""}</div></div>`).join("");
+  const ts=(CFG.testemunhos||[]).filter(t=>t&&t.link);const tg=document.getElementById("tgrid");
+  if(ts.length)tg.innerHTML=ts.map(t=>`<div class="tcard"><div class="vid"><iframe src="${esc(embedUrl(t.link))}" allowfullscreen loading="lazy"></iframe></div><div class="nm">${esc(t.nome||"Formando")}</div><span class="pill ${((t.tipo||"").toLowerCase().indexOf("online")>=0)?"p-azul":"p-verde"}">${esc(t.tipo||"Presencial")}</span></div>`).join("");
+  const o=CFG.oferta||DEF.oferta;
+  document.getElementById("ofertabox").innerHTML=`<div class="eyebrow">${esc(o.titulo||"")}</div><div class="price">${esc(o.preco||"")}</div><div class="facil">${esc(o.facilidade||"")}</div><ul>${(o.itens||[]).map(x=>`<li>${esc(x)}</li>`).join("")}</ul>${o.garantia?`<div class="garantia">🛡️ ${esc(o.garantia)}</div>`:""}<a href="#reservar" class="btn btn-block">Quero garantir a minha vaga</a>`;
+  document.getElementById("porquegrid").innerHTML=(CFG.porque||[]).map(p=>`<div class="pq"><b>${esc(p.t)}</b><span>${esc(p.d)}</span></div>`).join("");
+  document.getElementById("faqbox").innerHTML=(CFG.faq||[]).map(f=>`<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join("");
+  const cs=(CFG.cursos&&CFG.cursos.length?CFG.cursos:DEF.cursos);const opt=cs.map(c=>`<option>${esc(c)}</option>`).join("");
+  document.getElementById("i_curso").innerHTML=opt;document.getElementById("r_curso").innerHTML=opt;
+  const b=CFG.banco||{};const bx=document.getElementById("bankbox");
+  if(bx){if(b.iban||b.nome||b.titular){bx.style.display="block";bx.innerHTML=`<div class="bankbox"><div class="bt">Dados para pagamento</div>${b.nome?`<div><b>Banco:</b> ${esc(b.nome)}</div>`:""}${b.iban?`<div><b>Nº de conta / IBAN:</b> ${esc(b.iban)}</div>`:""}${b.titular?`<div><b>Titular:</b> ${esc(b.titular)}</div>`:""}${b.ref?`<div><b>Referência:</b> ${esc(b.ref)}</div>`:""}<div class="bn">Efetue o pagamento para os dados acima e depois envie o comprovativo abaixo.</div></div>`;}else{bx.style.display="none";bx.innerHTML="";}}
+  const tc=document.getElementById("turmacard");
+  if(TURMA){tc.innerHTML=`<div class="turma"><div class="scar">🔥 Vagas limitadas</div><h3>${esc(TURMA.ed||"")}ª Edição — ${esc(TURMA.curso||"Excel")}</h3><div class="muted">Turma presencial em Luanda</div>
+    <div class="rows"><div><b>Início</b>${esc(TURMA.inicio||"a anunciar")}</div><div><b>Fim</b>${esc(TURMA.fim||"—")}</div><div><b>Horário</b>${esc(TURMA.horario||"—")}</div><div><b>Vagas</b><span class="vagas">${(TURMA.vagas!=null?TURMA.vagas:"—")}</span></div></div>
+    <div style="margin-bottom:18px;color:var(--grey)">${esc(CFG.local||DEF.local)}</div>
+    <a href="#reservar" class="btn btn-navy">Garantir a minha vaga</a></div>`;}
+  else{tc.innerHTML=`<div class="turma"><h3>Turmas a abrir em breve</h3><div class="muted" style="margin:10px 0 18px">Inscreve-te para seres o primeiro a saber a data da próxima turma presencial.</div><a href="#reservar" class="btn btn-navy">Quero ser avisado</a></div>`;}
+  document.getElementById("f_local").textContent=CFG.local||DEF.local;
+  document.getElementById("f_tel").textContent=CFG.tel||DEF.tel;
+  document.getElementById("wa_link").href=waLink("Olá! Acabei de me inscrever e envio o comprovativo de pagamento.");
+  document.getElementById("f_wa").href=waLink();
+}
+
+function boot(){
+  render();
+  if(!_db)return;
+  _db.ref("estado").once("value").then(function(snap){
+    var s=snap.val();if(!s)return;var d;try{d=JSON.parse(s);}catch(e){return;}
+    if(d.landing)CFG=Object.assign({},DEF,d.landing);
+    if(d.precos&&!(d.landing&&d.landing.cursos))CFG.cursos=Object.keys(d.precos);
+    if(d.comp){if(d.comp.local&&(!CFG.local||CFG.local===DEF.local))CFG.local=d.comp.local;if(d.comp.tel&&(!CFG.tel||CFG.tel===DEF.tel))CFG.tel=d.comp.tel;CFG.banco={nome:d.comp.banco||"",iban:d.comp.iban||"",titular:d.comp.titular||"",ref:d.comp.ref||""};}
+    TURMA=turmaRecente(d.turmas);
+    render();
+  }).catch(function(){});
+}
+boot();
+
+function tab(w){document.getElementById("tab_r").classList.toggle("on",w==="r");document.getElementById("tab_p").classList.toggle("on",w==="p");document.getElementById("pane_r").classList.toggle("on",w==="r");document.getElementById("pane_p").classList.toggle("on",w==="p");}
+function val(id){const e=document.getElementById(id);return e?e.value.trim():"";}
+
+function reservar(){
+  const nome=val("r_nome"),tel=val("r_tel");
+  if(!nome||!tel){alert("Falta o nome e o WhatsApp.");return;}
+  const rec={quando:new Date().toISOString(),tipo:"Interesse",nome:nome,tel:tel,curso:val("r_curso"),modalidade:val("r_mod"),turma:(TURMA&&TURMA.cod)||"",edicao:(TURMA&&TURMA.ed)||"",estado:"Nova",origem:"Landing"};
+  const btn=document.getElementById("r_btn");btn.textContent="A enviar…";btn.disabled=true;
+  const wa=waLink("Olá! Sou "+nome+" e quero garantir a minha vaga na formação de Excel ("+val("r_curso")+").");
+  function done(){document.getElementById("rfields").style.display="none";const ok=document.getElementById("rok");ok.style.display="block";
+    ok.innerHTML=`<div class="ok"><div style="font-size:34px">✅</div><h3 style="color:#176b39;margin:6px 0">Vaga reservada, ${esc(nome)}!</h3><p>Para acelerar, fala já connosco no WhatsApp — respondemos rápido.</p><a class="wa-btn" target="_blank" href="${esc(wa)}">Falar agora no WhatsApp</a></div>`;
+    setTimeout(function(){try{window.open(wa,"_blank");}catch(e){}},400);}
+  if(_db){_db.ref("inscricoes").push(rec).then(done).catch(done);}else{done();}
+}
+
+let COMP_B64="";
+function onComp(inp){const f=inp.files&&inp.files[0];if(!f)return;const r=new FileReader();
+  r.onload=e=>{const img=new Image();img.onload=()=>{const max=1100;let w=img.width,h=img.height;if(w>max){h=Math.round(h*max/w);w=max;}
+    const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);
+    COMP_B64=c.toDataURL("image/jpeg",0.7);document.getElementById("i_complabel").innerHTML="✅ Comprovativo carregado — "+esc(f.name);};img.src=e.target.result;};
+  r.readAsDataURL(f);}
+function enviar(){
+  const nome=val("i_nome"),tel=val("i_tel");
+  if(!nome||!tel){alert("Falta o nome e o telefone.");return;}
+  const rec={quando:new Date().toISOString(),tipo:"Pagamento",nome:nome,tel:tel,curso:val("i_curso"),modalidade:val("i_mod"),turma:(TURMA&&TURMA.cod)||"",edicao:(TURMA&&TURMA.ed)||"",valorPago:+val("i_valor")||0,comprovativo:COMP_B64||"",viaWhatsapp:!COMP_B64,estado:"Nova",origem:"Landing"};
+  const btn=document.getElementById("i_btn");btn.textContent="A enviar…";btn.disabled=true;
+  function done(){document.getElementById("formfields").style.display="none";const ok=document.getElementById("okbox");ok.style.display="block";
+    ok.innerHTML=`<div class="ok"><div style="font-size:34px">🎉</div><h3 style="color:#176b39;margin:6px 0">Inscrição recebida!</h3><p>Obrigado, ${esc(nome)}. A nossa equipa vai confirmar o pagamento e entrar em contacto.</p>${!COMP_B64?`<p class="muted">Ainda não anexaste o comprovativo. Envia-o pelo WhatsApp:</p><a class="wa-btn" target="_blank" href="${esc(waLink("Olá! Acabei de me inscrever ("+nome+"). Envio o comprovativo em anexo."))}">Enviar comprovativo pelo WhatsApp</a>`:`<a class="wa-btn" target="_blank" href="${esc(waLink("Olá! Acabei de me inscrever: "+nome))}">Falar connosco no WhatsApp</a>`}</div>`;}
+  if(_db){_db.ref("inscricoes").push(rec).then(done).catch(done);}else{done();}
+}
+</script>
+</body>
+</html>
