@@ -100,7 +100,8 @@ tr:hover td{background:#fafbfe}
  .topbar{padding:12px 14px}
  .topbar h1{font-size:17px}
 }
-@media print{body *{visibility:hidden}#compdoc,#compdoc *{visibility:visible}#compdoc{position:absolute;left:0;top:0;width:100%;border:none!important;margin:0}}
+@page{size:A4;margin:0}
+@media print{body *{visibility:hidden}#compdoc,#compdoc *{visibility:visible}#compdoc{position:absolute!important;left:0;top:0;width:100%;border:none!important;border-radius:0!important;margin:0!important;padding:11mm 14mm!important;font-size:10.8px!important;line-height:1.35!important;box-shadow:none!important}#compdoc h2{margin:10px 0 3px!important}#compdoc p{margin:6px 0!important}}
 </style>
 </head>
 <body>
@@ -638,44 +639,45 @@ function vFormador(){const set=new Set();data.turmas.forEach(t=>{if(t.resp)set.a
    </tbody></table></div>`;}).join("")||'<div class="sec"><div class="muted">Sem formadores. Define o responsável nas Turmas.</div></div>');}
 
 /* COMPROVATIVO */
-function vComprovativo(){return `<div class="sec noprint"><h2>Comprovativo de inscrição</h2><div class="muted">Escolhe o formando, confirma os dados e exporta em PDF. O texto de WhatsApp já vem pronto (o PDF anexas tu na partilha).</div>
+function vComprovativo(){return `<div class="sec noprint"><h2>Comprovativo de inscrição</h2><div class="muted">Pesquisa o formando por nome ou telefone, confirma os dados e exporta em PDF. O texto de WhatsApp já vem pronto (o PDF anexas tu na partilha).</div>
   <div class="formgrid">
-   <div><label>Formando</label><select id="cp_cod" onchange="fillComp()">${data.formandos.map(f=>`<option value="${esc(f.cod)}">${esc(f.nome)}</option>`).join("")}</select></div>
-   <div><label>A tua assinatura (assistente)</label><input id="cp_assist" value="${esc(localStorage.getItem('ka_assist')||'')}" placeholder="O teu nome"></div>
+   <div><label>Pesquisar (nome ou telefone)</label><input id="cp_q" placeholder="Escreve o nome ou o telefone…" oninput="filterComp()"></div>
+   <div><label>Formando</label><select id="cp_cod" onchange="fillComp()">${compOptions("")}</select></div>
   </div>
   <div class="row-actions"><button class="btn-p" onclick="printComp()">Exportar PDF / Imprimir</button><button class="btn-g" onclick="waComp()">Enviar WhatsApp</button></div></div>
   <div id="compwrap">${compDoc((data.formandos[0]||{}).cod)}</div>`;}
+function compOptions(q){q=(q||"").toLowerCase();const qd=q.replace(/\D/g,"");const r=data.formandos.filter(f=>{const n=(f.nome||"").toLowerCase();const tel=(f.tel||"").replace(/\D/g,"");return !q||n.includes(q)||(qd&&tel.includes(qd))});return r.map(f=>`<option value="${esc(f.cod)}">${esc(f.nome)} — ${esc(f.tel||"")}</option>`).join("")||`<option value="">(sem resultados)</option>`;}
+function filterComp(){const s=document.getElementById("cp_cod");if(!s)return;s.innerHTML=compOptions(val("cp_q"));fillComp();}
+function nomeCurto(n){const p=(n||"").trim().split(/\s+/).filter(Boolean);return p.length<=1?(n||""):p[0]+" "+p[p.length-1];}
 function compDoc(cod){const f=data.formandos.find(x=>x.cod===cod)||{};const t=turmaByCod(f.turma)||{};const c=data.comp;const logo=c.logo||((document.querySelector('.wordmark-sm')||{}).src)||"";const hoje=new Date().toLocaleDateString("pt-PT");
- return `<div id="compdoc" style="background:#fff;max-width:760px;margin:16px auto;padding:32px 42px;border:1px solid var(--linha);border-radius:8px;font-size:13px;line-height:1.6;color:#222">
+ return `<div id="compdoc" style="background:#fff;max-width:760px;margin:16px auto;padding:22px 34px;border:1px solid var(--linha);border-radius:8px;font-size:12.5px;line-height:1.45;color:#222">
    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px">
-     <div>${logo?`<img src="${logo}" style="height:50px">`:'<b style="color:var(--azul);font-size:18px">Knowledge Angola</b>'}</div>
-     <div style="text-align:right;font-size:11px;color:#555;line-height:1.5"><b>Knowledge Angola – Academia de Formação</b><br>${esc(c.morada)}<br>Tel: ${esc(c.tel)}<br>${esc(c.email)}</div>
+     <div>${logo?`<img src="${logo}" style="height:44px">`:'<b style="color:var(--azul);font-size:18px">Knowledge Angola</b>'}</div>
+     <div style="text-align:right;font-size:11px;color:#555;line-height:1.45"><b>Knowledge Angola – Academia de Formação</b><br>${esc(c.morada)}<br>Tel: ${esc(c.tel)}<br>${esc(c.email)}</div>
    </div>
-   <h2 style="color:var(--azul);margin:22px 0 6px;letter-spacing:1px">COMPROVATIVO DE INSCRIÇÃO</h2>
-   <div style="color:#555">Entidade Formadora: Knowledge Angola<br>N.º de Registo INEFOP: ${esc(c.inefop)}<br>${hoje}</div>
-   <p style="margin-top:16px">Ilustre <b>${esc(f.nome||"‹Nome do Aluno›")}</b>,</p>
-   <p>${esc(c.intro)}</p>
-   <div style="border-top:1px solid var(--linha);padding-top:10px;margin-top:14px"><div style="font-weight:700;color:var(--azul);margin-bottom:6px">📋 DETALHES DA FORMAÇÃO</div>
+   <h2 style="color:var(--azul);margin:14px 0 4px;letter-spacing:1px;font-size:17px">COMPROVATIVO DE INSCRIÇÃO</h2>
+   <div style="color:#555;font-size:11.5px">Entidade Formadora: Knowledge Angola · N.º de Registo INEFOP: ${esc(c.inefop)} · ${hoje}</div>
+   <p style="margin:12px 0 6px">Ilustre <b>${esc(nomeCurto(f.nome)||"‹Nome do Aluno›")}</b>,</p>
+   <p style="margin:6px 0">${esc(c.intro)}</p>
+   <div style="border-top:1px solid var(--linha);padding-top:8px;margin-top:10px"><div style="font-weight:700;color:var(--azul);margin-bottom:4px">📋 DETALHES DA FORMAÇÃO</div>
      <div>Formação: <b>${esc(f.curso||t.curso||"")}</b></div>
-     <div>Início: <b>${esc(t.inicio||"—")}</b></div>
-     <div>Fim: <b>${esc(t.fim||"—")}</b></div>
+     <div>Início: <b>${esc(t.inicio||"—")}</b> · Fim: <b>${esc(t.fim||"—")}</b></div>
      <div>Horário: <b>${esc(t.horario||"—")}</b></div>
      <div>Local: <b>${esc(c.local)}</b></div>
    </div>
-   <div style="border-top:1px solid var(--linha);padding-top:10px;margin-top:14px"><div style="font-weight:700;color:var(--azul);margin-bottom:6px">📍 LOCALIZAÇÃO E ACESSO</div>
-     <div>Para facilitar a sua chegada às nossas instalações, utilize os dados abaixo:</div>
-     <div style="margin:6px 0">Abrir localização no GPS <a href="${esc(c.gps)}" target="_blank">[Link]</a> ou via QR Code:</div>
-     ${c.qr?`<img src="${c.qr}" style="width:108px;height:108px">`:''}
+   <div style="border-top:1px solid var(--linha);padding-top:8px;margin-top:10px"><div style="font-weight:700;color:var(--azul);margin-bottom:4px">📍 LOCALIZAÇÃO E ACESSO</div>
+     <div>Para facilitar a sua chegada, utilize o GPS <a href="${esc(c.gps)}" target="_blank">[Link]</a> ou o QR Code:</div>
+     ${c.qr?`<img src="${c.qr}" style="width:84px;height:84px;margin-top:4px">`:''}
    </div>
-   <p style="margin-top:16px">${esc(c.fecho)}</p>
-   <p style="margin-top:6px">Com os melhores cumprimentos,</p>
-   ${c.carimbo?`<img src="${c.carimbo}" style="height:92px;margin:2px 0">`:''}
+   <p style="margin:10px 0 4px">${esc(c.fecho)}</p>
+   <p style="margin:4px 0">Com os melhores cumprimentos,</p>
+   ${c.carimbo?`<img src="${c.carimbo}" style="height:66px;margin:2px 0">`:''}
    <div><b>${esc(c.director)}${c.cargo?" ("+esc(c.cargo)+")":""}</b></div>
  </div>`;}
 function fillComp(){document.getElementById("compwrap").innerHTML=compDoc(val("cp_cod"));}
-function printComp(){const a=val("cp_assist");if(a)localStorage.setItem("ka_assist",a);document.getElementById("compwrap").innerHTML=compDoc(val("cp_cod"));window.print();}
-function waComp(){const f=data.formandos.find(x=>x.cod===val("cp_cod"))||{};const assist=val("cp_assist")||localStorage.getItem("ka_assist")||"";if(assist)localStorage.setItem("ka_assist",assist);
- const txt="Ilustre "+(f.nome||"")+",\n\nNo seguimento dos contactos mantidos e tendo em vista a formação que se aproxima, enviamos em anexo o comprovativo de inscrição, onde poderá consultar todos os detalhes, bem como a localização da formação Excel: do Básico ao Avançado.\n\nEstamos muito satisfeitos por contar com a sua participação e tudo faremos para lhe proporcionar uma formação que corresponda às suas expectativas.\n\nCaso tenha alguma questão, não hesite em contactar-nos.\n\nCom os melhores cumprimentos,\n"+assist;
+function printComp(){document.getElementById("compwrap").innerHTML=compDoc(val("cp_cod"));window.print();}
+function waComp(){const f=data.formandos.find(x=>x.cod===val("cp_cod"))||{};const assina=(data.comp&&data.comp.director)||"Knowledge Angola";
+ const txt="Ilustre "+nomeCurto(f.nome)+",\n\nNo seguimento dos contactos mantidos e tendo em vista a formação que se aproxima, enviamos em anexo o comprovativo de inscrição, onde poderá consultar todos os detalhes, bem como a localização da formação Excel: do Básico ao Avançado.\n\nEstamos muito satisfeitos por contar com a sua participação e tudo faremos para lhe proporcionar uma formação que corresponda às suas expectativas.\n\nCaso tenha alguma questão, não hesite em contactar-nos.\n\nCom os melhores cumprimentos,\n"+assina;
  const d=(f.tel||"").replace(/\D/g,"");const num=d?(d.startsWith("244")?d:"244"+d):"";
  window.open("https://wa.me/"+num+"?text="+encodeURIComponent(txt),"_blank");}
 
