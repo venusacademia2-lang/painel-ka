@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Painel de Gestão — Knowledge Angola</title>
 <style>
-:root{color-scheme:light;--azul:#1F3864;--azul2:#2E5496;--dour:#BF9000;--bg:#F4F6FA;--cinza:#EEF1F6;--linha:#E2E6EE;--verde:#1E7B45;--verm:#C0392B;--txt:#1a2233;--sombra:0 1px 3px rgba(31,56,100,.06),0 4px 16px rgba(31,56,100,.04)}
+:root{color-scheme:light;--azul:#1F3864;--azul2:#2E5496;--dour:#BF9000;--bg:#f5f5f7;--cinza:#EEF1F6;--linha:#E2E6EE;--verde:#1E7B45;--verm:#C0392B;--txt:#1a2233;--sombra:0 1px 2px rgba(0,0,0,.04),0 6px 22px rgba(0,0,0,.05)}
 *{box-sizing:border-box}
-body{margin:0;font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--txt);font-size:14px}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--txt);font-size:14px;-webkit-font-smoothing:antialiased}
 h1,h2,h3{margin:0}
 .hidden{display:none!important}
 button{font-family:inherit;cursor:pointer;border:none;border-radius:9px;padding:9px 15px;font-weight:600;font-size:14px}
@@ -131,6 +131,11 @@ details.subdet>summary::-webkit-details-marker{display:none}
 details.subdet>summary::before{content:"+ ";color:var(--dour);font-weight:800}
 details.subdet[open]>summary::before{content:"– "}
 .navtop{font-weight:600;border-bottom:1px solid var(--linha)}
+.sec,.kpi{border-radius:16px}
+.btn-p,.btn-g,.btn-o{border-radius:10px;transition:transform .12s,filter .12s,background .15s}
+.btn-p:hover,.btn-g:hover{filter:brightness(1.05);transform:translateY(-1px)}
+.kpi{transition:transform .15s,box-shadow .15s}
+input,select,textarea{border-radius:10px}
 html[data-theme="dark"]{--bg:#0f1420;--cinza:#1a2130;--linha:#2a3345;--txt:#e6ebf3;--sombra:none}
 html[data-theme="dark"] .sec,html[data-theme="dark"] .kpi,html[data-theme="dark"] .leadcard{box-shadow:none}
 html[data-theme="dark"] .card{background:#1e2838;border:1px solid #37455f;box-shadow:none}
@@ -191,7 +196,7 @@ html[data-theme="dark"] .tema-thumb::after{content:"\263E";color:#c9d2e3}
   </aside>
   <div id="navmask" onclick="closeNav()"></div>
   <div id="main">
-    <div class="topbar"><button class="mob-menu" onclick="toggleNav()" aria-label="Menu">☰</button><svg class="top-k" viewBox="0 0 100 100" width="30" height="30" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="48" fill="#1F3864"/><circle cx="50" cy="21" r="4" fill="#BF9000"/><text x="50" y="53" text-anchor="middle" dominant-baseline="central" font-family="Georgia,'Times New Roman',serif" font-size="52" font-weight="700" fill="#fff">K</text></svg><div style="flex:1"><h1 id="ptitle"></h1><div class="muted sub" id="psub"></div></div><button id="ocultBtn" class="btn-o" onclick="toggleOcultar()" style="padding:6px 10px;font-size:12.5px;margin-right:8px">👁 Mostrar valores</button><button class="tema-toggle" onclick="toggleTema()" title="Modo claro/escuro" aria-label="Modo claro/escuro"><span class="tema-track"><span class="tema-thumb"></span></span></button><button class="btn-o mob-sair" onclick="logout()">Sair</button></div>
+    <div class="topbar"><button class="mob-menu" onclick="toggleNav()" aria-label="Menu">☰</button><svg class="top-k" viewBox="0 0 100 100" width="30" height="30" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="48" fill="#1F3864"/><circle cx="50" cy="21" r="4" fill="#BF9000"/><text x="50" y="53" text-anchor="middle" dominant-baseline="central" font-family="Georgia,'Times New Roman',serif" font-size="52" font-weight="700" fill="#fff">K</text></svg><div style="flex:1"><h1 id="ptitle"></h1><div class="muted sub" id="psub"></div></div><button id="ocultBtn" class="btn-o" onclick="toggleOcultar()" style="padding:6px 11px;font-size:12.5px;margin-right:8px;display:inline-flex;align-items:center;gap:6px"></button><button class="tema-toggle" onclick="toggleTema()" title="Modo claro/escuro" aria-label="Modo claro/escuro"><span class="tema-track"><span class="tema-thumb"></span></span></button><button class="btn-o mob-sair" onclick="logout()">Sair</button></div>
     <main id="views"></main>
     <footer id="rodape" style="padding:16px 26px;margin-top:8px;color:#5b6577;font-size:13px;font-weight:600;border-top:1px solid var(--linha);background:var(--cinza);text-align:center"></footer>
   </div>
@@ -222,7 +227,7 @@ const CALL_RESULT=["Atendeu","Não atendeu","Número errado","Remarcar","Interes
 const CERT_ESTADOS=["Pendente","Emitido","Entregue"];
 const HORARIOS=["Semana (9h–11h)","Sábado manhã (8h30–13h)","Sábado tarde (14h–18h)"];
 const DEFAULT_PASS="ka-gestao-2026";
-const PAGES={painel:["Painel","Visão geral do negócio de relance."],notificacoes:["Notificações","O que precisa da tua atenção hoje."],financas:["Finanças","Orçamento, gastos e divisão das receitas."],avaliacoes:["Avaliações","Entregas de avaliações e quem falta."],formandos:["Formandos","Inscreve e pesquisa formandos."],turmas:["Turmas & Edições","Que edição está em andamento e quem é o responsável."],calendario:["Calendário","Próximas formações dos nossos cursos."],comunicados:["Comunicados","Mensagens dos estudantes (por telefone)."],presencas:["Presenças","Marcar a presença de cada aluno por sessão."],pagamentos:["Pagamentos","Lança e acompanha pagamentos."],leads:["Marketing & Vendas","Acompanha os interessados pelo funil."],chamadas:["Chamadas","Registo de chamadas a leads e formandos."],certificados:["Certificados","Quem já recebeu o certificado."],online:["Turmas Online","Acompanhamento e Ponto de Situação (PDS)."],formador:["Formador","Alunos por formador — online e presencial."],comprovativo:["Comprovativo","Gera o comprovativo de inscrição em PDF."],notas:["Comunicados & Tarefas","Comunicados dos formandos e tarefas a resolver — numa só página."],chat:["Chat","Mensagens rápidas da equipa."],melhorias:["Melhorias","Sugestões da equipa."],rh:["RH","Salários e comissões a pagar."],dados:["Importar / Exportar","Sincroniza com a folha do Google."],inscricoes:["Inscrições (Landing)","Quem se inscreveu pela página pública — captação pela landing."],defs:["Definições","Preços, senha e reposição."]};
+const PAGES={painel:["Painel","Visão geral do negócio de relance."],notificacoes:["Notificações","O que precisa da tua atenção hoje."],financas:["Finanças","Orçamento, gastos e divisão das receitas."],avaliacoes:["Avaliações","Entregas de avaliações e quem falta."],formandos:["Formandos","Inscreve e pesquisa formandos."],turmas:["Turmas & Edições","Que edição está em andamento e quem é o responsável."],calendario:["Calendário","Próximas formações dos nossos cursos."],comunicados:["Comunicados","Mensagens dos estudantes (por telefone)."],presencas:["Presenças","Marcar a presença de cada aluno por sessão."],pagamentos:["Pagamentos","Lança e acompanha pagamentos."],leads:["Marketing & Vendas","Acompanha os interessados pelo funil."],chamadas:["Chamadas","Registo de chamadas a leads e formandos."],certificados:["Certificados","Quem já recebeu o certificado."],online:["Turmas Online","Acompanhamento e Ponto de Situação (PDS)."],formador:["Formador","Alunos por formador — online e presencial."],comprovativo:["Comprovativo","Gera o comprovativo de inscrição em PDF."],notas:["Comunicados & Tarefas","Comunicados dos formandos e tarefas a resolver — numa só página."],chat:["Chat","Mensagens rápidas da equipa."],melhorias:["Melhorias","Sugestões da equipa."],actividade:["Registo de actividade","Histórico de operações com data/hora e autor."],rh:["RH","Salários e comissões a pagar."],dados:["Importar / Exportar","Sincroniza com a folha do Google."],inscricoes:["Inscrições (Landing)","Quem se inscreveu pela página pública — captação pela landing."],defs:["Definições","Preços, senha e reposição."]};
 
 const DB={load(){try{return JSON.parse(localStorage.getItem("ka_db"))||null}catch(e){return null}},save(d){try{localStorage.setItem("ka_db",JSON.stringify(d))}catch(e){}}};
 let data=null;let _saveT=null;
@@ -307,7 +312,9 @@ function compromissoVencido(p){return divida(p)>0&&p.dataPrometida&&new Date(p.d
 let role="team";let currentUser=null;try{if(localStorage.getItem("ka_tema")==="dark")document.documentElement.setAttribute("data-theme","dark");}catch(e){}
 function olhoPin(){var e=document.getElementById("lg_pin");if(e)e.type=(e.type==="password"?"text":"password");}
 function recuperarPass(){alert("Para repor a tua palavra-passe, fala com a gestão. A gestão pode vê-la e alterá-la em Definições → Perfis de equipa.");}
-function toggleOcultar(){ocultar=!ocultar;var b=document.getElementById("ocultBtn");if(b)b.textContent=ocultar?"👁 Mostrar valores":"🙈 Ocultar valores";render();}
+function ocultIcon(off){var a='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">';return off?a+'<path d="M17.9 17.9A10.6 10.6 0 0 1 12 20C5 20 1 12 1 12a19 19 0 0 1 5.1-5.9"/><path d="M9.9 4.2A10.6 10.6 0 0 1 12 4c7 0 11 8 11 8a19 19 0 0 1-2.2 3.2"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="M1 1l22 22"/></svg>':a+'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';}
+function updateOcultBtn(){var b=document.getElementById("ocultBtn");if(!b)return;b.innerHTML=(ocultar?ocultIcon(false):ocultIcon(true))+'<span style="vertical-align:middle">'+(ocultar?"Mostrar valores":"Ocultar valores")+'</span>';}
+function toggleOcultar(){ocultar=!ocultar;updateOcultBtn();render();}
 function toggleTema(){var dark=document.documentElement.getAttribute("data-theme")==="dark";if(dark)document.documentElement.removeAttribute("data-theme");else document.documentElement.setAttribute("data-theme","dark");try{localStorage.setItem("ka_tema",dark?"":"dark");}catch(e){}}
 function enterTeam(){document.getElementById("passbox").classList.add("hidden");const tb=document.getElementById("teambox");
  tb.innerHTML='<label>ID do Colaborador</label><input id="lg_id" placeholder="o teu ID" onkeydown="if(event.key===\'Enter\'){var e=document.getElementById(\'lg_pin\');if(e)e.focus();}"><label style="margin-top:8px">PIN</label><input id="lg_pin" type="password" placeholder="PIN" onkeydown="if(event.key===\'Enter\')loginById()"><div class="flex" style="margin-top:10px"><button class="btn-p" onclick="loginById()">Entrar</button><span id="lgerr" class="muted" style="color:var(--verm)"></span></div>';
@@ -339,7 +346,7 @@ function startApp(){
  document.getElementById("login").classList.add("hidden");
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
- buildNav();chatInit();presencaInit();
+ buildNav();chatInit();presencaInit();updateOcultBtn();
  var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT");
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
@@ -351,6 +358,7 @@ const NAVICON={
  avaliacoes:'<rect x="5" y="4" width="12" height="16" rx="2"/><path d="M8 9h6M8 13h6M8 17h3"/>',
  chat:'<path d="M4 5h16v11H8l-4 4z"/>',
  melhorias:'<path d="M12 3a6 6 0 0 0-4 10c1 1 1 2 1 3h6c0-1 0-2 1-3a6 6 0 0 0-4-10z"/><path d="M10 21h4"/>',
+ actividade:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
  painel:'<rect x="3" y="11" width="4" height="6"/><rect x="9" y="6" width="4" height="11"/><rect x="15" y="9" width="4" height="8"/>',
  formandos:'<circle cx="7" cy="8" r="2.6"/><circle cx="15" cy="8" r="2.2"/><path d="M2.5 17c0-2.6 2.2-3.8 4.5-3.8s4.5 1.2 4.5 3.8"/><path d="M13 17c0-1.8 1.7-3 3.6-3"/>',
  turmas:'<path d="M3 9l8-4 8 4-8 4z"/><path d="M6.5 11v3.5c0 1 2 1.8 4.5 1.8s4.5-.8 4.5-1.8V11"/>',
@@ -377,9 +385,9 @@ function updateChatBadge(){var b=document.querySelector('.navbtn[data-id="chat"]
 function navBadge(id){var n=0;if(id==="notas")n=(data.notas||[]).filter(x=>!x.feito).length;else if(id==="notificacoes")n=notifCount();else if(id==="chat")n=chatUnread();if(!n)return"";return ' <span style="background:var(--verm);color:#fff;border-radius:10px;padding:0 6px;font-size:11px;margin-left:4px">'+n+'</span>';}
 function buildNav(){
  const items=role==="admin"
-  ?["painel","notificacoes","formandos","turmas","calendario","online","pagamentos","comprovativo","leads","inscricoes","chamadas","presencas","avaliacoes","certificados","formador","notas","chat","melhorias","rh","financas","dados","defs"]
+  ?["painel","notificacoes","formandos","turmas","calendario","online","pagamentos","comprovativo","leads","inscricoes","chamadas","presencas","avaliacoes","certificados","formador","notas","chat","melhorias","rh","financas","dados","actividade","defs"]
   :(function(){let base=["notificacoes","formandos","turmas","calendario","online","comprovativo","leads","inscricoes","chamadas","presencas","avaliacoes","certificados","formador","notas","chat","melhorias","financas","dados"];if(currentUser&&Array.isArray(currentUser.abas)&&currentUser.abas.length)base=base.filter(a=>currentUser.abas.indexOf(a)>=0);return base.length?base:["formandos"];})();
- const groups=[["Painel",["painel"]],["Formandos",["formandos","comprovativo"]],["Turmas",["turmas","online","presencas","avaliacoes","certificados","calendario","formador"]],["Marketing & Vendas",["leads","inscricoes","chamadas"]],["Finanças",["financas","pagamentos","rh"]],["Comunicação",["notas","melhorias"]],["Definições",["dados","defs"]]];
+ const groups=[["Painel",["painel"]],["Formandos",["formandos","comprovativo"]],["Turmas",["turmas","online","presencas","avaliacoes","certificados","calendario","formador"]],["Marketing & Vendas",["leads","inscricoes","chamadas"]],["Finanças",["financas","pagamentos","rh"]],["Comunicação",["notas","melhorias"]],["Definições",["dados","actividade","defs"]]];
  const nav=document.getElementById("nav");nav.innerHTML="";let first=null;if(items.indexOf("notificacoes")>=0){const nb=document.createElement("button");nb.className="navbtn navtop";nb.dataset.id="notificacoes";nb.innerHTML=`${iconSVG("notificacoes")} ${PAGES["notificacoes"][0]}`+navBadge("notificacoes");nb.onclick=()=>{show("notificacoes");closeNav()};nav.appendChild(nb);}if(items.indexOf("chat")>=0){const cb=document.createElement("button");cb.className="navbtn navtop";cb.dataset.id="chat";cb.innerHTML=`${iconSVG("chat")} ${PAGES["chat"][0]}`+navBadge("chat");cb.onclick=()=>{show("chat");closeNav()};nav.appendChild(cb);}
  groups.forEach(g=>{const pgs=g[1].filter(p=>items.indexOf(p)>=0);if(!pgs.length)return;
    const det=document.createElement("details");det.className="navgrp";det.addEventListener("toggle",()=>{if(det.open)[...nav.querySelectorAll("details.navgrp")].forEach(d=>{if(d!==det)d.open=false;});});
@@ -392,7 +400,7 @@ function buildNav(){
 function show(id){current=id;[...document.querySelectorAll('.navbtn')].forEach(b=>b.classList.toggle("active",b.dataset.id===id));
  document.getElementById("ptitle").textContent=PAGES[id][0];document.getElementById("psub").textContent=PAGES[id][1];render()}
 let _refocus=null;function refocusSearch(id){_refocus=id;}
-function render(){document.getElementById("views").innerHTML=rowEditModalHTML()+({painel:vPainel,notificacoes:vNotificacoes,financas:vFinancas,formandos:vFormandos,turmas:vTurmas,calendario:vCalendario,online:vOnline,pagamentos:vPagamentos,comprovativo:vComprovativo,leads:vLeads,inscricoes:vInscricoes,chamadas:vChamadas,presencas:vPresencas,avaliacoes:vAvaliacoes,certificados:vCertificados,formador:vFormador,comunicados:vComunicados,notas:vNotas,chat:vChat,melhorias:vMelhorias,rh:vRH,dados:vDados,defs:vDefs}[current]||(()=>""))();if(current==="painel"){drawChart();drawPerfChart();}if(_refocus){const e=document.getElementById(_refocus);if(e){e.focus();const v=e.value||"";try{e.setSelectionRange(v.length,v.length)}catch(_){}}_refocus=null;}}
+function render(){document.getElementById("views").innerHTML=rowEditModalHTML()+({painel:vPainel,notificacoes:vNotificacoes,financas:vFinancas,formandos:vFormandos,turmas:vTurmas,calendario:vCalendario,online:vOnline,pagamentos:vPagamentos,comprovativo:vComprovativo,leads:vLeads,inscricoes:vInscricoes,chamadas:vChamadas,presencas:vPresencas,avaliacoes:vAvaliacoes,certificados:vCertificados,formador:vFormador,comunicados:vComunicados,notas:vNotas,chat:vChat,melhorias:vMelhorias,actividade:vActividade,rh:vRH,dados:vDados,defs:vDefs}[current]||(()=>""))();if(current==="painel"){drawChart();drawPerfChart();}if(_refocus){const e=document.getElementById(_refocus);if(e){e.focus();const v=e.value||"";try{e.setSelectionRange(v.length,v.length)}catch(_){}}_refocus=null;}}
 
 function fin(){if(!data.financas)data.financas={saldoBanco:0,saldoData:"",gastos:[],metas:{Marketing:0,Renda:0,"Comunicação":0,Outras:0},split:{proLabore:30,operacao:40,reserva:15,investimento:10,marketing:5}};return data.financas;}
 const GASTO_CATS=["Marketing","Renda","Comunicação","Água","Detergentes","Consumíveis","Outras"];
@@ -501,6 +509,23 @@ function vMelhorias(){const admin=role==="admin";const list=data.melhorias||[];
   <div class="formgrid"><div style="grid-column:1/-1"><label>A tua sugestão</label><textarea id="mel_txt" rows="3" placeholder="O que podíamos melhorar?"></textarea></div></div>
   <div class="row-actions"><button class="btn-p" onclick="addMelhoria()">Enviar sugestão</button></div></div>
  <div class="sec"><h2>Sugestões <span class="pill p-cinza">${list.length}</span></h2>${list.length?`<table><thead><tr><th>Quando</th>${admin?"<th>Quem</th>":""}<th>Sugestão</th>${admin?"<th></th>":""}</tr></thead><tbody>${list.map((m,i)=>`<tr><td>${esc((m.quando||"").slice(0,16).replace("T"," "))}</td>${admin?`<td>${esc(m.quem||"—")}</td>`:""}<td>${esc(m.texto||"")}</td>${admin?`<td><button class="btn-o" style="padding:3px 8px" onclick="delMelhoria(${i})">✕</button></td>`:""}</tr>`).join("")}</tbody></table>`:'<div class="muted">Ainda sem sugestões.</div>'}</div>`;}
+let actSearch="";
+function vActividade(){const ev=[];const add=(q,tipo,ref,quem)=>{if(q)ev.push({q:q,tipo:tipo,ref:ref||"",quem:quem||"—"});};
+ (data.formandos||[]).forEach(f=>add(f.criadoEm,"Inscrição/Venda",f.nome,f.criadoPor));
+ (data.pagamentos||[]).forEach(p=>{const f=(data.formandos||[]).find(x=>x.cod===p.cod)||{};add(p.criadoEm,"Pagamento",f.nome||p.cod,p.criadoPor);});
+ (data.online||[]).forEach(o=>add(o.criadoEm,"Aluno online",o.nome,o.criadoPor));
+ (data.chamadas||[]).forEach(c=>add(c.criadoEm||c.data,"Chamada",c.nome,c.resp));
+ (data.notas||[]).forEach(n=>add(n.criadoEm,"Tarefa",n.txt,n.pedidoPor));
+ (data.colaboradores||[]).forEach(c=>add(c.criadoEm,"Colaborador",c.nome,""));
+ (data.melhorias||[]).forEach(m=>add(m.quando,"Melhoria",m.texto,m.quem));
+ ((data.financas&&data.financas.gastos)||[]).forEach(g=>add(g.criadoEm,"Gasto",(g.descricao||g.categoria||"")+" · "+kz(g.valor),g.criadoPor));
+ ((data.financas&&data.financas.entregas)||[]).forEach(x=>add(x.criadoEm,"Entrega",(x.finalidade||"")+" · "+(x.quem||""),x.criadoPor));
+ (data.compsLog||[]).forEach(x=>add(x.quando,"Comprovativo emitido",x.nome,x.por));
+ ev.sort((a,b)=>(new Date(b.q))-(new Date(a.q)));
+ const qq=(actSearch||"").toLowerCase();const rows=ev.filter(e=>!qq||((e.tipo+" "+e.ref+" "+e.quem).toLowerCase().indexOf(qq)>=0));
+ return `<div class="sec"><h2>Registo de actividade</h2><div class="muted">Tudo o que foi registado, com data, hora e por quem. Do mais recente para o mais antigo.</div>
+  <input id="q_act" class="search" placeholder="Pesquisar por operação, nome ou autor…" value="${esc(actSearch)}" oninput="actSearch=this.value;refocusSearch('q_act');render()">
+  <table><thead><tr><th>Data / hora</th><th>Operação</th><th>Referente a</th><th>Registado por</th></tr></thead><tbody>${rows.slice(0,300).map(e=>`<tr><td>${esc((e.q||"").slice(0,16).replace("T"," "))}</td><td><span class="pill p-cinza">${esc(e.tipo)}</span></td><td>${esc(e.ref)}</td><td>${esc(e.quem)}</td></tr>`).join("")||`<tr><td colspan="4" class="muted">Sem actividade registada.</td></tr>`}</tbody></table>${rows.length>300?`<div class="muted" style="margin-top:8px">A mostrar as 300 mais recentes de ${rows.length}.</div>`:""}</div>`;}
 function vNotificacoes(){const hoje=new Date().toISOString().slice(0,10);const dow=new Date().getDay();
  const tarefas=data.notas.filter(n=>!n.feito);
  const pdsHoje=data.online.filter(o=>o.proximoPDS&&o.proximoPDS<=hoje&&o.status!=="Concluído");
