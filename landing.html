@@ -66,7 +66,7 @@ section{padding:52px 0}
 .benef b{display:block;color:var(--navy);font-size:16.5px;margin-bottom:3px;letter-spacing:-.01em}
 .benef div>span{color:var(--grey);font-size:14.5px}
 /* testemunhos */
-#tgrid{display:grid;gap:22px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+#tgrid{display:grid;gap:22px;grid-template-columns:repeat(auto-fit,minmax(280px,360px));justify-content:center}
 .tcard{background:#fff;border:1px solid var(--line);padding:16px}
 .vid{position:relative;padding-top:56.25%;overflow:hidden;background:#0b1730}
 .vid iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
@@ -142,7 +142,7 @@ footer b{color:#fff}footer a{color:#fff}
 <section class="hero"><div class="wrap">
   <div class="eyebrow">Formação em Excel · Luanda &amp; Online</div>
   <h1 id="h_head">Aprende o Excel que o mercado de trabalho exige — <em>mesmo que comeces do zero</em></h1>
-  <p id="h_sub">Formação 100% prática, do básico ao avançado, com certificado reconhecido pelo INEFOP. Sais a construir relatórios, tabelas dinâmicas e dashboards que resolvem problemas reais no teu trabalho.</p>
+  <p id="h_sub">Formação 100% prática, do básico ao avançado, com certificado reconhecido pelo INEFOP. Sais a construir relatórios, tabelas dinâmicas que resolvem problemas reais no teu trabalho.</p>
   <div class="cta-row">
     <a href="#reservar" class="btn" id="h_cta">Quero a minha vaga</a>
     <a href="#oferta" class="btn btn-ghost">Ver a oferta</a>
@@ -232,7 +232,7 @@ let _db=null;try{firebase.initializeApp(FB_CONFIG);_db=firebase.database();}catc
 
 const DEF={
   headline:'Aprende o Excel que o mercado de trabalho exige — <em>mesmo que comeces do zero</em>',
-  sub:"Formação 100% prática, do básico ao avançado, com certificado reconhecido pelo INEFOP. Sais a construir relatórios, tabelas dinâmicas e dashboards que resolvem problemas reais no teu trabalho.",
+  sub:"Formação 100% prática, do básico ao avançado, com certificado reconhecido pelo INEFOP. Sais a construir relatórios, tabelas dinâmicas que resolvem problemas reais no teu trabalho.",
   cta:"Quero a minha vaga",
   mini:"Vagas limitadas · Certificado incluído",
   whatsapp:"244939845313",
@@ -241,14 +241,14 @@ const DEF={
   problema:[
     "Perdes horas em tarefas que uma fórmula resolve em segundos.",
     "Candidatas-te a vagas que pedem \"Excel avançado\" e não te sentes seguro.",
-    "Vês colegas a subir porque dominam relatórios e dashboards — e tu ficas para trás.",
+    "Vês colegas a subir porque dominam relatórios e análises — e tu ficas para trás.",
     "Já passaste vergonha com um mapa ou relatório com erros."
   ],
   turn:"A boa notícia: isto aprende-se — e mais depressa do que pensas. ↓",
   beneficios:[
     {t:"Relatórios em minutos",d:"Faz em 2 minutos o que hoje te rouba a tarde toda."},
     {t:"Tabelas dinâmicas",d:"Analisa milhares de linhas e tira conclusões num instante."},
-    {t:"Dashboards que impressionam",d:"Apresenta dados que convencem chefes e clientes."},
+    {t:"Gráficos que impressionam",d:"Apresenta dados que convencem chefes e clientes."},
     {t:"Automatização",d:"Deixa o Excel trabalhar por ti, sem repetição."},
     {t:"Currículo mais forte",d:"Excel avançado que abre portas a melhores empregos."},
     {t:"Certificado",d:"Prova que sabes, com certificado da Knowledge Angola."}
@@ -261,7 +261,7 @@ const DEF={
     itens:[
       "Formação completa do básico ao avançado (presencial ou online)",
       "⟨Certificado de conclusão⟩",
-      "⟨Material de apoio e modelos prontos de dashboards⟩",
+      "⟨Material de apoio e modelos prontos⟩",
       "⟨Grupo de apoio no WhatsApp durante e após o curso⟩"
     ],
     garantia:"Se em duas semanas sentires que não estás a evoluir, devolvemos cada kwanza que pagaste."
@@ -275,7 +275,7 @@ const DEF={
   faq:[
     {q:"Preciso de saber alguma coisa antes?",a:"Não. Começamos do zero, do básico ao avançado, ao teu ritmo."},
     {q:"É presencial ou online?",a:"As duas. Tens turma presencial em Luanda e também turmas online."},
-    {q:"Quanto tempo dura a formação?",a:"Nas turmas de dias de semana, cerca de 1 mês. Nas turmas de sábados, são 5 sábados (cerca de 1 mês e uma semana)."},
+    {q:"Quanto tempo dura a formação?",a:"Nas turmas de dias de semana, 1 mês. Nas turmas de sábados, são 5 sábados (1 mês e uma semana)."},
     {q:"Recebo certificado?",a:"Sim, com certificado de conclusão da Knowledge Angola, devidamente reconhecido pelo INEFOP."},
     {q:"E se eu tiver dúvidas depois das aulas?",a:"Tens acompanhamento do formador e grupo de apoio para tirar dúvidas."},
     {q:"Como faço o pagamento?",a:"Podes pagar a pronto ou em prestações. Anexa o comprovativo na inscrição ou envia pelo WhatsApp."}
@@ -298,8 +298,11 @@ function embedUrl(link){link=String(link||"");
 }
 function waLink(txt){const n=(CFG.whatsapp||"244939845313").replace(/\D/g,"");return"https://wa.me/"+n+"?text="+encodeURIComponent(txt||"Olá! Quero a minha vaga na formação de Excel da Knowledge Angola.");}
 
-function turmaRecente(turmas){const pres=(turmas||[]).filter(t=>((t.modalidade||"Presencial")+"").toLowerCase().indexOf("presenc")>=0);
-  pres.sort((a,b)=>(new Date(b.inicio||0))-(new Date(a.inicio||0))||((+b.ed||0)-(+a.ed||0)));return pres[0]||null;}
+function turmaRecente(turmas){var pres=(turmas||[]).filter(function(t){return((t.modalidade||"Presencial")+"").toLowerCase().indexOf("presenc")>=0;});
+  var hoje=new Date(new Date().toDateString());
+  var fut=pres.filter(function(t){return t.inicio&&new Date(t.inicio)>=hoje;}).sort(function(a,b){return new Date(a.inicio)-new Date(b.inicio);});
+  if(fut.length)return fut[0];
+  pres.sort(function(a,b){return (new Date(b.inicio||0))-(new Date(a.inicio||0))||((+b.ed||0)-(+a.ed||0));});return pres[0]||null;}
 
 function fmtKz(n){n=Math.round(+n||0);var str=String(Math.abs(n)),out="",c=0;for(var i=str.length-1;i>=0;i--){out=str.charAt(i)+out;c++;if(c%3===0&&i>0)out="."+out;}return "Kz "+out+",00";}
 function render(){
