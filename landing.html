@@ -38,6 +38,8 @@ header{position:sticky;top:0;z-index:40;background:rgba(255,255,255,.97);backdro
 .hero p{font-size:clamp(16px,2.1vw,19px);color:#d7deec;max-width:620px;margin:0 0 30px}
 .cta-row{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
 .cta-row .mini{font-size:13px;color:#aeb9d0}
+.hero-guar{margin-top:22px;display:inline-flex;gap:9px;align-items:flex-start;background:rgba(255,255,255,.06);border:1px solid rgba(233,201,106,.45);border-left:3px solid var(--gold);border-radius:4px;padding:12px 16px;font-size:14.5px;color:#eef2fb;max-width:600px}
+.hero-guar b{color:#e9c96a}
 /* strip */
 .strip{background:var(--navy2);color:#dbe2f0;border-top:1px solid rgba(255,255,255,.08)}
 .strip .wrap{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;padding:22px 24px}
@@ -106,8 +108,8 @@ section{padding:52px 0}
 .formsec .head h2{color:#fff}.formsec .head p{color:#d7deec}
 .formcard{background:#fff;color:var(--ink);border-radius:3px;padding:30px;max-width:560px;margin:0 auto;box-shadow:0 24px 60px rgba(0,0,0,.28)}
 label{display:block;font-weight:700;font-size:12.5px;margin:13px 0 6px;color:var(--navy);text-transform:uppercase;letter-spacing:.04em}
-input,select{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:3px;font-size:15px;font-family:inherit;background:#fff}
-input:focus,select:focus{outline:none;border-color:var(--navy)}
+input,select,textarea{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:3px;font-size:15px;font-family:inherit;background:#fff;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--navy)}
 .file{border:1.5px dashed var(--line);border-radius:3px;padding:16px;text-align:center;color:var(--grey);font-size:14px;cursor:pointer}
 .file:hover{border-color:var(--navy);color:var(--navy)}
 .bankbox{background:var(--soft);border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:3px;padding:14px 16px;margin-bottom:6px;font-size:14px}
@@ -139,13 +141,14 @@ footer b{color:#fff}footer a{color:#fff}
 
 <section class="hero"><div class="wrap">
   <div class="eyebrow">Formação em Excel · Luanda &amp; Online</div>
-  <h1 id="h_head">O Excel que te destaca no mercado de trabalho — <em>mesmo que comeces do zero</em></h1>
-  <p id="h_sub">Domina o Excel que as empresas usam e parece um expert já nas primeiras 2 semanas — formação prática, do básico ao avançado, com certificado reconhecido pelo INEFOP.</p>
+  <h1 id="h_head">Aprende o Excel que o mercado de trabalho exige — <em>mesmo que comeces do zero</em></h1>
+  <p id="h_sub">Formação 100% prática, do básico ao avançado, com certificado reconhecido pelo INEFOP. Sais a construir relatórios, tabelas dinâmicas e dashboards que resolvem problemas reais no teu trabalho.</p>
   <div class="cta-row">
     <a href="#reservar" class="btn" id="h_cta">Quero a minha vaga</a>
     <a href="#oferta" class="btn btn-ghost">Ver a oferta</a>
     <span class="mini" id="h_mini">Vagas limitadas · Certificado incluído</span>
   </div>
+  <div class="hero-guar"><span>🛡️</span><span><b>Garantia:</b> Se em duas semanas sentires que não estás a evoluir, devolvemos <b>cada kwanza que pagaste.</b></span></div>
 </div></section>
 
 <div class="strip"><div class="wrap">
@@ -191,32 +194,21 @@ footer b{color:#fff}footer a{color:#fff}
 </div></section>
 
 <section class="formsec" id="reservar"><div class="wrap">
-  <div class="head"><div class="eyebrow" style="color:#e9c96a">Dá o primeiro passo</div><h2>Garante a tua vaga</h2><p>Deixa o teu contacto e falamos contigo pelo WhatsApp. Sem compromisso. Para pagar ou enviar o comprovativo, usa o separador ao lado.</p></div>
-  <div class="tabs">
-    <button id="tab_r" class="on" onclick="tab('r')">Quero a minha vaga</button>
-    <button id="tab_p" onclick="tab('p')">Efectuar pagamento ou Envia o comprovativo</button>
-  </div>
+  <div class="head"><div class="eyebrow" style="color:#e9c96a">Último passo</div><h2>Efectua o pagamento e envia o comprovativo</h2><p>Preenche os teus dados e anexa a foto do comprovativo de pagamento. Se preferires, envia-o directamente pelo nosso WhatsApp.</p></div>
 
-  <div class="pane on" id="pane_r"><div class="formcard" id="rcard">
-    <div id="rfields">
-      <label>Nome *</label><input id="r_nome" placeholder="O teu nome">
-      <label>WhatsApp *</label><input id="r_tel" placeholder="9XX XXX XXX">
-      <label>Curso de interesse</label><select id="r_curso"></select>
-      <label>Modalidade</label><select id="r_mod"><option>Presencial</option><option>Online</option></select>
-      <button class="btn btn-block" style="margin-top:20px" onclick="reservar()" id="r_btn">Garantir a minha vaga →</button>
-      <div class="muted center" style="margin-top:10px">Falamos contigo em breve. Vagas limitadas.</div>
-    </div>
-    <div id="rok" style="display:none"></div>
-  </div></div>
-
-  <div class="pane" id="pane_p"><div class="formcard" id="pcard">
+  <div class="formcard" id="pcard">
     <div id="formfields">
       <div id="bankbox" style="display:none"></div>
       <label>Nome completo *</label><input id="i_nome" placeholder="O teu nome">
       <label>Telefone / WhatsApp *</label><input id="i_tel" placeholder="9XX XXX XXX">
+      <label>E-mail</label><input id="i_email" type="email" placeholder="oteu@email.com">
       <label>Curso *</label><select id="i_curso"></select>
       <label>Modalidade</label><select id="i_mod"><option>Presencial</option><option>Online</option></select>
-      <label>Valor pago (Kz)</label><input id="i_valor" type="number" placeholder="ex.: 60000">
+      <label>Período *</label><select id="i_periodo" onchange="periodoChg()"><option value="">Escolhe o período…</option><option>Dias de semana</option><option>Sábados</option></select>
+      <div id="i_semwrap" style="display:none"><label>Horário</label><input id="i_semh" value="9h às 11h" readonly></div>
+      <div id="i_horariowrap" style="display:none"><label>Horário (Sábados) *</label><select id="i_horario"><option>Manhã (8:30 às 13:00)</option><option>Tarde (14:00 às 18:00)</option></select></div>
+      <label>Valor pago (Kz)</label><input id="i_valor" type="number" placeholder="ex.: Kz 70.000,00">
+      <label>O que esperas aprender? (opcional)</label><textarea id="i_exp" rows="3" placeholder="Conta-nos o que queres alcançar com a formação"></textarea>
       <label>Comprovativo de pagamento (foto)</label>
       <input id="i_comp" type="file" accept="image/*" style="display:none" onchange="onComp(this)">
       <div class="file" onclick="document.getElementById('i_comp').click()" id="i_complabel">📎 Toca para carregar a foto do comprovativo</div>
@@ -224,7 +216,7 @@ footer b{color:#fff}footer a{color:#fff}
       <button class="btn btn-block" style="margin-top:20px" onclick="enviar()" id="i_btn">Concluir inscrição</button>
     </div>
     <div id="okbox" style="display:none"></div>
-  </div></div>
+  </div>
 </div></section>
 
 <footer><div class="wrap fl">
@@ -239,8 +231,8 @@ const FB_CONFIG={apiKey:"AIzaSyBBgqJJ1SsbpxXVJBiypRMntNjSywrgGtg",authDomain:"kn
 let _db=null;try{firebase.initializeApp(FB_CONFIG);_db=firebase.database();}catch(e){}
 
 const DEF={
-  headline:'O Excel que te destaca no mercado de trabalho — <em>mesmo que comeces do zero</em>',
-  sub:"Domina o Excel que as empresas usam e parece um expert já nas primeiras 2 semanas — formação prática, do básico ao avançado, com certificado reconhecido pelo INEFOP.",
+  headline:'Aprende o Excel que o mercado de trabalho exige — <em>mesmo que comeces do zero</em>',
+  sub:"Formação 100% prática, do básico ao avançado, com certificado reconhecido pelo INEFOP. Sais a construir relatórios, tabelas dinâmicas e dashboards que resolvem problemas reais no teu trabalho.",
   cta:"Quero a minha vaga",
   mini:"Vagas limitadas · Certificado incluído",
   whatsapp:"244939845313",
@@ -264,16 +256,15 @@ const DEF={
   testemunhos:[],
   oferta:{
     titulo:"Curso de Excel — do Básico ao Avançado",
-    preco:"⟨PREÇO⟩ Kz",
+    preco:"Kz 70.000,00",
     facilidade:"Com entrada + facilidades de pagamento em prestações",
     itens:[
       "Formação completa do básico ao avançado (presencial ou online)",
       "⟨Certificado de conclusão⟩",
       "⟨Material de apoio e modelos prontos de dashboards⟩",
-      "⟨Grupo de apoio no WhatsApp durante e após o curso⟩",
-      "⟨Aula extra de introdução ao Power BI⟩"
+      "⟨Grupo de apoio no WhatsApp durante e após o curso⟩"
     ],
-    garantia:"Garantia: assiste à primeira aula. Se não te agradar, devolvemos o valor."
+    garantia:"Se em duas semanas sentires que não estás a evoluir, devolvemos cada kwanza que pagaste."
   },
   porque:[
     {t:"Turmas pequenas",d:"Atenção individual, não uma sala cheia."},
@@ -284,11 +275,12 @@ const DEF={
   faq:[
     {q:"Preciso de saber alguma coisa antes?",a:"Não. Começamos do zero, do básico ao avançado, ao teu ritmo."},
     {q:"É presencial ou online?",a:"As duas. Tens turma presencial em Luanda e também turmas online."},
+    {q:"Quanto tempo dura a formação?",a:"Nas turmas de dias de semana, cerca de 1 mês. Nas turmas de sábados, são 5 sábados (cerca de 1 mês e uma semana)."},
     {q:"Recebo certificado?",a:"Sim, com certificado de conclusão da Knowledge Angola, devidamente reconhecido pelo INEFOP."},
     {q:"E se eu tiver dúvidas depois das aulas?",a:"Tens acompanhamento do formador e grupo de apoio para tirar dúvidas."},
     {q:"Como faço o pagamento?",a:"Podes pagar a pronto ou em prestações. Anexa o comprovativo na inscrição ou envia pelo WhatsApp."}
   ],
-  cursos:["Excel (do básico ao avançado)","Power BI"],
+  cursos:["Excel (do básico ao avançado)"],
   local:"Morro Bento, junto ao IMETRO — Rua: Galeria dos Pães, Luanda",
   tel:"+(244) 939 845 313"
 };
@@ -309,6 +301,7 @@ function waLink(txt){const n=(CFG.whatsapp||"244939845313").replace(/\D/g,"");re
 function turmaRecente(turmas){const pres=(turmas||[]).filter(t=>((t.modalidade||"Presencial")+"").toLowerCase().indexOf("presenc")>=0);
   pres.sort((a,b)=>(new Date(b.inicio||0))-(new Date(a.inicio||0))||((+b.ed||0)-(+a.ed||0)));return pres[0]||null;}
 
+function fmtKz(n){n=Math.round(+n||0);var str=String(Math.abs(n)),out="",c=0;for(var i=str.length-1;i>=0;i--){out=str.charAt(i)+out;c++;if(c%3===0&&i>0)out="."+out;}return "Kz "+out+",00";}
 function render(){
   document.getElementById("h_head").innerHTML=CFG.headline||DEF.headline;
   document.getElementById("h_sub").textContent=CFG.sub||DEF.sub;
@@ -324,8 +317,8 @@ function render(){
   document.getElementById("ofertabox").innerHTML=`<div class="eyebrow">${esc(o.titulo||"")}</div><div class="price">${esc(o.preco||"")}</div><div class="facil">${esc(o.facilidade||"")}</div><ul>${(o.itens||[]).map(x=>`<li>${esc(x)}</li>`).join("")}</ul>${o.garantia?`<div class="garantia">🛡️ ${esc(o.garantia)}</div>`:""}<a href="#reservar" class="btn btn-block">Quero garantir a minha vaga</a>`;
   document.getElementById("porquegrid").innerHTML=(CFG.porque||[]).map(p=>`<div class="pq"><b>${esc(p.t)}</b><span>${esc(p.d)}</span></div>`).join("");
   document.getElementById("faqbox").innerHTML=(CFG.faq||[]).map(f=>`<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join("");
-  const cs=(CFG.cursos&&CFG.cursos.length?CFG.cursos:DEF.cursos);const opt=cs.map(c=>`<option>${esc(c)}</option>`).join("");
-  document.getElementById("i_curso").innerHTML=opt;document.getElementById("r_curso").innerHTML=opt;
+  const cs=(CFG.cursos&&CFG.cursos.length?CFG.cursos:DEF.cursos).filter(c=>!/power\s*bi/i.test(c));const opt=cs.map(c=>`<option>${esc(c)}</option>`).join("");
+  document.getElementById("i_curso").innerHTML=opt;
   const b=CFG.banco||{};const bx=document.getElementById("bankbox");
   if(bx){if(b.iban||b.nome||b.titular){bx.style.display="block";bx.innerHTML=`<div class="bankbox"><div class="bt">Dados para pagamento</div>${b.nome?`<div><b>Banco:</b> ${esc(b.nome)}</div>`:""}${b.iban?`<div><b>Nº de conta / IBAN:</b> ${esc(b.iban)}</div>`:""}${b.titular?`<div><b>Titular:</b> ${esc(b.titular)}</div>`:""}${b.ref?`<div><b>Referência:</b> ${esc(b.ref)}</div>`:""}<div class="bn">Efetue o pagamento para os dados acima e depois envie o comprovativo abaixo.</div></div>`;}else{bx.style.display="none";bx.innerHTML="";}}
   const tc=document.getElementById("turmacard");
@@ -347,6 +340,7 @@ function boot(){
     var s=snap.val();if(!s)return;var d;try{d=JSON.parse(s);}catch(e){return;}
     if(d.landing)CFG=Object.assign({},DEF,d.landing);
     if(d.precos&&!(d.landing&&d.landing.cursos))CFG.cursos=Object.keys(d.precos);
+    if(d.precos){var _pk=Object.keys(d.precos);var _ex=_pk.filter(function(k){return /excel/i.test(k);})[0]||_pk[0];var _pv=_ex?d.precos[_ex]:null;if(_pv!=null&&!isNaN(_pv)&&+_pv>0){CFG.oferta=Object.assign({},CFG.oferta||DEF.oferta,{preco:fmtKz(_pv)});}}
     if(d.comp){if(d.comp.local&&(!CFG.local||CFG.local===DEF.local))CFG.local=d.comp.local;if(d.comp.tel&&(!CFG.tel||CFG.tel===DEF.tel))CFG.tel=d.comp.tel;CFG.banco={nome:d.comp.banco||"",iban:d.comp.iban||"",titular:d.comp.titular||"",ref:d.comp.ref||""};}
     TURMA=turmaRecente(d.turmas);
     render();
@@ -375,10 +369,11 @@ function onComp(inp){const f=inp.files&&inp.files[0];if(!f)return;const r=new Fi
     const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);
     COMP_B64=c.toDataURL("image/jpeg",0.7);document.getElementById("i_complabel").innerHTML="✅ Comprovativo carregado — "+esc(f.name);};img.src=e.target.result;};
   r.readAsDataURL(f);}
+function periodoChg(){var p=val("i_periodo");var sab=/s[áa]bado/i.test(p),sem=/semana/i.test(p);var w=document.getElementById("i_horariowrap"),w2=document.getElementById("i_semwrap");if(w)w.style.display=sab?"block":"none";if(w2)w2.style.display=sem?"block":"none";}
 function enviar(){
   const nome=val("i_nome"),tel=val("i_tel");
   if(!nome||!tel){alert("Falta o nome e o telefone.");return;}
-  const rec={quando:new Date().toISOString(),tipo:"Pagamento",nome:nome,tel:tel,curso:val("i_curso"),modalidade:val("i_mod"),turma:(TURMA&&TURMA.cod)||"",edicao:(TURMA&&TURMA.ed)||"",valorPago:+val("i_valor")||0,comprovativo:COMP_B64||"",viaWhatsapp:!COMP_B64,estado:"Nova",origem:"Landing"};
+  const rec={quando:new Date().toISOString(),tipo:"Pagamento",nome:nome,tel:tel,email:val("i_email"),expectativas:val("i_exp"),curso:val("i_curso"),modalidade:val("i_mod"),periodo:val("i_periodo"),horario:(/s[áa]bado/i.test(val("i_periodo"))?val("i_horario"):(/semana/i.test(val("i_periodo"))?"9h às 11h":"")),turma:(TURMA&&TURMA.cod)||"",edicao:(TURMA&&TURMA.ed)||"",valorPago:+val("i_valor")||0,comprovativo:COMP_B64||"",viaWhatsapp:!COMP_B64,estado:"Nova",origem:"Landing"};
   const btn=document.getElementById("i_btn");btn.textContent="A enviar…";btn.disabled=true;
   function done(){document.getElementById("formfields").style.display="none";const ok=document.getElementById("okbox");ok.style.display="block";
     ok.innerHTML=`<div class="ok"><div style="font-size:34px">🎉</div><h3 style="color:#176b39;margin:6px 0">Inscrição recebida!</h3><p>Obrigado, ${esc(nome)}. A nossa equipa vai confirmar o pagamento e entrar em contacto.</p>${!COMP_B64?`<p class="muted">Ainda não anexaste o comprovativo. Envia-o pelo WhatsApp:</p><a class="wa-btn" target="_blank" href="${esc(waLink("Olá! Acabei de me inscrever ("+nome+"). Envio o comprovativo em anexo."))}">Enviar comprovativo pelo WhatsApp</a>`:`<a class="wa-btn" target="_blank" href="${esc(waLink("Olá! Acabei de me inscrever: "+nome))}">Falar connosco no WhatsApp</a>`}</div>`;}
