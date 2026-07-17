@@ -261,6 +261,13 @@ function filaEmail(para,assunto,corpo){try{if(para&&window.firebase&&firebase.ap
 function filaCalendario(titulo,inicio,fim,nota,convidados,recorrencia){try{if(window.firebase&&firebase.apps&&firebase.apps.length){const payload={titulo:titulo,inicio:inicio,fim:fim||"",nota:nota||"",convidados:convidados||"",criadoEm:new Date().toISOString()};if(recorrencia&&recorrencia.dias&&recorrencia.dias.length)payload.recorrencia={dias:recorrencia.dias};const ref=firebase.database().ref("fila_calendario").push(payload);return ref.key;}}catch(e){}return null;}
 /* Envia um pedido de cancelamento para o Google Calendar. Depende de o Apps Script (lado do Firebase→Calendar) processar a fila "fila_calendario_cancelar" e apagar o evento correspondente à referência — essa parte não está neste ficheiro. */
 function filaCancelarCalendario(refKey,titulo){try{if(window.firebase&&firebase.apps&&firebase.apps.length&&refKey)firebase.database().ref("fila_calendario_cancelar").push({refKey:refKey,titulo:titulo||"",criadoEm:new Date().toISOString()});}catch(e){}}
+/* Devolve o e-mail do colaborador (procurado em data.perfis pelo nome). Usado para
+   incluir automaticamente o formador responsável nos convites do PDS, sem ser preciso
+   adicioná-lo à mão. */
+function emailDoColaborador(nome){if(!nome)return"";var p=(data.perfis||[]).find(function(x){return x.nome===nome;});return (p&&p.email)?p.email:"";}
+/* Junta vários e-mails (ignora vazios/repetidos) numa lista separada por vírgulas,
+   pronta a passar como "convidados" ao Google Calendar. */
+function juntarConvidados(){var vistos={};var out=[];for(var i=0;i<arguments.length;i++){var e=(arguments[i]||"").trim();if(e&&!vistos[e]){vistos[e]=true;out.push(e);}}return out.join(",");}
 function agendarAtividade(){const tit=val("ag_tit"),dt=val("ag_data"),hr=val("ag_hora");if(!tit||!dt){toast("Falta título e data");return;}filaCalendario(tit,dt+"T"+(hr||"09:00")+":00","",val("ag_nota"));toast("Actividade enviada para o Google Calendar");const t=document.getElementById("ag_tit");if(t)t.value="";const nn=document.getElementById("ag_nota");if(nn)nn.value="";}
 function persistServer(){if(_saveT)clearTimeout(_saveT);_saveT=setTimeout(function(){try{google.script.run.saveState(JSON.stringify(data));}catch(e){}},600);}
 function persistFB(){if(_saveT)clearTimeout(_saveT);_saveT=setTimeout(function(){try{_fbRef.set(JSON.stringify(data));}catch(e){}},600);}
@@ -1224,10 +1231,12 @@ function marcarPds(){if(pdsEdit===null)return;const o=data.online[pdsEdit];if(!o
   if(alvo.gcalRef)filaCancelarCalendario(alvo.gcalRef,"PDS — "+o.nome);
   alvo.data=dd;alvo.hora=hh;alvo.duracao=durMin;
   const fimISO=new Date(new Date(dd+"T"+hh+":00").getTime()+durMin*60000).toISOString();
-  const _ref=filaCalendario("PDS — "+o.nome,dd+"T"+hh+":00",fimISO,"Ponto de Situação · Formador: "+(o.formador||"")+" · Knowledge Angola",o.email||"");
+  const _emailForm=emailDoColaborador(o.formador);
+  const _ref=filaCalendario("PDS — "+o.nome,dd+"T"+hh+":00",fimISO,"Ponto de Situação · Formador: "+(o.formador||"")+" · Knowledge Angola",juntarConvidados(o.email,_emailForm));
   alvo.gcalRef=_ref||null;
   syncProx(o);persist();
   if(o.email)filaEmail(o.email,"Ponto de Situação reagendado — Knowledge Angola","Olá "+esc(o.nome)+",<br><br>O teu Ponto de Situação (PDS) foi reagendado para <b>"+esc(dd)+" às "+esc(hh)+"</b>.<br><br>Até lá!<br>Knowledge Angola");
+  if(_emailForm)filaEmail(_emailForm,"PDS reagendado — "+o.nome+" — Knowledge Angola","Olá "+esc(o.formador)+",<br><br>O PDS de <b>"+esc(o.nome)+"</b> foi reagendado para <b>"+esc(dd)+" às "+esc(hh)+"</b>. Foste convidado(a) automaticamente — o evento já está no teu Google Calendar, com o link para participar.<br><br>Knowledge Angola");
   pdsEdit=null;pdsEditIdx=null;toast("PDS actualizado p/ "+dd+" "+hh);render();return;
  }
  var recCk=(document.getElementById("pds_rec")||{}).checked;
@@ -1249,9 +1258,11 @@ function marcarPds(){if(pdsEdit===null)return;const o=data.online[pdsEdit];if(!o
  persist();
  if(o.email)filaEmail(o.email,"Ponto de Situação agendado — Knowledge Angola","Olá "+esc(o.nome)+",<br><br>O teu próximo Ponto de Situação (PDS) está marcado para <b>"+esc(dd)+" às "+esc(hh)+"</b>"+(comp?" (em conjunto com "+esc(comp.nome)+")":"")+".<br><br>Até lá!<br>Knowledge Angola");
  var _fimISO=new Date(new Date(dd+"T"+hh+":00").getTime()+durMin*60000).toISOString();
- var _gcalRef=filaCalendario("PDS — "+o.nome+(comp?" + "+comp.nome:""),dd+"T"+hh+":00",_fimISO,"Ponto de Situação · Formador: "+(o.formador||"")+" · Knowledge Angola",o.email||"",recCk?{dias:diasCk}:null);
+ var _emailForm=emailDoColaborador(o.formador);
+ var _gcalRef=filaCalendario("PDS — "+o.nome+(comp?" + "+comp.nome:""),dd+"T"+hh+":00",_fimISO,"Ponto de Situação · Formador: "+(o.formador||"")+" · Knowledge Angola",juntarConvidados(o.email,comp&&comp.email,_emailForm),recCk?{dias:diasCk}:null);
  if(_gcalRef){pdsEntry.gcalRef=_gcalRef;if(compEntry)compEntry.gcalRef=_gcalRef;persist();}
  if(comp&&comp.email)filaEmail(comp.email,"Ponto de Situação agendado — Knowledge Angola","Olá "+esc(comp.nome)+",<br><br>O teu próximo Ponto de Situação (PDS) está marcado para <b>"+esc(dd)+" às "+esc(hh)+"</b> (em conjunto com "+esc(o.nome)+").<br><br>Até lá!<br>Knowledge Angola");
+ if(_emailForm)filaEmail(_emailForm,"PDS agendado — "+o.nome+" — Knowledge Angola","Olá "+esc(o.formador)+",<br><br>O PDS de <b>"+esc(o.nome)+"</b> ficou marcado para <b>"+esc(dd)+" às "+esc(hh)+"</b>"+(comp?" (em conjunto com "+esc(comp.nome)+")":"")+". Foste convidado(a) automaticamente — o evento já está no teu Google Calendar, com o link para participar.<br><br>Knowledge Angola");
  pdsEdit=null;toast("PDS marcado p/ "+dd+" "+hh+(comp?" com "+comp.nome:"")+(recCk?" ("+diasCk.map(d=>DIAS_NOME[d]).join("+")+", semanal)":""));render();}
 function pdsCompanionOptions(selfIdx){return '<option value="">— ninguém, PDS individual —</option>'+data.online.map(function(x,xi){return xi===selfIdx||x.status==="Concluído"?"":'<option value="'+xi+'">'+esc(x.nome)+'</option>';}).join("");}
 function pdsPickerHTML(){if(pdsEdit===null)return"";const o=data.online[pdsEdit];if(!o)return"";const editando=pdsEditIdx!==null;const alvo=editando?(o.pds||[])[pdsEditIdx]:null;const dd0=(alvo&&alvo.data)||o.proximoPDS||nextTuesday();const wd0=new Date(dd0).getDay();return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)cancelPds()"><div class="card" style="padding:22px;width:380px;max-width:94vw;max-height:88vh;overflow:auto"><h3 style="color:var(--azul);margin-bottom:2px">${editando?"Editar PDS":"Marcar PDS"}</h3><div class="muted" style="margin-bottom:12px">${esc(o.nome)}${o.formador?' · '+esc(o.formador):''}</div><label>Data</label><input id="pds_data" type="date" value="${esc(dd0)}"><label style="margin-top:8px">Hora</label><input id="pds_hora" type="time" value="${esc((alvo&&alvo.hora)||o.proximoHora||'19:30')}">
@@ -1557,14 +1568,18 @@ function marcarPdsF(){if(!pdsEditF)return;const f=data.formandos.find(x=>x.cod==
   const alvo=f.pds[pdsEditFIdx];if(!alvo){pdsEditF=null;pdsEditFIdx=null;render();return;}
   if(alvo.gcalRef)filaCancelarCalendario(alvo.gcalRef,"PDS — "+f.nome);
   alvo.data=dd;alvo.hora=hh;alvo.duracao=durMin;
-  const _ref=filaCalendario("PDS — "+f.nome,dd+"T"+hh+":00",fimISO,"Ponto de Situação (presencial) · Knowledge Angola",f.email||"");
+  const _emailFormF=emailDoColaborador(f.formador);
+  const _ref=filaCalendario("PDS — "+f.nome,dd+"T"+hh+":00",fimISO,"Ponto de Situação (presencial) · Formador: "+(f.formador||"")+" · Knowledge Angola",juntarConvidados(f.email,_emailFormF));
   alvo.gcalRef=_ref||null;persist();
   if(f.email)filaEmail(f.email,"Ponto de Situação reagendado — Knowledge Angola","Olá "+esc(f.nome)+",<br><br>O teu Ponto de Situação (PDS) foi reagendado para <b>"+esc(dd)+" às "+esc(hh)+"</b>.<br><br>Até lá!<br>Knowledge Angola");
+  if(_emailFormF)filaEmail(_emailFormF,"PDS reagendado — "+f.nome+" — Knowledge Angola","Olá "+esc(f.formador)+",<br><br>O PDS de <b>"+esc(f.nome)+"</b> foi reagendado para <b>"+esc(dd)+" às "+esc(hh)+"</b>. Foste convidado(a) automaticamente — o evento já está no teu Google Calendar, com o link para participar.<br><br>Knowledge Angola");
   pdsEditF=null;pdsEditFIdx=null;toast("PDS actualizado p/ "+dd+" "+hh);render();return;
  }
  const entry={data:dd,hora:hh,duracao:durMin,criadoEm:new Date().toISOString(),feito:false};f.pds.push(entry);persist();
  if(f.email)filaEmail(f.email,"Ponto de Situação agendado — Knowledge Angola","Olá "+esc(f.nome)+",<br><br>O teu próximo Ponto de Situação (PDS) está marcado para <b>"+esc(dd)+" às "+esc(hh)+"</b>.<br><br>Até lá!<br>Knowledge Angola");
- const _ref=filaCalendario("PDS — "+f.nome,dd+"T"+hh+":00",fimISO,"Ponto de Situação (presencial) · Knowledge Angola",f.email||"");if(_ref){entry.gcalRef=_ref;persist();}
+ const _emailFormF2=emailDoColaborador(f.formador);
+ const _ref=filaCalendario("PDS — "+f.nome,dd+"T"+hh+":00",fimISO,"Ponto de Situação (presencial) · Formador: "+(f.formador||"")+" · Knowledge Angola",juntarConvidados(f.email,_emailFormF2));if(_ref){entry.gcalRef=_ref;persist();}
+ if(_emailFormF2)filaEmail(_emailFormF2,"PDS agendado — "+f.nome+" — Knowledge Angola","Olá "+esc(f.formador)+",<br><br>O PDS de <b>"+esc(f.nome)+"</b> ficou marcado para <b>"+esc(dd)+" às "+esc(hh)+"</b>. Foste convidado(a) automaticamente — o evento já está no teu Google Calendar, com o link para participar.<br><br>Knowledge Angola");
  pdsEditF=null;toast("PDS marcado p/ "+dd+" "+hh);render();}
 function doPdsF(cod,idx){const f=data.formandos.find(x=>x.cod===cod);if(!f)return;ensurePdsF(f);const p=f.pds[idx];if(!p)return;p.feito=true;p.dataFeito=new Date().toISOString().slice(0,10);persist();toast("PDS marcado como feito");render();}
 function cancelPdsFItem(cod,idx){const f=data.formandos.find(x=>x.cod===cod);if(!f)return;ensurePdsF(f);const p=f.pds[idx];if(!p)return;if(!confirm("Cancelar o PDS de "+p.data+"?"))return;if(p.gcalRef)filaCancelarCalendario(p.gcalRef,"PDS — "+f.nome);f.pds.splice(idx,1);persist();toast("PDS cancelado"+(p.gcalRef?" (pedido de cancelamento enviado ao Google Calendar)":""));render();}
