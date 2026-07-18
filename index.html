@@ -740,8 +740,8 @@ function vPainel(){
   ${K("Pagamentos em atraso",atraso,atraso>0?"alert":"","pagamentos")}
   ${K("Edições em andamento",turmas,"","calendario")}
   ${K("Já formámos",formados,"","formandos")}
-  ${K("Novos inscritos (mês)",(function(){var m=new Date().toISOString().slice(0,7);return data.formandos.filter(f=>(f.data||"").slice(0,7)===m).length+(data.online||[]).filter(o=>((o.criadoEm||"").slice(0,7))===m).length;})(),"","formandos")}
-  ${K("Conversão de leads (mês)",(function(){var m=new Date().toISOString().slice(0,7);var l=data.leads.filter(x=>(x.data||"").slice(0,7)===m).length;var ins=data.formandos.filter(f=>(f.data||"").slice(0,7)===m).length;return l?Math.round(ins/l*100)+'%':'—';})(),"","leads")}
+  ${K("Novos inscritos (mês)",(function(){var m=new Date().toISOString().slice(0,7);var paga=function(cod){var p=payOf(cod);return !!(p&&((+p.pago||0)>0||(p.prestacoes||[]).reduce(function(a,x){return a+(+x.valor||0);},0)>0));};return data.formandos.filter(function(f){return (f.data||"").slice(0,7)===m&&paga(f.cod);}).length+(data.online||[]).filter(function(o){return ((o.criadoEm||"").slice(0,7))===m&&(+o.valorPago||0)>0;}).length;})(),"","formandos")}
+  ${K("Conversão de leads",(function(){var totL=(data.leads||[]).length;if(!totL)return '—';var pagos={};data.formandos.forEach(function(f){var p=payOf(f.cod);if(p&&((+p.pago||0)>0||(p.prestacoes||[]).reduce(function(a,x){return a+(+x.valor||0);},0)>0)){var k=normTel(f.tel);if(k)pagos[k]=1;}});(data.online||[]).forEach(function(o){if((+o.valorPago||0)>0){var k=normTel(o.contacto);if(k)pagos[k]=1;}});var conv=(data.leads||[]).filter(function(l){return pagos[normTel(l.tel)];}).length;return Math.round(conv/totL*100)+'%';})(),"","leads")}
   ${Kc("Certificados recebidos",certRec,"","Entregue")}
   ${Kc("Certificados pendentes",certPend,certPend>0?"alert":"","Pendente")}
   ${K("Chamadas (7 dias)",cham7,"","chamadas")}
