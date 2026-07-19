@@ -68,9 +68,9 @@ section{padding:52px 0}
 /* testemunhos */
 #tgrid{display:grid;gap:22px;grid-template-columns:repeat(auto-fit,minmax(280px,360px));justify-content:center}
 .tcard{background:#fff;border:1px solid var(--line);padding:16px}
-.vid{position:relative;width:100%;aspect-ratio:16/9;padding-top:0;overflow:hidden;background:#000;border-radius:4px}
+.vid{position:relative;width:100%;aspect-ratio:9/16;max-width:300px;margin:0 auto;padding-top:0;overflow:hidden;background:#eef1f6;border-radius:8px}
 .vid iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
-@supports not (aspect-ratio:16/9){.vid{padding-top:56.25%}}
+@supports not (aspect-ratio:9/16){.vid{padding-top:177%}}
 .tcard .nm{font-weight:700;color:var(--navy);margin-top:14px;font-size:15.5px}
 .pill{display:inline-block;padding:3px 10px;border-radius:2px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-top:6px}
 .p-verde{background:#e5f4ec;color:#1E7B45}.p-azul{background:#e7edf7;color:var(--navy)}
@@ -142,7 +142,7 @@ footer b{color:#fff}footer a{color:#fff}
 
 <section class="hero"><div class="wrap">
   <div class="eyebrow">Formação em Excel · Luanda &amp; Online</div>
-  <h1 id="h_head">Aprende o Excel que o mercado de trabalho exige — <em>mesmo que comeces do zero</em></h1>
+  <h1 id="h_head">Aprenda o Excel que o mercado de trabalho exige — <em>mesmo que comeces do zero</em></h1>
   <p id="h_sub">Formação 100% prática, do básico ao avançado, com certificado reconhecido pelo INEFOP. Sais a construir relatórios, tabelas dinâmicas que resolvem problemas reais no teu trabalho.</p>
   <div class="cta-row">
     <a href="#reservar" class="btn" id="h_cta">Quero a minha vaga</a>
@@ -232,7 +232,7 @@ const FB_CONFIG={apiKey:"AIzaSyBBgqJJ1SsbpxXVJBiypRMntNjSywrgGtg",authDomain:"kn
 let _db=null;try{firebase.initializeApp(FB_CONFIG);_db=firebase.database();}catch(e){}
 
 const DEF={
-  headline:'Aprende o Excel que o mercado de trabalho exige — <em>mesmo que comeces do zero</em>',
+  headline:'Aprenda o Excel que o mercado de trabalho exige — <em>mesmo que comeces do zero</em>',
   sub:"Formação 100% prática, do básico ao avançado, com certificado reconhecido pelo INEFOP. Sais a construir relatórios, tabelas dinâmicas que resolvem problemas reais no teu trabalho.",
   cta:"Quero a minha vaga",
   mini:"Vagas limitadas · Certificado incluído",
@@ -298,6 +298,8 @@ function embedUrl(link){link=String(link||"");
   return link;
 }
 function waLink(txt){const n=(CFG.whatsapp||"244939845313").replace(/\D/g,"");return"https://wa.me/"+n+"?text="+encodeURIComponent(txt||"Olá! Quero a minha vaga na formação de Excel da Knowledge Angola.");}
+function injectGA(id){if(!id||window._gaDone)return;window._gaDone=true;var s=document.createElement("script");s.async=true;s.src="https://www.googletagmanager.com/gtag/js?id="+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag("js",new Date());gtag("config",id);}
+function bumpStat(page,kind){try{var d=new Date().toISOString().slice(0,10);fetch("https://knowledge-angola-default-rtdb.firebaseio.com/publico/hits/"+page+".json",{method:"POST",body:JSON.stringify({d:d,k:kind})});}catch(e){}}
 
 function turmaRecente(turmas){var pres=(turmas||[]).filter(function(t){return((t.modalidade||"Presencial")+"").toLowerCase().indexOf("presenc")>=0;});
   var hoje=new Date(new Date().toDateString());
@@ -307,6 +309,7 @@ function turmaRecente(turmas){var pres=(turmas||[]).filter(function(t){return((t
 
 function fmtKz(n){n=Math.round(+n||0);var str=String(Math.abs(n)),out="",c=0;for(var i=str.length-1;i>=0;i--){out=str.charAt(i)+out;c++;if(c%3===0&&i>0)out="."+out;}return "Kz "+out+",00";}
 function render(){
+  if(CFG.ga)injectGA(CFG.ga);
   document.getElementById("h_head").innerHTML=CFG.headline||DEF.headline;
   document.getElementById("h_sub").textContent=CFG.sub||DEF.sub;
   document.getElementById("h_cta").textContent=CFG.cta||DEF.cta;
@@ -339,7 +342,9 @@ function render(){
 
 function boot(){
   render();
+  try{bumpStat("landing","v");document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest('a[href*="wa.me"]');if(a)bumpStat("landing","w");});}catch(e){}
   if(!_db)return;
+  _db.ref("publico/landing").once("value").then(function(sn){var v=sn.val();if(v){CFG=Object.assign({},DEF,v);render();}}).catch(function(){});
   _db.ref("estado").once("value").then(function(snap){
     var s=snap.val();if(!s)return;var d;try{d=JSON.parse(s);}catch(e){return;}
     if(d.landing)CFG=Object.assign({},DEF,d.landing);

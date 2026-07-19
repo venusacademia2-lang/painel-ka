@@ -79,8 +79,8 @@
   </header>
 
   <section class="hero">
-    <h1>Domina o <span>Excel</span> e o <span>Power BI</span> — e torna-te a pessoa <span>indispensável</span> no teu trabalho.</h1>
-    <p>Formações práticas, com acompanhamento real, para profissionais que querem destacar-se com dados — e ser promovidos por isso.</p>
+    <h1 id="herotitle">Domina o <span>Excel</span> e o <span>Power BI</span> — e torna-te a pessoa <span>indispensável</span> no teu trabalho.</h1>
+    <p id="herosub">Formações práticas, com acompanhamento real, para profissionais que querem destacar-se com dados — e ser promovidos por isso.</p>
     <div class="selo">🎓 Certificado ao concluir · Turmas presenciais e online</div>
     <div id="proxturma" class="selo" style="display:none;background:#e6f5ec;color:#1E7B45;border-color:#b7e0c4;margin-left:6px"></div>
     <div class="selo" style="background:#fbe9e7;color:#a3311f;border-color:#e0a99f;margin-left:6px">💻 Requisito obrigatório: computador próprio</div>
@@ -98,6 +98,8 @@
   <div id="catprest" style="text-align:center;color:#8a6d00;font-weight:600;font-size:14px;margin:6px 0">💳 Pagamento facilitado — podes pagar em prestações.</div>
   <div style="text-align:center;margin:12px 0"><input id="visname" placeholder="O teu nome (opcional)" style="padding:10px 14px;border:1px solid var(--linha);border-radius:9px;max-width:280px;width:100%;font-size:14px"><div style="font-size:12px;color:#8792a6;margin-top:4px">Escreve o teu nome e, ao pedir uma formação, a mensagem de WhatsApp já vai personalizada.</div></div>
 
+  <div id="catpdf" style="text-align:center;margin:14px 0;display:none"><a id="catpdflink" href="#" download style="display:inline-block;background:#fff;border:1.5px solid var(--azul);color:var(--azul);text-decoration:none;font-weight:700;padding:10px 22px;border-radius:10px">📄 Descarregar</a></div>
+
   <h2 class="sechd">As nossas formações</h2>
   <div id="catvagas" style="text-align:center;color:#a3311f;font-weight:700;font-size:14px;margin:6px 0 12px"></div>
   <div class="cursos" id="cursos"></div>
@@ -112,8 +114,8 @@
   <!-- Substitui estes dois testemunhos pelos reais da landing quando quiseres. -->
 
   <section class="final">
-    <h2>Pronto para dar o próximo passo?</h2>
-    <p>As vagas por turma são limitadas para garantir acompanhamento próximo. Fala connosco hoje e reserva o teu lugar.</p>
+    <h2 id="finaltitle">Pronto para dar o próximo passo?</h2>
+    <p id="finalsub">As vagas por turma são limitadas para garantir acompanhamento próximo. Fala connosco hoje e reserva o teu lugar.</p>
     <div class="btns">
       <a class="btn btn-wa" id="wa" href="#" target="_blank" rel="noopener" style="font-size:16px;padding:15px 30px">💬 Quero garantir a minha vaga</a>
     </div>
@@ -150,8 +152,9 @@
   function embedUrl(u){u=(u||"").trim();var m;m=u.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([\w-]{6,})/);if(m)return "https://www.youtube.com/embed/"+m[1];m=u.match(/drive\.google\.com\/file\/d\/([\w-]+)/);if(m)return "https://drive.google.com/file/d/"+m[1]+"/preview";m=u.match(/vimeo\.com\/(\d+)/);if(m)return "https://player.vimeo.com/video/"+m[1];return u;}
   var WA=DEFAULT.whatsapp;
   function _nome(){var n=(document.getElementById("visname")||{}).value||"";return n.trim();}
-  function contactar(curso){var n=_nome();var msg=(n?("Olá, sou "+n+". "):"Olá! ")+(curso?("Quero inscrever-me no "+curso+"."):"Quero mais informações sobre as formações.");window.open("https://wa.me/"+WA+"?text="+encodeURIComponent(msg),"_blank");}
-  function contactarMsg(msg){var n=_nome();var m=(n?("Olá, sou "+n+". "):"Olá! ")+msg;window.open("https://wa.me/"+WA+"?text="+encodeURIComponent(m),"_blank");}
+  function bumpStat(page,kind){try{var d=new Date().toISOString().slice(0,10);fetch("https://knowledge-angola-default-rtdb.firebaseio.com/publico/hits/"+page+".json",{method:"POST",body:JSON.stringify({d:d,k:kind})});}catch(e){}}
+  function contactar(curso){bumpStat("catalogo","w");var n=_nome();var msg=(n?("Olá, sou "+n+". "):"Olá! ")+(curso?("Quero inscrever-me no "+curso+"."):"Quero mais informações sobre as formações.");window.open("https://wa.me/"+WA+"?text="+encodeURIComponent(msg),"_blank");}
+  function contactarMsg(msg){bumpStat("catalogo","w");var n=_nome();var m=(n?("Olá, sou "+n+". "):"Olá! ")+msg;window.open("https://wa.me/"+WA+"?text="+encodeURIComponent(m),"_blank");}
   function injectGA(id){if(!id||window._gaDone)return;window._gaDone=true;var s=document.createElement("script");s.async=true;s.src="https://www.googletagmanager.com/gtag/js?id="+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag("js",new Date());gtag("config",id);}
   function render(cfg){
     WA=cfg.whatsapp||DEFAULT.whatsapp; if(cfg.ga)injectGA(cfg.ga);
@@ -187,6 +190,11 @@
     var loc=document.getElementById("catlocal"); if(loc) loc.textContent="📍 "+(cfg.local||"Morro Bento, Rua Galeria dos Pães, Luanda");
     var _vg=document.getElementById("catvagas"); if(_vg){ var v=cfg.vagas||12; _vg.textContent="🔥 Apenas "+v+" vagas por turma — para o formador acompanhar o ecrã de cada aluno."; }
     var _an=document.getElementById("catancora"); if(_an){ _an.textContent=cfg.ancoragem||"💡 Pensa bem: este investimento é pequeno ao lado de uma promoção que te escapa — ou das horas perdidas a refazer relatórios errados."; }
+    var _ht=document.getElementById("herotitle"); if(_ht&&cfg.titulo)_ht.textContent=cfg.titulo;
+    var _hs=document.getElementById("herosub"); if(_hs&&cfg.subtitulo)_hs.textContent=cfg.subtitulo;
+    var _ft=document.getElementById("finaltitle"); if(_ft&&cfg.finalTitulo)_ft.textContent=cfg.finalTitulo;
+    var _fs=document.getElementById("finalsub"); if(_fs&&cfg.finalSub)_fs.textContent=cfg.finalSub;
+    var _pd=document.getElementById("catpdf"),_pl=document.getElementById("catpdflink"); if(_pd&&_pl){ if(cfg.pdfOn!==false&&cfg.pdf){ _pl.href=cfg.pdf; _pl.textContent="📄 "+(cfg.pdfLabel||"Descarregar o guia grátis"); _pd.style.display=""; } else { _pd.style.display="none"; } }
     var rs=document.getElementById("ressalvatxt"); if(rs&&cfg.ressalva){ rs.innerHTML="<b>Ressalva:</b> "+String(cfg.ressalva).replace(/</g,"&lt;"); }
     var fm=document.getElementById("catformados"); if(fm){ if(cfg.formados){ fm.textContent="🎓 Já formámos "+cfg.formados; fm.style.display="inline-block"; } else { fm.style.display="none"; } }
     var lg=document.getElementById("catlogoimg"), lgd=document.getElementById("catlogodefault");
@@ -194,10 +202,11 @@
     document.getElementById("ano").textContent = new Date().getFullYear();
   }
   render(DEFAULT);
+  try{bumpStat("catalogo","v");}catch(e){}
   try{
     fetch(FB).then(function(r){return r.json();}).then(function(d){
       if(d && (d.whatsapp||d.precos||d.landing||d.proximaTurma)){
-        render({ whatsapp:(d.whatsapp||DEFAULT.whatsapp), landing:(d.landing||DEFAULT.landing), precos:(d.precos||DEFAULT.precos), proximaTurma:(d.proximaTurma||""), imagem:(d.imagem||""), cursosAtivos:(d.cursosAtivos||null), local:(d.local||""), logo:(d.logo||""), testemunhos:(d.testemunhos||[]), formados:(d.formados||""), ressalva:(d.ressalva||""), garantia:(d.garantia||""), prestacoes:(d.prestacoes||""), prestOn:d.prestOn, detalhes:(d.detalhes||""), ga:(d.ga||""), gancho:(d.gancho||""), vagas:(d.vagas||""), proximaTurmaCurso:(d.proximaTurmaCurso||{}), ancoragem:(d.ancoragem||"") });
+        render({ whatsapp:(d.whatsapp||DEFAULT.whatsapp), landing:(d.landing||DEFAULT.landing), precos:(d.precos||DEFAULT.precos), proximaTurma:(d.proximaTurma||""), imagem:(d.imagem||""), cursosAtivos:(d.cursosAtivos||null), local:(d.local||""), logo:(d.logo||""), testemunhos:(d.testemunhos||[]), formados:(d.formados||""), ressalva:(d.ressalva||""), garantia:(d.garantia||""), prestacoes:(d.prestacoes||""), prestOn:d.prestOn, detalhes:(d.detalhes||""), ga:(d.ga||""), gancho:(d.gancho||""), vagas:(d.vagas||""), proximaTurmaCurso:(d.proximaTurmaCurso||{}), ancoragem:(d.ancoragem||""), titulo:(d.titulo||""), subtitulo:(d.subtitulo||""), finalTitulo:(d.finalTitulo||""), finalSub:(d.finalSub||""), pdf:(d.pdf||""), pdfOn:d.pdfOn, pdfLabel:(d.pdfLabel||"") });
       }
     }).catch(function(){});
   }catch(e){}
