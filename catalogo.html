@@ -84,10 +84,11 @@
     <div class="selo">🎓 Certificado ao concluir · Turmas presenciais e online</div>
     <div id="proxturma" class="selo" style="display:none;background:#e6f5ec;color:#1E7B45;border-color:#b7e0c4;margin-left:6px"></div>
     <div class="selo" style="background:#fbe9e7;color:#a3311f;border-color:#e0a99f;margin-left:6px">💻 Requisito obrigatório: computador próprio</div>
+    <div id="catformados" class="selo" style="display:none;background:#eef3fb;color:#1F3864;border-color:#c7d6f0;margin-left:6px"></div>
   </section>
 
   <div class="ressalva">
-    <b>Ressalva:</b> estas formações destinam-se a profissionais e formados em <b>Economia, Contabilidade, Gestão, Finanças, Banca e Seguros, Logística e Recursos Humanos</b> — e a quem já trabalha com Excel e quer dominar a ferramenta a sério.
+    <span id="ressalvatxt"><b>Ressalva:</b> estas formações destinam-se a profissionais e formados em <b>Economia, Contabilidade, Gestão, Finanças, Banca e Seguros, Logística e Recursos Humanos</b> — e a quem já trabalha com Excel e quer dominar a ferramenta a sério.</span>
     <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #c7d6f0">Não és de nenhuma destas áreas? <a id="naochave" href="#" target="_blank" rel="noopener" style="color:var(--azul2);font-weight:700;text-decoration:underline">"Não sou da área-chave — como posso fazer?"</a> O Excel faz-te <b>poupar tempo</b>, entregar o trabalho mais depressa e <b>deixar de depender dos colegas</b> a toda a hora. Fala connosco.</div>
   </div>
 
@@ -163,6 +164,8 @@
     var pt = document.getElementById("proxturma");
     if(cfg.proximaTurma){ pt.textContent = "📅 Próxima turma: "+cfg.proximaTurma; pt.style.display="inline-block"; } else { pt.style.display="none"; }
     var loc=document.getElementById("catlocal"); if(loc) loc.textContent="📍 "+(cfg.local||"Morro Bento, Rua Galeria dos Pães, Luanda");
+    var rs=document.getElementById("ressalvatxt"); if(rs&&cfg.ressalva){ rs.innerHTML="<b>Ressalva:</b> "+String(cfg.ressalva).replace(/</g,"&lt;"); }
+    var fm=document.getElementById("catformados"); if(fm){ if(cfg.formados){ fm.textContent="🎓 Já formámos "+cfg.formados; fm.style.display="inline-block"; } else { fm.style.display="none"; } }
     var lg=document.getElementById("catlogoimg"), lgd=document.getElementById("catlogodefault");
     if(lg&&lgd){ if(cfg.logo){ lg.src=cfg.logo; lg.style.display=""; lgd.style.display="none"; } else { lg.style.display="none"; lgd.style.display=""; } }
     document.getElementById("ano").textContent = new Date().getFullYear();
@@ -171,7 +174,7 @@
   try{
     fetch(FB).then(function(r){return r.json();}).then(function(d){
       if(d && (d.whatsapp||d.precos||d.landing||d.proximaTurma)){
-        render({ whatsapp:(d.whatsapp||DEFAULT.whatsapp), landing:(d.landing||DEFAULT.landing), precos:(d.precos||DEFAULT.precos), proximaTurma:(d.proximaTurma||""), imagem:(d.imagem||""), cursosAtivos:(d.cursosAtivos||null), local:(d.local||""), logo:(d.logo||""), testemunhos:(d.testemunhos||[]) });
+        render({ whatsapp:(d.whatsapp||DEFAULT.whatsapp), landing:(d.landing||DEFAULT.landing), precos:(d.precos||DEFAULT.precos), proximaTurma:(d.proximaTurma||""), imagem:(d.imagem||""), cursosAtivos:(d.cursosAtivos||null), local:(d.local||""), logo:(d.logo||""), testemunhos:(d.testemunhos||[]), formados:(d.formados||""), ressalva:(d.ressalva||"") });
       }
     }).catch(function(){});
   }catch(e){}
