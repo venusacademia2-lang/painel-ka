@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catálogo de Formações — Knowledge Angola</title>
+<meta name="description" content="Formações práticas de Excel e Power BI em Luanda. Torna-te indispensável com dados.">
+<style>
+  :root{--azul:#1F3864;--azul2:#2E5496;--dour:#BF9000;--txt:#1a2233;--linha:#e6e9f2;--cinza:#f5f7fb;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,Arial,sans-serif;color:var(--txt);background:#eef1f6;line-height:1.55}
+  .wrap{max-width:920px;margin:0 auto;padding:0 16px 60px}
+  /* Cabeçalho / logo */
+  header{text-align:center;padding:34px 0 8px}
+  .k{width:64px;height:64px;border-radius:50%;background:var(--azul);display:inline-flex;align-items:center;justify-content:center;position:relative;margin-bottom:10px}
+  .k svg{width:64px;height:64px}
+  .brand{color:var(--azul);font-weight:800;font-size:20px;letter-spacing:.02em}
+  .brand small{display:block;color:#6b7488;font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase;margin-top:2px}
+  /* Hero (à Sabri: promessa forte + curta) */
+  .hero{background:linear-gradient(180deg,#fff, #fff);background:#fff;border:1px solid var(--linha);border-radius:16px;padding:28px 26px;margin-top:14px;text-align:center;box-shadow:0 4px 18px rgba(20,30,60,.06)}
+  .hero h1{color:var(--azul);font-size:26px;line-height:1.25;margin-bottom:8px}
+  .hero h1 span{color:var(--dour)}
+  .hero p{color:#4a5468;font-size:15px;max-width:620px;margin:0 auto}
+  .selo{display:inline-block;margin-top:14px;background:#fff3d6;color:#8a6d00;border:1px solid #f0d999;border-radius:20px;padding:4px 14px;font-size:12.5px;font-weight:600}
+  /* Ressalva */
+  .ressalva{background:#eef3fb;border:1px solid #c7d6f0;border-left:4px solid var(--azul2);border-radius:10px;padding:12px 16px;margin:18px 0;font-size:13.5px;color:#33415a}
+  .ressalva b{color:var(--azul)}
+  /* Cursos */
+  .sechd{color:var(--azul);font-size:18px;margin:24px 0 4px;border-bottom:2px solid var(--dour);padding-bottom:6px}
+  .cursos{display:grid;grid-template-columns:1fr;gap:16px;margin-top:14px}
+  @media(min-width:720px){.cursos{grid-template-columns:1fr 1fr 1fr}}
+  .curso{background:#fff;border:1px solid var(--linha);border-radius:14px;padding:20px;display:flex;flex-direction:column;box-shadow:0 3px 12px rgba(20,30,60,.05);position:relative;overflow:hidden}
+  .curso.destaque{border:2px solid var(--dour)}
+  .fita{position:absolute;top:12px;right:-32px;background:var(--dour);color:#fff;font-size:11px;font-weight:700;padding:3px 40px;transform:rotate(45deg)}
+  .curso h3{color:var(--azul);font-size:17px;margin-bottom:4px}
+  .nivel{font-size:11.5px;font-weight:700;color:var(--azul2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+  .curso .desc{font-size:14px;color:#4a5468;flex:1}
+  .curso ul{list-style:none;margin:10px 0;font-size:13.5px;color:#33415a}
+  .curso li{padding:3px 0 3px 22px;position:relative}
+  .curso li::before{content:"✔";position:absolute;left:0;color:#1E7B45;font-weight:700}
+  .preco{margin-top:12px;border-top:1px dashed var(--linha);padding-top:12px}
+  .preco .v{color:var(--azul);font-size:24px;font-weight:800}
+  .preco .m{font-size:12px;color:#8792a6}
+  .cta-c{display:block;text-align:center;margin-top:12px;background:var(--azul);color:#fff;text-decoration:none;font-weight:700;padding:11px;border-radius:10px;transition:.15s}
+  .cta-c:hover{background:var(--azul2)}
+  /* Testemunhos */
+  .test{display:grid;grid-template-columns:1fr;gap:12px;margin-top:14px}
+  @media(min-width:720px){.test{grid-template-columns:1fr 1fr}}
+  .tcard{background:#fff;border:1px solid var(--linha);border-radius:12px;padding:16px}
+  .tcard p{font-size:14px;color:#33415a;font-style:italic}
+  .tcard .a{margin-top:8px;font-weight:700;color:var(--azul);font-size:13px}
+  .estrelas{color:var(--dour);font-size:14px}
+  .vid{position:relative;width:100%;aspect-ratio:9/16;max-width:230px;margin:0 auto 8px;overflow:hidden;border-radius:10px;background:#eef1f6}
+  .vid iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+  /* CTA final */
+  .final{background:var(--azul);color:#fff;border-radius:16px;padding:28px 24px;margin-top:26px;text-align:center}
+  .final h2{font-size:21px;margin-bottom:6px}
+  .final p{opacity:.9;font-size:14.5px;max-width:560px;margin:0 auto 16px}
+  .btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .btn{display:inline-block;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:10px}
+  .btn-wa{background:#25D366;color:#0b3d1e}
+  .btn-land{background:#fff;color:var(--azul)}
+  .vagas{margin-top:14px;font-size:12.5px;opacity:.85}
+  footer{text-align:center;color:#7b8394;font-size:12px;margin-top:26px}
+  footer b{color:var(--azul)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="catbanner" style="width:100%;height:180px;border-radius:16px;margin-top:14px;background:linear-gradient(120deg,#1F3864,#2E5496);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:21px;text-align:center;padding:0 16px;box-shadow:0 4px 18px rgba(20,30,60,.12)">Excel · Power BI · dados que fazem a diferença</div>
+
+  <header>
+    <img id="catlogoimg" alt="Knowledge Angola" style="display:none;max-height:76px;max-width:92%">
+    <div id="catlogodefault">
+    <span class="k"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="48" fill="#1F3864"/><circle cx="50" cy="50" r="40" fill="none" stroke="#3a4d75" stroke-width="1.5"/><circle cx="50" cy="21" r="4" fill="#BF9000"/><text x="50" y="53" text-anchor="middle" dominant-baseline="central" font-family="Georgia,'Times New Roman',serif" font-size="50" font-weight="700" fill="#fff">K</text></svg></span>
+    <div class="brand">Knowledge Angola<small>Academia de Formação · Luanda</small></div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <h1>Domina o <span>Excel</span> e o <span>Power BI</span> — e torna-te a pessoa <span>indispensável</span> no teu trabalho.</h1>
+    <p>Formações práticas, com acompanhamento real, para profissionais que querem destacar-se com dados — e ser promovidos por isso.</p>
+    <div class="selo">🎓 Certificado ao concluir · Turmas presenciais e online</div>
+    <div id="proxturma" class="selo" style="display:none;background:#e6f5ec;color:#1E7B45;border-color:#b7e0c4;margin-left:6px"></div>
+    <div class="selo" style="background:#fbe9e7;color:#a3311f;border-color:#e0a99f;margin-left:6px">💻 Requisito obrigatório: computador próprio</div>
+  </section>
+
+  <div class="ressalva">
+    <b>Ressalva:</b> estas formações destinam-se a profissionais e formados em <b>Economia, Contabilidade, Gestão, Finanças, Banca e Seguros, Logística e Recursos Humanos</b> — e a quem já trabalha com Excel e quer dominar a ferramenta a sério.
+    <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #c7d6f0">Não és de nenhuma destas áreas? <a id="naochave" href="#" target="_blank" rel="noopener" style="color:var(--azul2);font-weight:700;text-decoration:underline">"Não sou da área-chave — como posso fazer?"</a> O Excel faz-te <b>poupar tempo</b>, entregar o trabalho mais depressa e <b>deixar de depender dos colegas</b> a toda a hora. Fala connosco.</div>
+  </div>
+
+  <h2 class="sechd">As nossas formações</h2>
+  <div class="cursos" id="cursos"></div>
+
+  <h2 class="sechd">O que dizem os nossos formandos</h2>
+  <div class="test" id="testbox">
+    <div class="tcard"><div class="estrelas">★★★★★</div><p>"Entrei sem saber quase nada de Excel. Hoje faço relatórios que a minha chefia usa nas reuniões. Valeu cada Kwanza."</p><div class="a">— Formanda, área de Contabilidade</div></div>
+    <div class="tcard"><div class="estrelas">★★★★★</div><p>"O Power BI mudou a forma como apresento resultados. Passei de folhas confusas para dashboards que decidem negócio."</p><div class="a">— Formando, área de Gestão</div></div>
+  </div>
+  <!-- Substitui estes dois testemunhos pelos reais da landing quando quiseres. -->
+
+  <section class="final">
+    <h2>Pronto para dar o próximo passo?</h2>
+    <p>As vagas por turma são limitadas para garantir acompanhamento próximo. Fala connosco hoje e reserva o teu lugar.</p>
+    <div class="btns">
+      <a class="btn btn-wa" id="wa" href="#" target="_blank" rel="noopener">💬 Falar no WhatsApp</a>
+      <a class="btn btn-land" id="land" href="#" target="_blank" rel="noopener">📝 Inscrever-me</a>
+    </div>
+    <div class="vagas" id="catlocal">📍 Morro Bento, Rua Galeria dos Pães, Luanda</div>
+  </section>
+
+  <footer>© <span id="ano"></span> <b>Knowledge Angola</b> · Academia de Formação</footer>
+</div>
+
+<script>
+  /* Valores por defeito (mostrados de imediato). Depois o catálogo tenta buscar
+     os que configuraste no PAINEL (Definições → Catálogo → Publicar catálogo). */
+  var DEFAULT = {
+    whatsapp:"244939845313",
+    landing:"https://venusacademia2-lang.github.io/painel-ka/landing.html",
+    proximaTurma:"",
+    precos:{"Excel do Básico ao Avançado":70000,"Excel do Zero ao Fundamental":24500,"Power BI":50000}
+  };
+  var CURSOS = [
+    { nome:"Excel do Básico ao Avançado", nivel:"Do essencial ao domínio", destaque:true, msg:"Olá! Quero inscrever-me no Excel do Básico ao Avançado.",
+      desc:"Do zero prático às fórmulas, tabelas dinâmicas e automatizações que impressionam qualquer chefia.",
+      benef:["Fórmulas que resolvem problemas reais","Tabelas dinâmicas e gráficos","Relatórios prontos a apresentar"] },
+    { nome:"Excel do Zero ao Fundamental", nivel:"Para começar do zero", destaque:false, msg:"Olá! Quero inscrever-me no Excel do Zero ao Fundamental.",
+      desc:"Nunca tocaste no Excel? Sais a trabalhar com confiança no dia-a-dia do escritório.",
+      benef:["Bases sólidas sem complicação","Organizar dados com método","Confiança para o trabalho diário"] },
+    { nome:"Power BI", nivel:"Dados que decidem negócio", destaque:false, msg:"Olá! Quero inscrever-me no Power BI.",
+      desc:"Transforma folhas de dados em dashboards que contam histórias e apoiam decisões.",
+      benef:["Dashboards profissionais","Ligar e tratar dados","Apresentar resultados com impacto"] }
+  ];
+  var FB = "https://knowledge-angola-default-rtdb.firebaseio.com/publico/catalogo.json";
+  function kz(n){ return (n||0).toLocaleString("de-DE") + " Kz"; }
+  function embedUrl(u){u=(u||"").trim();var m;m=u.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([\w-]{6,})/);if(m)return "https://www.youtube.com/embed/"+m[1];m=u.match(/drive\.google\.com\/file\/d\/([\w-]+)/);if(m)return "https://drive.google.com/file/d/"+m[1]+"/preview";m=u.match(/vimeo\.com\/(\d+)/);if(m)return "https://player.vimeo.com/video/"+m[1];return u;}
+  function render(cfg){
+    var tb=document.getElementById("testbox");
+    var tv=(cfg.testemunhos||[]).filter(function(t){return t&&t.link;});
+    if(tb&&tv.length){ tb.innerHTML=tv.map(function(t){return '<div class="tcard"><div class="vid"><iframe src="'+embedUrl(t.link)+'" allowfullscreen loading="lazy"></iframe></div><div class="a">— '+(t.nome||"Formando")+'</div></div>';}).join(""); }
+    var banner=document.getElementById("catbanner");
+    if(banner){ if(cfg.imagem){ banner.style.backgroundImage="url('"+cfg.imagem+"')"; banner.textContent=""; } else { banner.style.backgroundImage=""; banner.textContent="Excel · Power BI · dados que fazem a diferença"; } }
+    var cont = document.getElementById("cursos"); cont.innerHTML="";
+    CURSOS.filter(function(c){return !cfg.cursosAtivos || cfg.cursosAtivos[c.nome]!==false;}).forEach(function(c){
+      var preco = (cfg.precos && cfg.precos[c.nome]) || DEFAULT.precos[c.nome] || 0;
+      var wa = "https://wa.me/"+cfg.whatsapp+"?text="+encodeURIComponent(c.msg);
+      var el = document.createElement("div");
+      el.className = "curso" + (c.destaque ? " destaque" : "");
+      el.innerHTML = (c.destaque?'<div class="fita">Mais procurado</div>':'') +
+        '<h3>'+c.nome+'</h3><div class="nivel">'+c.nivel+'</div>' +
+        '<div class="desc">'+c.desc+'</div>' +
+        '<ul>'+c.benef.map(function(b){return '<li>'+b+'</li>';}).join("")+'</ul>' +
+        '<div class="preco"><div class="v">'+kz(preco)+'</div><div class="m">Investimento único · certificado incluído</div></div>' +
+        '<a class="cta-c" href="'+wa+'" target="_blank" rel="noopener">Quero esta formação</a>';
+      cont.appendChild(el);
+    });
+    document.getElementById("wa").href = "https://wa.me/"+cfg.whatsapp+"?text="+encodeURIComponent("Olá! Vi o catálogo e quero mais informações sobre as formações.");
+    document.getElementById("land").href = cfg.landing || DEFAULT.landing;
+    document.getElementById("naochave").href = "https://wa.me/"+cfg.whatsapp+"?text="+encodeURIComponent("Olá! Não sou da área-chave, mas quero aprender Excel para poupar tempo e não depender dos colegas. Como posso fazer?");
+    var pt = document.getElementById("proxturma");
+    if(cfg.proximaTurma){ pt.textContent = "📅 Próxima turma: "+cfg.proximaTurma; pt.style.display="inline-block"; } else { pt.style.display="none"; }
+    var loc=document.getElementById("catlocal"); if(loc) loc.textContent="📍 "+(cfg.local||"Morro Bento, Rua Galeria dos Pães, Luanda");
+    var lg=document.getElementById("catlogoimg"), lgd=document.getElementById("catlogodefault");
+    if(lg&&lgd){ if(cfg.logo){ lg.src=cfg.logo; lg.style.display=""; lgd.style.display="none"; } else { lg.style.display="none"; lgd.style.display=""; } }
+    document.getElementById("ano").textContent = new Date().getFullYear();
+  }
+  render(DEFAULT);
+  try{
+    fetch(FB).then(function(r){return r.json();}).then(function(d){
+      if(d && (d.whatsapp||d.precos||d.landing||d.proximaTurma)){
+        render({ whatsapp:(d.whatsapp||DEFAULT.whatsapp), landing:(d.landing||DEFAULT.landing), precos:(d.precos||DEFAULT.precos), proximaTurma:(d.proximaTurma||""), imagem:(d.imagem||""), cursosAtivos:(d.cursosAtivos||null), local:(d.local||""), logo:(d.logo||""), testemunhos:(d.testemunhos||[]) });
+      }
+    }).catch(function(){});
+  }catch(e){}
+</script>
+</body>
+</html>
