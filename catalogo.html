@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Catálogo de Formações — Knowledge Angola</title>
+<title>Knowledge Angola — Formações que te preparam para o mercado de trabalho</title>
 <meta name="description" content="Formações práticas de Excel e Power BI em Luanda. Torna-te indispensável com dados.">
 <style>
   :root{--azul:#1F3864;--azul2:#2E5496;--dour:#BF9000;--txt:#1a2233;--linha:#e6e9f2;--cinza:#f5f7fb;}
@@ -68,13 +68,13 @@
 <body>
 <div class="wrap">
 
-  <div id="catbanner" style="width:100%;height:180px;border-radius:16px;margin-top:14px;background:linear-gradient(120deg,#1F3864,#2E5496);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:21px;text-align:center;padding:0 16px;box-shadow:0 4px 18px rgba(20,30,60,.12)">Excel · Power BI · dados que fazem a diferença</div>
+  <div id="catbanner" style="width:100%;min-height:180px;border-radius:16px;margin-top:14px;background:linear-gradient(120deg,#1F3864,#2E5496);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:space-between;gap:16px;color:#fff;padding:18px 26px;box-shadow:0 4px 18px rgba(20,30,60,.12)"></div>
 
   <header>
     <img id="catlogoimg" alt="Knowledge Angola" style="display:none;max-height:76px;max-width:92%">
     <div id="catlogodefault">
     <span class="k"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="48" fill="#1F3864"/><circle cx="50" cy="50" r="40" fill="none" stroke="#3a4d75" stroke-width="1.5"/><circle cx="50" cy="21" r="4" fill="#BF9000"/><text x="50" y="53" text-anchor="middle" dominant-baseline="central" font-family="Georgia,'Times New Roman',serif" font-size="50" font-weight="700" fill="#fff">K</text></svg></span>
-    <div class="brand">Knowledge Angola<small>Academia de Formação · Luanda</small></div>
+    <div class="brand">Knowledge Angola<small>Academia de Formação · Preparação para o mercado de trabalho</small></div>
     </div>
   </header>
 
@@ -87,13 +87,22 @@
     <div id="catformados" class="selo" style="display:none;background:#eef3fb;color:#1F3864;border-color:#c7d6f0;margin-left:6px"></div>
   </section>
 
+  <div id="catgancho" style="background:#1F3864;color:#fff;border-radius:14px;padding:18px 22px;margin:18px 0;text-align:center;font-size:17px;font-weight:700;line-height:1.4;box-shadow:0 4px 16px rgba(20,30,60,.15)">Chega de <span style="color:#F3C34E">depender dos colegas</span> para cada tabela ou relatório. Torna-te tu a referência com Excel e Power BI.</div>
+
   <div class="ressalva">
     <span id="ressalvatxt"><b>Ressalva:</b> estas formações destinam-se a profissionais e formados em <b>Economia, Contabilidade, Gestão, Finanças, Banca e Seguros, Logística e Recursos Humanos</b> — e a quem já trabalha com Excel e quer dominar a ferramenta a sério.</span>
     <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #c7d6f0">Não és de nenhuma destas áreas? <a id="naochave" href="#" target="_blank" rel="noopener" style="color:var(--azul2);font-weight:700;text-decoration:underline">"Não sou da área-chave — como posso fazer?"</a> O Excel faz-te <b>poupar tempo</b>, entregar o trabalho mais depressa e <b>deixar de depender dos colegas</b> a toda a hora. Fala connosco.</div>
   </div>
 
+  <div id="catgarantia" style="background:#e6f5ec;border:1px solid #b7e0c4;border-left:4px solid #1E7B45;border-radius:10px;padding:12px 16px;margin:16px 0;font-size:14px;color:#1E7B45"><b>🛡️ <span id="garantiatxt">Garantia de 3 dias: se nos primeiros 3 dias de aulas sentires que não é para ti, devolvemos 100% do teu investimento.</span></b></div>
+  <div id="catprest" style="text-align:center;color:#8a6d00;font-weight:600;font-size:14px;margin:6px 0">💳 Pagamento facilitado — podes pagar em prestações.</div>
+  <div style="text-align:center;margin:12px 0"><input id="visname" placeholder="O teu nome (opcional)" style="padding:10px 14px;border:1px solid var(--linha);border-radius:9px;max-width:280px;width:100%;font-size:14px"><div style="font-size:12px;color:#8792a6;margin-top:4px">Escreve o teu nome e, ao pedir uma formação, a mensagem de WhatsApp já vai personalizada.</div></div>
+
   <h2 class="sechd">As nossas formações</h2>
+  <div id="catvagas" style="text-align:center;color:#a3311f;font-weight:700;font-size:14px;margin:6px 0 12px"></div>
   <div class="cursos" id="cursos"></div>
+  <div id="catancora" style="text-align:center;color:#1F3864;font-weight:600;font-size:14.5px;margin:16px auto 0;max-width:660px;background:#eef3fb;border:1px solid #c7d6f0;border-radius:12px;padding:14px 18px"></div>
+  <div id="catdetalhes"></div>
 
   <h2 class="sechd">O que dizem os nossos formandos</h2>
   <div class="test" id="testbox">
@@ -106,9 +115,9 @@
     <h2>Pronto para dar o próximo passo?</h2>
     <p>As vagas por turma são limitadas para garantir acompanhamento próximo. Fala connosco hoje e reserva o teu lugar.</p>
     <div class="btns">
-      <a class="btn btn-wa" id="wa" href="#" target="_blank" rel="noopener">💬 Falar no WhatsApp</a>
-      <a class="btn btn-land" id="land" href="#" target="_blank" rel="noopener">📝 Inscrever-me</a>
+      <a class="btn btn-wa" id="wa" href="#" target="_blank" rel="noopener" style="font-size:16px;padding:15px 30px">💬 Quero garantir a minha vaga</a>
     </div>
+    <div style="margin-top:12px"><a id="land" href="#" target="_blank" rel="noopener" style="color:#fff;opacity:.82;font-size:13px;text-decoration:underline">ou inscreve-te pela página online</a></div>
     <div class="vagas" id="catlocal">📍 Morro Bento, Rua Galeria dos Pães, Luanda</div>
   </section>
 
@@ -136,14 +145,25 @@
       benef:["Dashboards profissionais","Ligar e tratar dados","Apresentar resultados com impacto"] }
   ];
   var FB = "https://knowledge-angola-default-rtdb.firebaseio.com/publico/catalogo.json";
+  var DEFAULT_BANNER = '<div style="text-align:left"><div style="font-size:26px;font-weight:800;line-height:1.05">Excel &amp; Power BI</div><div style="font-size:13px;opacity:.92;font-weight:600;margin-top:5px;max-width:340px">Formações práticas que te preparam para o mercado de trabalho.</div></div><svg width="160" height="120" viewBox="0 0 160 120" style="flex:0 0 auto"><g fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1"><path d="M10 100h140M10 70h140M10 40h140"/></g><rect x="22" y="60" width="18" height="40" rx="2" fill="#BF9000"/><rect x="52" y="42" width="18" height="58" rx="2" fill="#F3C34E"/><rect x="82" y="70" width="18" height="30" rx="2" fill="#fff" opacity=".85"/><rect x="112" y="30" width="18" height="70" rx="2" fill="#BF9000"/><polyline points="31,58 61,40 91,68 121,28" fill="none" stroke="#fff" stroke-width="2.5"/><circle cx="121" cy="28" r="4" fill="#fff"/></svg>';
   function kz(n){ return (n||0).toLocaleString("de-DE") + " Kz"; }
   function embedUrl(u){u=(u||"").trim();var m;m=u.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([\w-]{6,})/);if(m)return "https://www.youtube.com/embed/"+m[1];m=u.match(/drive\.google\.com\/file\/d\/([\w-]+)/);if(m)return "https://drive.google.com/file/d/"+m[1]+"/preview";m=u.match(/vimeo\.com\/(\d+)/);if(m)return "https://player.vimeo.com/video/"+m[1];return u;}
+  var WA=DEFAULT.whatsapp;
+  function _nome(){var n=(document.getElementById("visname")||{}).value||"";return n.trim();}
+  function contactar(curso){var n=_nome();var msg=(n?("Olá, sou "+n+". "):"Olá! ")+(curso?("Quero inscrever-me no "+curso+"."):"Quero mais informações sobre as formações.");window.open("https://wa.me/"+WA+"?text="+encodeURIComponent(msg),"_blank");}
+  function contactarMsg(msg){var n=_nome();var m=(n?("Olá, sou "+n+". "):"Olá! ")+msg;window.open("https://wa.me/"+WA+"?text="+encodeURIComponent(m),"_blank");}
+  function injectGA(id){if(!id||window._gaDone)return;window._gaDone=true;var s=document.createElement("script");s.async=true;s.src="https://www.googletagmanager.com/gtag/js?id="+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag("js",new Date());gtag("config",id);}
   function render(cfg){
+    WA=cfg.whatsapp||DEFAULT.whatsapp; if(cfg.ga)injectGA(cfg.ga);
+    var _g=document.getElementById("garantiatxt"); if(_g&&cfg.garantia)_g.textContent=cfg.garantia;
+    var _gc=document.getElementById("catgancho"); if(_gc&&cfg.gancho)_gc.textContent=cfg.gancho;
+    var _pr=document.getElementById("catprest"); if(_pr){ if(cfg.prestOn===false){_pr.style.display="none";} else { _pr.style.display=""; if(cfg.prestacoes)_pr.textContent="💳 "+cfg.prestacoes; } }
+    var _dd=document.getElementById("catdetalhes"); if(_dd){ _dd.innerHTML=cfg.detalhes?('<h2 class="sechd">Detalhes e horários</h2><div class="tcard" style="white-space:pre-line;font-size:14px;color:#33415a">'+String(cfg.detalhes).replace(/</g,"&lt;")+'</div>'):""; }
     var tb=document.getElementById("testbox");
     var tv=(cfg.testemunhos||[]).filter(function(t){return t&&t.link;});
     if(tb&&tv.length){ tb.innerHTML=tv.map(function(t){return '<div class="tcard"><div class="vid"><iframe src="'+embedUrl(t.link)+'" allowfullscreen loading="lazy"></iframe></div><div class="a">— '+(t.nome||"Formando")+'</div></div>';}).join(""); }
     var banner=document.getElementById("catbanner");
-    if(banner){ if(cfg.imagem){ banner.style.backgroundImage="url('"+cfg.imagem+"')"; banner.textContent=""; } else { banner.style.backgroundImage=""; banner.textContent="Excel · Power BI · dados que fazem a diferença"; } }
+    if(banner){ if(cfg.imagem){ banner.style.backgroundImage="url('"+cfg.imagem+"')"; banner.innerHTML=""; } else { banner.style.backgroundImage=""; banner.innerHTML=DEFAULT_BANNER; } }
     var cont = document.getElementById("cursos"); cont.innerHTML="";
     CURSOS.filter(function(c){return !cfg.cursosAtivos || cfg.cursosAtivos[c.nome]!==false;}).forEach(function(c){
       var preco = (cfg.precos && cfg.precos[c.nome]) || DEFAULT.precos[c.nome] || 0;
@@ -152,18 +172,21 @@
       el.className = "curso" + (c.destaque ? " destaque" : "");
       el.innerHTML = (c.destaque?'<div class="fita">Mais procurado</div>':'') +
         '<h3>'+c.nome+'</h3><div class="nivel">'+c.nivel+'</div>' +
+        ((cfg.proximaTurmaCurso&&cfg.proximaTurmaCurso[c.nome])?'<div style="font-size:12.5px;color:#1E7B45;font-weight:600;margin:0 0 6px">📅 Próxima turma: '+cfg.proximaTurmaCurso[c.nome]+'</div>':'') +
         '<div class="desc">'+c.desc+'</div>' +
         '<ul>'+c.benef.map(function(b){return '<li>'+b+'</li>';}).join("")+'</ul>' +
         '<div class="preco"><div class="v">'+kz(preco)+'</div><div class="m">Investimento único · certificado incluído</div></div>' +
-        '<a class="cta-c" href="'+wa+'" target="_blank" rel="noopener">Quero esta formação</a>';
+        '<a class="cta-c" href="#" onclick="contactar(&#39;'+String(c.nome).replace(/'/g,"")+'&#39;);return false">Quero esta formação</a>';
       cont.appendChild(el);
     });
-    document.getElementById("wa").href = "https://wa.me/"+cfg.whatsapp+"?text="+encodeURIComponent("Olá! Vi o catálogo e quero mais informações sobre as formações.");
+    var _wa=document.getElementById("wa"); if(_wa){_wa.href="#";_wa.onclick=function(){contactar("");return false;};}
     document.getElementById("land").href = cfg.landing || DEFAULT.landing;
-    document.getElementById("naochave").href = "https://wa.me/"+cfg.whatsapp+"?text="+encodeURIComponent("Olá! Não sou da área-chave, mas quero aprender Excel para poupar tempo e não depender dos colegas. Como posso fazer?");
+    var _nc=document.getElementById("naochave"); if(_nc){_nc.href="#";_nc.onclick=function(){contactarMsg("Não sou da área-chave, mas quero aprender Excel para poupar tempo e não depender dos colegas. Como posso fazer?");return false;};}
     var pt = document.getElementById("proxturma");
     if(cfg.proximaTurma){ pt.textContent = "📅 Próxima turma: "+cfg.proximaTurma; pt.style.display="inline-block"; } else { pt.style.display="none"; }
     var loc=document.getElementById("catlocal"); if(loc) loc.textContent="📍 "+(cfg.local||"Morro Bento, Rua Galeria dos Pães, Luanda");
+    var _vg=document.getElementById("catvagas"); if(_vg){ var v=cfg.vagas||12; _vg.textContent="🔥 Apenas "+v+" vagas por turma — para o formador acompanhar o ecrã de cada aluno."; }
+    var _an=document.getElementById("catancora"); if(_an){ _an.textContent=cfg.ancoragem||"💡 Pensa bem: este investimento é pequeno ao lado de uma promoção que te escapa — ou das horas perdidas a refazer relatórios errados."; }
     var rs=document.getElementById("ressalvatxt"); if(rs&&cfg.ressalva){ rs.innerHTML="<b>Ressalva:</b> "+String(cfg.ressalva).replace(/</g,"&lt;"); }
     var fm=document.getElementById("catformados"); if(fm){ if(cfg.formados){ fm.textContent="🎓 Já formámos "+cfg.formados; fm.style.display="inline-block"; } else { fm.style.display="none"; } }
     var lg=document.getElementById("catlogoimg"), lgd=document.getElementById("catlogodefault");
@@ -174,7 +197,7 @@
   try{
     fetch(FB).then(function(r){return r.json();}).then(function(d){
       if(d && (d.whatsapp||d.precos||d.landing||d.proximaTurma)){
-        render({ whatsapp:(d.whatsapp||DEFAULT.whatsapp), landing:(d.landing||DEFAULT.landing), precos:(d.precos||DEFAULT.precos), proximaTurma:(d.proximaTurma||""), imagem:(d.imagem||""), cursosAtivos:(d.cursosAtivos||null), local:(d.local||""), logo:(d.logo||""), testemunhos:(d.testemunhos||[]), formados:(d.formados||""), ressalva:(d.ressalva||"") });
+        render({ whatsapp:(d.whatsapp||DEFAULT.whatsapp), landing:(d.landing||DEFAULT.landing), precos:(d.precos||DEFAULT.precos), proximaTurma:(d.proximaTurma||""), imagem:(d.imagem||""), cursosAtivos:(d.cursosAtivos||null), local:(d.local||""), logo:(d.logo||""), testemunhos:(d.testemunhos||[]), formados:(d.formados||""), ressalva:(d.ressalva||""), garantia:(d.garantia||""), prestacoes:(d.prestacoes||""), prestOn:d.prestOn, detalhes:(d.detalhes||""), ga:(d.ga||""), gancho:(d.gancho||""), vagas:(d.vagas||""), proximaTurmaCurso:(d.proximaTurmaCurso||{}), ancoragem:(d.ancoragem||"") });
       }
     }).catch(function(){});
   }catch(e){}
