@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teste grátis: Qual é o teu nível de Excel? — Knowledge Angola</title>
+<meta name="description" content="Descobre em 2 minutos o teu nível de Excel e se estás preparado para uma entrevista de emprego. Teste grátis da Knowledge Angola.">
+<style>
+:root{--navy:#1F3864;--navy2:#16294a;--gold:#BF9000;--gold2:#F3C34E;--ink:#141b2d;--grey:#5b6a86;--line:#e6e9f0;--soft:#f6f8fb;--verde:#1E7B45}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;font-family:-apple-system,"Segoe UI",system-ui,Arial,sans-serif;color:var(--ink);background:var(--soft);line-height:1.6}
+.wrap{max-width:720px;margin:0 auto;padding:0 18px}
+header{background:var(--navy);color:#fff;padding:16px 0}
+.hd{display:flex;align-items:center;gap:12px}
+.hd .k{width:40px;height:40px;flex:0 0 auto}
+.hd .nm{font-family:Georgia,serif;font-weight:700;font-size:19px}
+.hd .nm .an{color:var(--gold2)}
+.hero{background:var(--navy);color:#fff;padding:10px 0 34px;position:relative;overflow:hidden}
+.hero:after{content:"";position:absolute;left:0;bottom:0;width:100%;height:4px;background:var(--gold)}
+.eyebrow{text-transform:uppercase;letter-spacing:.16em;font-size:12px;font-weight:700;color:var(--gold2)}
+.hero h1{font-family:Georgia,'Times New Roman',serif;font-size:clamp(25px,5vw,38px);line-height:1.12;margin:10px 0 10px;font-weight:700;letter-spacing:-.01em}
+.hero h1 em{font-style:normal;color:var(--gold2)}
+.hero p{color:#d7deec;font-size:16px;margin:0;max-width:560px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px;margin:18px 0;box-shadow:0 10px 30px rgba(20,30,60,.06)}
+.prog{height:8px;background:#e9edf4;border-radius:6px;overflow:hidden;margin-bottom:18px}
+.prog>i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));width:0;transition:width .3s}
+.q{font-weight:700;color:var(--navy);font-size:17px;margin:0 0 10px}
+.qn{color:var(--gold);font-weight:800;margin-right:6px}
+.opt{display:block;border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;margin:8px 0;cursor:pointer;font-size:15px;transition:.12s}
+.opt:hover{border-color:var(--navy)}
+.opt.sel{border-color:var(--gold);background:#fffaf0;font-weight:600}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--gold);color:#fff;font-weight:800;border:none;border-radius:6px;padding:15px 26px;font-size:16px;cursor:pointer;width:100%;transition:.12s}
+.btn:hover{filter:brightness(1.06)}
+.btn-wa{background:#25D366}
+.btn-navy{background:var(--navy)}
+label.f{display:block;font-weight:700;font-size:12.5px;margin:12px 0 5px;color:var(--navy);text-transform:uppercase;letter-spacing:.04em}
+input{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:8px;font-size:15px;font-family:inherit}
+input:focus{outline:none;border-color:var(--navy)}
+.muted{color:var(--grey);font-size:13px}
+.hide{display:none}
+.badge{display:inline-block;background:var(--gold2);color:var(--navy2);font-weight:800;border-radius:20px;padding:6px 16px;font-size:14px;margin-bottom:8px}
+.res-lvl{font-size:30px;font-weight:800;color:var(--navy);margin:4px 0 6px}
+.bar{height:12px;background:#e9edf4;border-radius:8px;overflow:hidden;margin:14px 0}
+.bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--navy),var(--gold))}
+.chk{list-style:none;padding:0;margin:14px 0}
+.chk li{padding:7px 0;border-bottom:1px solid var(--line);display:flex;gap:10px}
+.chk li:before{content:"✓";color:var(--verde);font-weight:800}
+footer{color:var(--grey);font-size:13px;text-align:center;padding:26px 0}
+</style>
+</head>
+<body>
+<header><div class="wrap hd">
+  <svg class="k" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="48" fill="#fff"/><circle cx="50" cy="21" r="4" fill="#BF9000"/><text x="50" y="53" text-anchor="middle" dominant-baseline="central" font-family="Georgia,serif" font-size="52" font-weight="700" fill="#1F3864">K</text></svg>
+  <span class="nm">Knowledge <span class="an">Angola</span></span>
+</div></header>
+
+<div class="hero"><div class="wrap">
+  <div class="eyebrow">Teste grátis · 2 minutos</div>
+  <h1 id="h_title">Estás preparado para uma <em>entrevista de emprego</em>? Descobre o teu nível de Excel</h1>
+  <p id="h_sub">Responde a 8 perguntas rápidas e recebe o teu nível — e um plano para chegares ao Excel avançado que o mercado exige.</p>
+</div></div>
+
+<div class="wrap">
+  <div class="card" id="quizcard">
+    <div id="intro" style="text-align:center;padding:8px 0 6px">
+      <div style="font-size:42px">📊</div>
+      <h2 style="color:var(--navy);font-family:Georgia,'Times New Roman',serif;font-weight:700;margin:8px 0 6px">Pronto para descobrir o teu nível?</h2>
+      <p class="muted" id="introtxt" style="max-width:440px;margin:0 auto 18px;font-size:14.5px">São 8 perguntas rápidas, uma de cada vez. Demora menos de 2 minutos e o resultado é grátis.</p>
+      <button class="btn" style="max-width:300px;margin:0 auto" onclick="iniciar()">Iniciar teste →</button>
+    </div>
+    <div id="quizrun" class="hide">
+      <div class="prog"><i id="prog"></i></div>
+      <div class="muted" id="passo" style="margin-bottom:10px;font-weight:600"></div>
+      <div id="perguntas"></div>
+    </div>
+  </div>
+
+  <div class="card hide" id="formcard">
+    <div class="eyebrow">Último passo</div>
+    <h2 style="color:var(--navy);margin:6px 0 4px">Para onde enviamos o teu resultado?</h2>
+    <p class="muted">Deixa o teu nome e WhatsApp — mostramos já o teu nível e enviamos o plano personalizado.</p>
+    <label class="f">Nome *</label><input id="q_nome" placeholder="O teu nome">
+    <label class="f">WhatsApp *</label><input id="q_tel" placeholder="9XX XXX XXX">
+    <label class="f">E-mail (opcional)</label><input id="q_email" type="email" placeholder="oteu@email.com">
+    <button class="btn" style="margin-top:16px" onclick="submeter()" id="subbtn">Ver o meu resultado →</button>
+    <div class="muted" style="text-align:center;margin-top:8px">Sem spam. É só para te enviarmos o resultado e o plano.</div>
+  </div>
+
+  <div class="card hide" id="rescard"></div>
+</div>
+
+<footer><div class="wrap">Knowledge Angola — Academia de Formação · Excel &amp; Power BI</div></footer>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+<script>
+const FB_CONFIG={apiKey:"AIzaSyBBgqJJ1SsbpxXVJBiypRMntNjSywrgGtg",authDomain:"knowledge-angola.firebaseapp.com",databaseURL:"https://knowledge-angola-default-rtdb.firebaseio.com",projectId:"knowledge-angola",storageBucket:"knowledge-angola.firebasestorage.app",messagingSenderId:"1060751471100",appId:"1:1060751471100:web:1b416c95cd040265da4279"};
+let _db=null;try{firebase.initializeApp(FB_CONFIG);_db=firebase.database();}catch(e){}
+let WA="244939845313", LAND="https://venusacademia2-lang.github.io/painel-ka/landing.html";
+function bumpStat(kind){try{var d=new Date().toISOString().slice(0,10);fetch("https://knowledge-angola-default-rtdb.firebaseio.com/publico/hits/quiz.json",{method:"POST",body:JSON.stringify({d:d,k:kind})});}catch(e){}}
+function injectGA(id){if(!id||window._ga)return;window._ga=1;var s=document.createElement("script");s.async=1;s.src="https://www.googletagmanager.com/gtag/js?id="+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag("js",new Date());gtag("config",id);}
+try{fetch("https://knowledge-angola-default-rtdb.firebaseio.com/publico/catalogo.json").then(r=>r.json()).then(function(d){if(d){if(d.whatsapp)WA=(""+d.whatsapp).replace(/\D/g,"");if(d.landing)LAND=d.landing;}}).catch(function(){});}catch(e){}
+try{fetch("https://knowledge-angola-default-rtdb.firebaseio.com/publico/quiz.json").then(r=>r.json()).then(function(q){if(!q)return;if(q.ga)injectGA(q.ga);if(q.whatsapp)WA=(""+q.whatsapp).replace(/\D/g,"");if(q.landing)LAND=q.landing;var e;if(q.titulo&&(e=document.getElementById("h_title")))e.innerHTML=q.titulo;if(q.subtitulo&&(e=document.getElementById("h_sub")))e.textContent=q.subtitulo;if(q.intro&&(e=document.getElementById("introtxt")))e.textContent=q.intro;if(Array.isArray(q.perguntas)&&q.perguntas.length)PERG=q.perguntas.map(function(p){return {q:p.q,o:(p.o||[]).map(function(o){return [o[0],+o[1]||0];})};});}).catch(function(){});}catch(e){}
+bumpStat("v");
+
+let PERG=[
+ {q:"Numa entrevista pedem-te “Excel avançado”. Como te sentes?",o:[["Nervoso, não domino",0],["Mais ou menos",1],["Confiante, mostro logo",2]]},
+ {q:"Sabes usar PROCV / PROCX (VLOOKUP / XLOOKUP)?",o:[["Não sei o que é",0],["Já ouvi falar",1],["Uso à vontade",2]]},
+ {q:"Tabelas dinâmicas (Pivot Tables)?",o:[["Nunca fiz",0],["Já vi alguém fazer",1],["Crio sozinho(a)",2]]},
+ {q:"Para somar com condição (ex.: só vendas do Mário) usas…",o:[["Somo à mão",0],["Função SOMA",1],["SOMASE / SOMASES",2]]},
+ {q:"Referências absolutas ($A$1)?",o:[["Não sei o que é",0],["Mais ou menos",1],["Uso bem",2]]},
+ {q:"Gráficos para apresentar dados?",o:[["Não costumo fazer",0],["Faço básicos",1],["Faço profissionais",2]]},
+ {q:"Organizar/limpar uma base de dados grande?",o:[["Perco-me",0],["Consigo, devagar",1],["Faço rápido",2]]},
+ {q:"Se surgisse hoje uma vaga que exige Excel avançado…",o:[["Não me candidatava",0],["Candidatava-me com receio",1],["Candidatava-me já",2]]}
+];
+let RESP=[];let step=-1;
+function maxPontos(){return PERG.reduce(function(a,p){return a+Math.max.apply(null,p.o.map(function(o){return o[1];}).concat(0));},0);}
+function iniciar(){bumpStat("s");RESP=new Array(PERG.length).fill(null);step=0;document.getElementById("intro").classList.add("hide");document.getElementById("quizrun").classList.remove("hide");pintar();}
+function pintar(){
+ var p=PERG[step];if(!p)return;
+ document.getElementById("passo").textContent="Pergunta "+(step+1)+" de "+PERG.length;
+ document.getElementById("prog").style.width=Math.round(step/PERG.length*100)+"%";
+ document.getElementById("perguntas").innerHTML='<div class="q"><span class="qn">'+(step+1)+'.</span>'+p.q+'</div>'+
+  p.o.map(function(o,j){return '<label class="opt'+(RESP[step]===j?' sel':'')+'" onclick="escolher('+j+')">'+o[0]+'</label>';}).join("")+
+  (step>0?'<div style="text-align:center;margin-top:12px"><a href="#" onclick="voltar();return false;" style="color:var(--grey);font-size:13px">← voltar</a></div>':'');
+}
+function voltar(){if(step>0){step--;pintar();}}
+function escolher(j){RESP[step]=j;if(step<PERG.length-1){step++;pintar();}else{document.getElementById("prog").style.width="100%";document.getElementById("quizcard").classList.add("hide");var fc=document.getElementById("formcard");fc.classList.remove("hide");fc.scrollIntoView({behavior:"smooth"});}}
+function pontos(){return RESP.reduce(function(a,j,i){return a+((PERG[i]&&PERG[i].o[j])?PERG[i].o[j][1]:0);},0);}
+function nivelDe(p){var mx=maxPontos()||1;var r=p/mx;if(r<=0.35)return "Iniciante";if(r<=0.72)return "Intermédio";return "Avançado";}
+function submeter(){
+ var nome=(document.getElementById("q_nome").value||"").trim();
+ var tel=(document.getElementById("q_tel").value||"").trim();
+ var email=(document.getElementById("q_email").value||"").trim();
+ if(!nome||!tel){alert("Falta o nome e o WhatsApp.");return;}
+ var p=pontos(),niv=nivelDe(p);
+ var rec={quando:new Date().toISOString(),tipo:"Quiz Excel",nome:nome,tel:tel,email:email,nivel:niv,pontos:p,de20:Math.round(p/(maxPontos()||1)*20),estado:"Nova",origem:"Quiz",curso:"Excel (do básico ao avançado)"};
+ var btn=document.getElementById("subbtn");btn.textContent="A calcular…";btn.disabled=true;
+ function done(){mostrarResultado(nome,p,niv);}
+ if(_db){_db.ref("inscricoes").push(rec).then(done).catch(done);}else{done();}
+}
+function mostrarResultado(nome,p,niv){
+ document.getElementById("formcard").classList.add("hide");
+ var pct=Math.round(p/(maxPontos()||1)*100);
+ var planos={
+  "Iniciante":{cor:"#C0392B",txt:"Estás a começar — e não há problema nenhum nisso. Com as bases certas, em poucas semanas fazes o que hoje te parece impossível.",lista:["Dominar as fórmulas essenciais do dia-a-dia","Organizar dados sem te perderes","Ganhar confiança para candidaturas"]},
+  "Intermédio":{cor:"#BF9000",txt:"Já te desenrascas! Falta o salto que separa quem “sabe um pouco” de quem o mercado disputa: PROCX, tabelas dinâmicas e automatização.",lista:["PROCX e funções de decisão","Tabelas dinâmicas a sério","Gráficos e dashboards que impressionam"]},
+  "Avançado":{cor:"#1E7B45",txt:"Muito bom! Já tens uma base forte. O próximo nível é transformar isto em resultados que se veem — e num certificado que comprova.",lista:["Automatização e eficiência","Power BI para dados que decidem negócio","Certificado que abre portas"]}
+ };
+ var pl=planos[niv];
+ var msg="Olá, sou "+nome+". Fiz o teste de Excel e o meu nível deu "+niv+" ("+p+"/"+maxPontos()+"). Quero saber mais sobre a formação.";
+ var wa="https://wa.me/"+WA+"?text="+encodeURIComponent(msg);
+ var rc=document.getElementById("rescard");
+ rc.classList.remove("hide");
+ rc.innerHTML='<div class="badge">O teu resultado, '+esc(nome.split(" ")[0])+'</div>'+
+  '<div class="res-lvl" style="color:'+pl.cor+'">Nível: '+niv+'</div>'+
+  '<div class="muted">Pontuação: '+p+'/'+maxPontos()+'</div>'+
+  '<div class="bar"><i style="width:'+pct+'%"></i></div>'+
+  '<p>'+pl.txt+'</p>'+
+  '<div style="font-weight:700;color:var(--navy);margin-top:6px">Com a nossa formação vais:</div>'+
+  '<ul class="chk">'+pl.lista.map(function(x){return "<li>"+x+"</li>";}).join("")+'</ul>'+
+  '<a class="btn btn-wa" href="'+wa+'" target="_blank" rel="noopener" onclick="bumpStat(\'w\')">💬 Falar no WhatsApp e garantir vaga</a>'+
+  '<a class="btn btn-navy" style="margin-top:10px" href="'+esc(LAND)+'" target="_blank" rel="noopener">Ver a formação e preços →</a>';
+ rc.scrollIntoView({behavior:"smooth"});
+}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[c];});}
+pintar();
+</script>
+</body>
+</html>

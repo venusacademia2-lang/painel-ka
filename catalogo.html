@@ -26,7 +26,7 @@
   .ressalva{background:#eef3fb;border:1px solid #c7d6f0;border-left:4px solid var(--azul2);border-radius:10px;padding:12px 16px;margin:18px 0;font-size:13.5px;color:#33415a}
   .ressalva b{color:var(--azul)}
   /* Cursos */
-  .sechd{color:var(--azul);font-size:18px;margin:24px 0 4px;border-bottom:2px solid var(--dour);padding-bottom:6px}
+  .sechd{color:var(--azul);font-size:19px;margin:24px 0 4px;border-bottom:2px solid var(--dour);padding-bottom:6px;font-family:Georgia,'Times New Roman',serif;font-weight:700}
   .cursos{display:grid;grid-template-columns:1fr;gap:16px;margin-top:14px}
   @media(min-width:720px){.cursos{grid-template-columns:1fr 1fr 1fr}}
   .curso{background:#fff;border:1px solid var(--linha);border-radius:14px;padding:20px;display:flex;flex-direction:column;box-shadow:0 3px 12px rgba(20,30,60,.05);position:relative;overflow:hidden}
@@ -89,9 +89,11 @@
 
   <div id="catgancho" style="background:#1F3864;color:#fff;border-radius:14px;padding:18px 22px;margin:18px 0;text-align:center;font-size:17px;font-weight:700;line-height:1.4;box-shadow:0 4px 16px rgba(20,30,60,.15)">Chega de <span style="color:#F3C34E">depender dos colegas</span> para cada tabela ou relatório. Torna-te tu a referência com Excel e Power BI.</div>
 
+  <div style="text-align:center;margin:14px 0 4px"><a href="quiz.html" style="display:inline-block;background:#fff;border:2px solid #BF9000;color:#1F3864;font-weight:700;border-radius:30px;padding:11px 22px;text-decoration:none;font-size:14.5px">🎯 Não sabes o teu nível? Faz o teste grátis de Excel (2 min)</a></div>
+
   <div class="ressalva">
     <span id="ressalvatxt"><b>Ressalva:</b> estas formações destinam-se a profissionais e formados em <b>Economia, Contabilidade, Gestão, Finanças, Banca e Seguros, Logística e Recursos Humanos</b> — e a quem já trabalha com Excel e quer dominar a ferramenta a sério.</span>
-    <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #c7d6f0">Não és de nenhuma destas áreas? <a id="naochave" href="#" target="_blank" rel="noopener" style="color:var(--azul2);font-weight:700;text-decoration:underline">"Não sou da área-chave — como posso fazer?"</a> O Excel faz-te <b>poupar tempo</b>, entregar o trabalho mais depressa e <b>deixar de depender dos colegas</b> a toda a hora. Fala connosco.</div>
+    <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #c7d6f0">Não és de nenhuma destas áreas? <a id="naochave" href="#" target="_blank" rel="noopener" style="color:var(--azul2);font-weight:700;text-decoration:underline">"Não sou da área-chave — como posso fazer?"</a> O Excel faz-te <b>poupar tempo</b>, entregar o trabalho mais depressa e <b>deixar de depender dos colegas</b> a toda a hora. Fale connosco.</div>
   </div>
 
   <div id="catgarantia" style="background:#e6f5ec;border:1px solid #b7e0c4;border-left:4px solid #1E7B45;border-radius:10px;padding:12px 16px;margin:16px 0;font-size:14px;color:#1E7B45"><b>🛡️ <span id="garantiatxt">Garantia de 3 dias: se nos primeiros 3 dias de aulas sentires que não é para ti, devolvemos 100% do teu investimento.</span></b></div>
@@ -113,9 +115,11 @@
   </div>
   <!-- Substitui estes dois testemunhos pelos reais da landing quando quiseres. -->
 
+  <div id="catfaq"></div>
+
   <section class="final">
     <h2 id="finaltitle">Pronto para dar o próximo passo?</h2>
-    <p id="finalsub">As vagas por turma são limitadas para garantir acompanhamento próximo. Fala connosco hoje e reserva o teu lugar.</p>
+    <p id="finalsub">As vagas por turma são limitadas para garantir acompanhamento próximo. Fale connosco hoje e reserva o teu lugar.</p>
     <div class="btns">
       <a class="btn btn-wa" id="wa" href="#" target="_blank" rel="noopener" style="font-size:16px;padding:15px 30px">💬 Quero garantir a minha vaga</a>
     </div>
@@ -159,9 +163,10 @@
   function render(cfg){
     WA=cfg.whatsapp||DEFAULT.whatsapp; if(cfg.ga)injectGA(cfg.ga);
     var _g=document.getElementById("garantiatxt"); if(_g&&cfg.garantia)_g.textContent=cfg.garantia;
-    var _gc=document.getElementById("catgancho"); if(_gc&&cfg.gancho)_gc.textContent=cfg.gancho;
+    var _gc=document.getElementById("catgancho"); if(_gc){var _cor=cfg.ganchoCor||"#F3C34E";if(cfg.gancho){_gc.innerHTML=String(cfg.gancho).replace(/</g,"&lt;").replace(/\*(.+?)\*/g,'<span style="color:'+_cor+'">$1</span>');}else{var _sp=_gc.querySelector("span");if(_sp)_sp.style.color=_cor;}}
     var _pr=document.getElementById("catprest"); if(_pr){ if(cfg.prestOn===false){_pr.style.display="none";} else { _pr.style.display=""; if(cfg.prestacoes)_pr.textContent="💳 "+cfg.prestacoes; } }
     var _dd=document.getElementById("catdetalhes"); if(_dd){ _dd.innerHTML=cfg.detalhes?('<h2 class="sechd">Detalhes e horários</h2><div class="tcard" style="white-space:pre-line;font-size:14px;color:#33415a">'+String(cfg.detalhes).replace(/</g,"&lt;")+'</div>'):""; }
+    var _fq=document.getElementById("catfaq"); if(_fq){ var faqs=(cfg.faq||[]).filter(function(f){return f&&f.q;}); _fq.innerHTML=faqs.length?('<h2 class="sechd">Perguntas frequentes</h2>'+faqs.map(function(f){return '<details style="background:#fff;border:1px solid #e6e9f0;border-radius:10px;padding:12px 16px;margin:8px auto;max-width:720px;text-align:left"><summary style="cursor:pointer;font-weight:700;color:#1F3864">'+String(f.q).replace(/</g,"&lt;")+'</summary><div style="color:#33415a;margin-top:8px;font-size:14.5px;line-height:1.55">'+String(f.a||"").replace(/</g,"&lt;")+'</div></details>';}).join('')):''; }
     var tb=document.getElementById("testbox");
     var tv=(cfg.testemunhos||[]).filter(function(t){return t&&t.link;});
     if(tb&&tv.length){ tb.innerHTML=tv.map(function(t){return '<div class="tcard"><div class="vid"><iframe src="'+embedUrl(t.link)+'" allowfullscreen loading="lazy"></iframe></div><div class="a">— '+(t.nome||"Formando")+'</div></div>';}).join(""); }
@@ -206,7 +211,7 @@
   try{
     fetch(FB).then(function(r){return r.json();}).then(function(d){
       if(d && (d.whatsapp||d.precos||d.landing||d.proximaTurma)){
-        render({ whatsapp:(d.whatsapp||DEFAULT.whatsapp), landing:(d.landing||DEFAULT.landing), precos:(d.precos||DEFAULT.precos), proximaTurma:(d.proximaTurma||""), imagem:(d.imagem||""), cursosAtivos:(d.cursosAtivos||null), local:(d.local||""), logo:(d.logo||""), testemunhos:(d.testemunhos||[]), formados:(d.formados||""), ressalva:(d.ressalva||""), garantia:(d.garantia||""), prestacoes:(d.prestacoes||""), prestOn:d.prestOn, detalhes:(d.detalhes||""), ga:(d.ga||""), gancho:(d.gancho||""), vagas:(d.vagas||""), proximaTurmaCurso:(d.proximaTurmaCurso||{}), ancoragem:(d.ancoragem||""), titulo:(d.titulo||""), subtitulo:(d.subtitulo||""), finalTitulo:(d.finalTitulo||""), finalSub:(d.finalSub||""), pdf:(d.pdf||""), pdfOn:d.pdfOn, pdfLabel:(d.pdfLabel||"") });
+        render({ whatsapp:(d.whatsapp||DEFAULT.whatsapp), landing:(d.landing||DEFAULT.landing), precos:(d.precos||DEFAULT.precos), proximaTurma:(d.proximaTurma||""), imagem:(d.imagem||""), cursosAtivos:(d.cursosAtivos||null), local:(d.local||""), logo:(d.logo||""), testemunhos:(d.testemunhos||[]), formados:(d.formados||""), ressalva:(d.ressalva||""), garantia:(d.garantia||""), prestacoes:(d.prestacoes||""), prestOn:d.prestOn, detalhes:(d.detalhes||""), ga:(d.ga||""), gancho:(d.gancho||""), ganchoCor:(d.ganchoCor||""), faq:(d.faq||[]), vagas:(d.vagas||""), proximaTurmaCurso:(d.proximaTurmaCurso||{}), ancoragem:(d.ancoragem||""), titulo:(d.titulo||""), subtitulo:(d.subtitulo||""), finalTitulo:(d.finalTitulo||""), finalSub:(d.finalSub||""), pdf:(d.pdf||""), pdfOn:d.pdfOn, pdfLabel:(d.pdfLabel||"") });
       }
     }).catch(function(){});
   }catch(e){}
