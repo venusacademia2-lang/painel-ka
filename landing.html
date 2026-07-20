@@ -345,7 +345,7 @@ function boot(){
   render();
   try{bumpStat("landing","v");document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest('a[href*="wa.me"]');if(a)bumpStat("landing","w");});}catch(e){}
   if(!_db)return;
-  _db.ref("publico/landing").once("value").then(function(sn){var v=sn.val();if(v){CFG=Object.assign({},DEF,v);render();}}).catch(function(){});
+  _db.ref("publico/landing").once("value").then(function(sn){var v=sn.val();if(v){var _banco=CFG.banco,_local=CFG.local,_tel=CFG.tel;CFG=Object.assign({},DEF,v);CFG.banco=_banco;CFG.local=_local;CFG.tel=_tel;render();}}).catch(function(){});
   _db.ref("estado").once("value").then(function(snap){
     var s=snap.val();if(!s)return;var d;try{d=JSON.parse(s);}catch(e){return;}
     if(d.landing)CFG=Object.assign({},DEF,d.landing);
