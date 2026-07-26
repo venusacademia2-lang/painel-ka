@@ -158,8 +158,9 @@
   var WA=DEFAULT.whatsapp;
   function _nome(){var n=(document.getElementById("visname")||{}).value||"";return n.trim();}
   function bumpStat(page,kind){try{var d=new Date().toISOString().slice(0,10);fetch("https://knowledge-angola-default-rtdb.firebaseio.com/publico/hits/"+page+".json",{method:"POST",body:JSON.stringify({d:d,k:kind})});}catch(e){}}
-  function contactar(curso){bumpStat("catalogo","w");var n=_nome();var msg=(n?("Olá, sou "+n+". "):"Olá! ")+(curso?("Quero inscrever-me no "+curso+"."):"Quero mais informações sobre as formações.");window.open("https://wa.me/"+WA+"?text="+encodeURIComponent(msg),"_blank");}
-  function contactarMsg(msg){bumpStat("catalogo","w");var n=_nome();var m=(n?("Olá, sou "+n+". "):"Olá! ")+msg;window.open("https://wa.me/"+WA+"?text="+encodeURIComponent(m),"_blank");}
+  function registarLeadCatalogo(nome,curso){try{fetch("https://knowledge-angola-default-rtdb.firebaseio.com/publico/leadsCatalogo.json",{method:"POST",body:JSON.stringify({nome:nome||"",curso:curso||"",quando:new Date().toISOString()})});}catch(e){}}
+  function contactar(curso){bumpStat("catalogo","w");var n=_nome();registarLeadCatalogo(n,curso);var msg=(n?("Olá, sou "+n+". "):"Olá! ")+(curso?("Quero inscrever-me no "+curso+"."):"Quero mais informações sobre as formações.");window.open("https://wa.me/"+WA+"?text="+encodeURIComponent(msg),"_blank");}
+  function contactarMsg(msg){bumpStat("catalogo","w");var n=_nome();registarLeadCatalogo(n,"");window.open("https://wa.me/"+WA+"?text="+encodeURIComponent((n?("Olá, sou "+n+". "):"Olá! ")+msg),"_blank");}
   function injectGA(id){if(!id||window._gaDone)return;window._gaDone=true;var s=document.createElement("script");s.async=true;s.src="https://www.googletagmanager.com/gtag/js?id="+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag("js",new Date());gtag("config",id);}
   function render(cfg){
     WA=cfg.whatsapp||DEFAULT.whatsapp; if(cfg.ga)injectGA(cfg.ga);
@@ -174,7 +175,9 @@
     var banner=document.getElementById("catbanner");
     if(banner){ if(cfg.imagem){ banner.style.backgroundImage="url('"+cfg.imagem+"')"; banner.innerHTML=""; } else { banner.style.backgroundImage=""; banner.innerHTML=DEFAULT_BANNER; } }
     var cont = document.getElementById("cursos"); cont.innerHTML="";
-    CURSOS.filter(function(c){return !cfg.cursosAtivos || cfg.cursosAtivos[c.nome]!==false;}).forEach(function(c){
+    var LISTA=CURSOS.slice();
+    Object.keys(cfg.precos||{}).forEach(function(n){ if(!LISTA.some(function(c){return c.nome===n;})) LISTA.push({nome:n,nivel:"Nova formação",destaque:false,msg:"Olá! Quero inscrever-me no "+n+".",desc:"Formação prática da Knowledge Angola, com acompanhamento próximo e certificado.",benef:["100% prático, para o mercado de trabalho","Acompanhamento próximo do formador","Certificado de conclusão"]}); });
+    LISTA.filter(function(c){return !cfg.cursosAtivos || cfg.cursosAtivos[c.nome]!==false;}).forEach(function(c){
       var preco = (cfg.precos && cfg.precos[c.nome]) || DEFAULT.precos[c.nome] || 0;
       var wa = "https://wa.me/"+cfg.whatsapp+"?text="+encodeURIComponent(c.msg);
       var el = document.createElement("div");
@@ -182,6 +185,7 @@
       el.innerHTML = (c.destaque?'<div class="fita">Mais procurado</div>':'') +
         '<h3>'+c.nome+'</h3><div class="nivel">'+c.nivel+'</div>' +
         ((cfg.proximaTurmaCurso&&cfg.proximaTurmaCurso[c.nome])?'<div style="font-size:12.5px;color:#1E7B45;font-weight:600;margin:0 0 6px">📅 Próxima turma: '+cfg.proximaTurmaCurso[c.nome]+'</div>':'') +
+        ((cfg.vagasCurso&&cfg.vagasCurso[c.nome]!=null)?'<div style="font-size:12.5px;color:#a3311f;font-weight:700;margin:0 0 6px">🔥 Restam '+cfg.vagasCurso[c.nome]+' vagas na próxima turma</div>':'') +
         '<div class="desc">'+c.desc+'</div>' +
         '<ul>'+c.benef.map(function(b){return '<li>'+b+'</li>';}).join("")+'</ul>' +
         '<div class="preco"><div class="v">'+kz(preco)+'</div><div class="m">Investimento único · certificado incluído</div></div>' +
@@ -212,7 +216,7 @@
   try{
     fetch(FB).then(function(r){return r.json();}).then(function(d){
       if(d && (d.whatsapp||d.precos||d.landing||d.proximaTurma)){
-        render({ whatsapp:(d.whatsapp||DEFAULT.whatsapp), landing:(d.landing||DEFAULT.landing), precos:(d.precos||DEFAULT.precos), proximaTurma:(d.proximaTurma||""), imagem:(d.imagem||""), cursosAtivos:(d.cursosAtivos||null), local:(d.local||""), logo:(d.logo||""), testemunhos:(d.testemunhos||[]), formados:(d.formados||""), ressalva:(d.ressalva||""), garantia:(d.garantia||""), prestacoes:(d.prestacoes||""), prestOn:d.prestOn, detalhes:(d.detalhes||""), ga:(d.ga||""), gancho:(d.gancho||""), ganchoCor:(d.ganchoCor||""), faq:(d.faq||[]), vagas:(d.vagas||""), proximaTurmaCurso:(d.proximaTurmaCurso||{}), ancoragem:(d.ancoragem||""), titulo:(d.titulo||""), subtitulo:(d.subtitulo||""), finalTitulo:(d.finalTitulo||""), finalSub:(d.finalSub||""), pdf:(d.pdf||""), pdfOn:d.pdfOn, pdfLabel:(d.pdfLabel||"") });
+        render({ whatsapp:(d.whatsapp||DEFAULT.whatsapp), landing:(d.landing||DEFAULT.landing), precos:(d.precos||DEFAULT.precos), proximaTurma:(d.proximaTurma||""), imagem:(d.imagem||""), cursosAtivos:(d.cursosAtivos||null), local:(d.local||""), logo:(d.logo||""), testemunhos:(d.testemunhos||[]), formados:(d.formados||""), ressalva:(d.ressalva||""), garantia:(d.garantia||""), prestacoes:(d.prestacoes||""), prestOn:d.prestOn, detalhes:(d.detalhes||""), ga:(d.ga||""), gancho:(d.gancho||""), ganchoCor:(d.ganchoCor||""), faq:(d.faq||[]), vagas:(d.vagas||""), proximaTurmaCurso:(d.proximaTurmaCurso||{}), vagasCurso:(d.vagasCurso||null), ancoragem:(d.ancoragem||""), titulo:(d.titulo||""), subtitulo:(d.subtitulo||""), finalTitulo:(d.finalTitulo||""), finalSub:(d.finalSub||""), pdf:(d.pdf||""), pdfOn:d.pdfOn, pdfLabel:(d.pdfLabel||"") });
       }
     }).catch(function(){});
   }catch(e){}
