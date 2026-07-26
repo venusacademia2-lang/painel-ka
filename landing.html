@@ -129,6 +129,25 @@ footer{background:var(--navy2);color:#aab6cf;padding:42px 0;font-size:14.5px}
 footer b{color:#fff}footer a{color:#fff}
 .fl{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
 @media(max-width:640px){section{padding:38px 0}.head{margin-bottom:24px}.strip .wrap{grid-template-columns:1fr;gap:14px}.turma .rows{grid-template-columns:1fr}}
+/* modernização — cantos mais arredondados, mais energia visual */
+.btn,.oferta,.turma,.formcard,.card,.pq,.tcard,.bankbox,.file,.wa-note,.garantia,.scar,.mais summary{border-radius:14px}
+.scar{background:#fff3d6;color:#8a6100}
+.scar.poucas{background:#fbe9e7;color:#a3311f}
+.scar.cheia{background:#e9ebf0;color:#55617a}
+.mais{border:none}
+.mais summary{cursor:pointer;font-weight:800;color:var(--navy);font-size:16px;padding:15px 18px;background:#fff;border:1px solid var(--line);list-style:none;text-align:center}
+.mais summary::-webkit-details-marker{display:none}
+.mais summary:after{content:" +";color:var(--gold)}
+.mais[open] summary:after{content:" –"}
+.mais .maisin{padding-top:32px}
+#stickycta{display:none}
+@media(max-width:640px){
+  #stickycta{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:50;background:#fff;box-shadow:0 -6px 20px rgba(20,30,60,.16);padding:10px 12px;gap:10px}
+  #stickycta a{flex:1;text-align:center;padding:13px;border-radius:14px;font-weight:800;font-size:14px}
+  #stickycta .a1{background:var(--gold);color:#fff}
+  #stickycta .a2{background:#25D366;color:#fff}
+  body{padding-bottom:72px}
+}
 </style>
 </head>
 <body>
@@ -159,40 +178,14 @@ footer b{color:#fff}footer a{color:#fff}
   <div class="it"><span class="d">◆</span> Certificado de conclusão incluído</div>
 </div></div>
 
-<section><div class="wrap">
-  <div class="head"><div class="eyebrow">Reconhece-te?</div><h2>Saber Excel "mais ou menos" já não chega</h2></div>
-  <div class="prob" id="probbox"></div>
-  <div class="turn" id="turn">A boa notícia: isto aprende-se — e mais depressa do que pensas. ↓</div>
-</div></section>
-
-<section class="alt"><div class="wrap">
-  <div class="head"><div class="eyebrow">O que ganhas</div><h2>O que vais conseguir fazer</h2><p>Resultados no trabalho e no currículo — não apenas "funções".</p></div>
-  <div class="grid g3" id="benefgrid"></div>
-</div></section>
-
-<section id="testemunhos"><div class="wrap">
-  <div class="head"><div class="eyebrow">Prova real</div><h2>Quem já passou pela Knowledge Angola</h2><p>Formandos presenciais e online que mudaram a sua história.</p></div>
-  <div id="tgrid"><div class="muted center" style="grid-column:1/-1">Em breve, os testemunhos dos nossos formandos.</div></div>
-</div></section>
-
-<section class="alt" id="oferta"><div class="wrap">
-  <div class="head"><div class="eyebrow">A oferta</div><h2>Tudo o que levas contigo</h2></div>
-  <div class="oferta" id="ofertabox"></div>
-</div></section>
-
 <section id="turma"><div class="wrap">
   <div class="head"><div class="eyebrow">Inscrições abertas</div><h2>Próxima turma presencial</h2><p>Atualizada automaticamente a partir do nosso sistema.</p></div>
   <div id="turmacard"></div>
 </div></section>
 
-<section class="alt"><div class="wrap">
-  <div class="head"><div class="eyebrow">Porquê nós</div><h2>Porquê a Knowledge Angola</h2></div>
-  <div class="porque" id="porquegrid"></div>
-</div></section>
-
-<section class="faq"><div class="wrap">
-  <div class="head"><div class="eyebrow">Dúvidas</div><h2>Perguntas frequentes</h2></div>
-  <div id="faqbox"></div>
+<section class="alt" id="oferta"><div class="wrap">
+  <div class="head"><div class="eyebrow">A oferta</div><h2>Tudo o que levas contigo</h2></div>
+  <div class="oferta" id="ofertabox"></div>
 </div></section>
 
 <section class="formsec" id="reservar"><div class="wrap">
@@ -204,7 +197,7 @@ footer b{color:#fff}footer a{color:#fff}
       <label>Nome completo *</label><input id="i_nome" placeholder="O teu nome">
       <label>Telefone / WhatsApp *</label><input id="i_tel" placeholder="9XX XXX XXX">
       <label>E-mail</label><input id="i_email" type="email" placeholder="oteu@email.com">
-      <label>Curso *</label><select id="i_curso"></select>
+      <label>Formação *</label><select id="i_curso" onchange="cursoChg()"></select>
       <label>Modalidade</label><select id="i_mod"><option>Presencial</option><option>Online</option></select>
       <label>Período *</label><select id="i_periodo" onchange="periodoChg()"><option value="">Escolhe o período…</option><option>Dias de semana</option><option>Sábados</option></select>
       <div id="i_semwrap" style="display:none"><label>Horário</label><input id="i_semh" value="9h às 11h" readonly></div>
@@ -221,10 +214,40 @@ footer b{color:#fff}footer a{color:#fff}
   </div>
 </div></section>
 
+<section class="alt maisbox faq"><div class="wrap">
+  <details class="mais">
+    <summary>👉 Ver testemunhos de quem já passou pela Knowledge Angola, benefícios e perguntas frequentes</summary>
+    <div class="maisin">
+
+      <div class="head"><div class="eyebrow">Reconhece-te?</div><h2>Saber Excel "mais ou menos" já não chega</h2></div>
+      <div class="prob" id="probbox"></div>
+      <div class="turn" id="turn">A boa notícia: isto aprende-se — e mais depressa do que pensas. ↓</div>
+
+      <div class="head" style="margin-top:40px"><div class="eyebrow">O que ganhas</div><h2>O que vais conseguir fazer</h2><p>Resultados no trabalho e no currículo — não apenas "funções".</p></div>
+      <div class="grid g3" id="benefgrid"></div>
+
+      <div class="head" style="margin-top:40px" id="testemunhos"><div class="eyebrow">Prova real</div><h2>Quem já passou pela Knowledge Angola</h2><p>Formandos presenciais e online que mudaram a sua história.</p></div>
+      <div id="tgrid"><div class="muted center" style="grid-column:1/-1">Em breve, os testemunhos dos nossos formandos.</div></div>
+
+      <div class="head" style="margin-top:40px"><div class="eyebrow">Porquê nós</div><h2>Porquê a Knowledge Angola</h2></div>
+      <div class="porque" id="porquegrid"></div>
+
+      <div class="head" style="margin-top:40px"><div class="eyebrow">Dúvidas</div><h2>Perguntas frequentes</h2></div>
+      <div id="faqbox"></div>
+
+    </div>
+  </details>
+</div></section>
+
 <footer><div class="wrap fl">
   <div><b>Knowledge Angola</b> — Academia de Formação<br><span id="f_local">Morro Bento, junto ao IMETRO — Rua: Galeria dos Pães, Luanda</span></div>
   <div>Tel: <span id="f_tel">+(244) 939 845 313</span><br><a href="mailto:academico@knowledgeangola.ao">academico@knowledgeangola.ao</a><br><a id="f_wa" target="_blank">WhatsApp</a></div>
 </div></footer>
+
+<div id="stickycta">
+  <a href="#reservar" class="a1">Garantir a minha vaga</a>
+  <a id="stickywa" target="_blank" class="a2">💬 WhatsApp</a>
+</div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
@@ -282,13 +305,14 @@ const DEF={
     {q:"E se eu tiver dúvidas depois das aulas?",a:"Tens acompanhamento do formador e grupo de apoio para tirar dúvidas."},
     {q:"Como faço o pagamento?",a:"Podes pagar a pronto ou em prestações. Anexa o comprovativo na inscrição ou envia pelo WhatsApp."}
   ],
-  cursos:["Excel (do básico ao avançado)"],
+  cursos:["Excel do Básico ao Avançado","Excel do Zero ao Fundamental","Power BI"],
   local:"Morro Bento, junto ao IMETRO — Rua: Galeria dos Pães, Luanda",
   tel:"+(244) 939 845 313"
 };
 
 let CFG=Object.assign({},DEF);
 let TURMA=null;
+let TURMAS_ALL=[];
 
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 function embedUrl(link){link=String(link||"");
@@ -309,6 +333,62 @@ function turmaRecente(turmas){var pres=(turmas||[]).filter(function(t){return((t
   pres.sort(function(a,b){return (new Date(b.inicio||0))-(new Date(a.inicio||0))||((+b.ed||0)-(+a.ed||0));});return pres[0]||null;}
 
 function fmtKz(n){n=Math.round(+n||0);var str=String(Math.abs(n)),out="",c=0;for(var i=str.length-1;i>=0;i--){out=str.charAt(i)+out;c++;if(c%3===0&&i>0)out="."+out;}return "Kz "+out+",00";}
+
+function _matchCurso(a,b){a=(a||"").toLowerCase();b=(b||"").toLowerCase();return a&&b&&(a===b||a.indexOf(b)>=0||b.indexOf(a)>=0);}
+
+function vagasInfo(){
+  if(!TURMA)return {total:null,livres:null,label:"—",badge:"📅 Inscrições abertas",cheia:false};
+  var vc=CFG.vagasCurso||{};var cur=TURMA.curso||"";var livres=null;
+  if(vc[cur]!=null)livres=vc[cur];
+  else{var k=Object.keys(vc).filter(function(n){return _matchCurso(n,cur);})[0];if(k!=null)livres=vc[k];}
+  var total=(TURMA.vagas!=null&&TURMA.vagas!=="")?(+TURMA.vagas):null;
+  if(livres==null&&total==null)return {total:null,livres:null,label:"Vagas por confirmar",badge:"📅 Inscrições abertas",cheia:false};
+  if(livres!=null)livres=+livres;
+  var preenchidas=(total!=null&&livres!=null)?Math.max(0,total-livres):null;
+  var cheia=livres!=null&&livres<=0;
+  var label;
+  if(total!=null&&livres!=null)label=livres+" livres de "+total+(preenchidas!=null?" · "+preenchidas+" preenchida"+(preenchidas===1?"":"s"):"");
+  else if(livres!=null)label=livres+" vaga"+(livres===1?"":"s")+" livres";
+  else label=total+" vagas por turma";
+  var badge=cheia?"🚫 Turma cheia":(livres!=null&&livres<=3)?"🔥 Últimas "+livres+" vagas!":(livres!=null?"🔥 Restam "+livres+" vagas":"📅 Inscrições abertas");
+  return {total:total,livres:livres,preenchidas:preenchidas,label:label,badge:badge,cheia:cheia};
+}
+
+function periodosDe(curso){
+  var hoje=new Date(new Date().toDateString());
+  var arr=(TURMAS_ALL||[]).filter(function(t){
+    if(((t.modalidade||"Presencial")+"").toLowerCase().indexOf("presenc")<0)return false;
+    if(!_matchCurso(t.curso,curso))return false;
+    if(t.fim){var f=new Date(t.fim);if(!isNaN(f)&&f<hoje)return false;}
+    return true;
+  });
+  var set={};
+  arr.forEach(function(t){
+    if(Array.isArray(t.turnos)&&t.turnos.length){
+      t.turnos.forEach(function(tn){set[tn.tipo==="semana"?"Dias de semana":"Sábados"]=true;});
+    }else{
+      var h=t.horario||"";
+      if(/s[áa]b/i.test(h))set["Sábados"]=true;
+      if(/semana/i.test(h)||!h)set["Dias de semana"]=true;
+    }
+  });
+  return Object.keys(set);
+}
+
+function cursoChg(){
+  var curso=val("i_curso");
+  var pers=periodosDe(curso);
+  var sel=document.getElementById("i_periodo");
+  if(sel){
+    var opts=(pers.length?pers:["Dias de semana","Sábados"]);
+    sel.innerHTML='<option value="">Escolhe o período…</option>'+opts.map(function(p){return "<option>"+esc(p)+"</option>";}).join("");
+  }
+  if(typeof periodoChg==="function")periodoChg();
+  var pr=(CFG.precos&&CFG.precos[curso])||(function(){var k=Object.keys(CFG.precos||{}).filter(function(n){return _matchCurso(n,curso);})[0];return k?CFG.precos[k]:null;})();
+  var iv=document.getElementById("i_valor");
+  if(iv)iv.placeholder=pr?("ex.: "+fmtKz(pr)):"ex.: Kz 70.000,00";
+}
+
 function render(){
   if(CFG.ga)injectGA(CFG.ga);
   document.getElementById("h_head").innerHTML=CFG.headline||DEF.headline;
@@ -325,20 +405,28 @@ function render(){
   document.getElementById("ofertabox").innerHTML=`<div class="eyebrow">${esc(o.titulo||"")}</div><div class="price">${esc(o.preco||"")}</div><div class="facil">${esc(o.facilidade||"")}</div><ul>${(o.itens||[]).map(x=>`<li>${esc(x)}</li>`).join("")}</ul>${o.garantia?`<div class="garantia">🛡️ ${esc(o.garantia)}</div>`:""}<a href="#reservar" class="btn btn-block">Quero garantir a minha vaga</a>`;
   document.getElementById("porquegrid").innerHTML=(CFG.porque||[]).map(p=>`<div class="pq"><b>${esc(p.t)}</b><span>${esc(p.d)}</span></div>`).join("");
   document.getElementById("faqbox").innerHTML=(CFG.faq||[]).map(f=>`<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join("");
-  const cs=(CFG.cursos&&CFG.cursos.length?CFG.cursos:DEF.cursos).filter(c=>!/power\s*bi/i.test(c));const opt=cs.map(c=>`<option>${esc(c)}</option>`).join("");
+  const _base=(CFG.cursos&&CFG.cursos.length?CFG.cursos:DEF.cursos);
+  const cs=_base.filter(c=>!CFG.cursosAtivos||CFG.cursosAtivos[c]!==false);
+  const opt=cs.map(c=>`<option>${esc(c)}</option>`).join("");
   document.getElementById("i_curso").innerHTML=opt;
+  cursoChg();
   const b=CFG.banco||{};const bx=document.getElementById("bankbox");
   if(bx){if(b.iban||b.nome||b.titular){bx.style.display="block";bx.innerHTML=`<div class="bankbox"><div class="bt">Dados para pagamento</div>${b.nome?`<div><b>Banco:</b> ${esc(b.nome)}</div>`:""}${b.iban?`<div><b>Nº de conta / IBAN:</b> ${esc(b.iban)}</div>`:""}${b.titular?`<div><b>Titular:</b> ${esc(b.titular)}</div>`:""}${b.ref?`<div><b>Referência:</b> ${esc(b.ref)}</div>`:""}<div class="bn">Efectue o pagamento para os dados acima e depois envie o comprovativo abaixo.</div></div>`;}else{bx.style.display="none";bx.innerHTML="";}}
   const tc=document.getElementById("turmacard");
-  if(TURMA){tc.innerHTML=`<div class="turma"><div class="scar">🔥 Vagas limitadas</div><h3>${esc(TURMA.ed||"")}ª Edição — ${esc(TURMA.curso||"Excel")}</h3><div class="muted">Turma presencial em Luanda</div>
-    <div class="rows"><div><b>Início</b>${esc(TURMA.inicio||"a anunciar")}</div><div><b>Fim</b>${esc(TURMA.fim||"—")}</div><div><b>Horário</b>${esc(TURMA.horario||"—")}</div><div><b>Vagas</b><span class="vagas">${(TURMA.vagas!=null?TURMA.vagas:"—")}</span></div></div>
+  const vi=vagasInfo();
+  if(TURMA){tc.innerHTML=`<div class="turma"><div class="scar${vi.cheia?" cheia":(vi.livres!=null&&vi.livres<=3?" poucas":"")}">${esc(vi.badge)}</div><h3>${esc(TURMA.ed||"")}ª Edição — ${esc(TURMA.curso||"Excel")}</h3><div class="muted">Turma presencial em Luanda</div>
+    <div class="rows"><div><b>Início</b>${esc(TURMA.inicio||"a anunciar")}</div><div><b>Fim</b>${esc(TURMA.fim||"—")}</div><div><b>Horário</b>${esc(TURMA.horario||"—")}</div><div><b>Vagas</b><span class="vagas">${esc(vi.label)}</span></div></div>
     <div style="margin-bottom:18px;color:var(--grey)">${esc(CFG.local||DEF.local)}</div>
-    <a href="#reservar" class="btn btn-navy">Garantir a minha vaga</a></div>`;}
+    <a href="#reservar" class="btn btn-navy">${vi.cheia?"Entrar na lista de espera":"Garantir a minha vaga"}</a></div>`;}
   else{tc.innerHTML=`<div class="turma"><h3>Turmas a abrir em breve</h3><div class="muted" style="margin:10px 0 18px">Inscreve-te para seres o primeiro a saber a data da próxima turma presencial.</div><a href="#reservar" class="btn btn-navy">Quero ser avisado</a></div>`;}
+  const hm=document.getElementById("h_mini");
+  if(hm)hm.textContent=(TURMA&&vi.livres!=null)?(vi.cheia?"Turma cheia — fica na lista de espera":(vi.livres+" vaga"+(vi.livres===1?"":"s")+" livres · Certificado incluído")):(CFG.mini||DEF.mini);
   document.getElementById("f_local").textContent=CFG.local||DEF.local;
   document.getElementById("f_tel").textContent=CFG.tel||DEF.tel;
   document.getElementById("wa_link").href=waLink("Olá! Acabei de me inscrever e envio o comprovativo de pagamento.");
   document.getElementById("f_wa").href=waLink();
+  const sw=document.getElementById("stickywa");
+  if(sw)sw.href=waLink();
 }
 
 function boot(){
@@ -351,10 +439,18 @@ function boot(){
     var _pb=CFG.banco;
     if(d.landing)CFG=Object.assign({},DEF,d.landing);
     if(_pb&&(_pb.iban||_pb.nome||_pb.titular))CFG.banco=_pb;
-    if(d.precos&&!(d.landing&&d.landing.cursos))CFG.cursos=Object.keys(d.precos);
-    if(d.precos){var _pk=Object.keys(d.precos);var _ex=_pk.filter(function(k){return /excel/i.test(k);})[0]||_pk[0];var _pv=_ex?d.precos[_ex]:null;if(_pv!=null&&!isNaN(_pv)&&+_pv>0){CFG.oferta=Object.assign({},CFG.oferta||DEF.oferta,{preco:fmtKz(_pv)});}}
+    if(d.precos){CFG.precos=d.precos;var _pk=Object.keys(d.precos);var _ex=_pk.filter(function(k){return /excel/i.test(k);})[0]||_pk[0];var _pv=_ex?d.precos[_ex]:null;if(_pv!=null&&!isNaN(_pv)&&+_pv>0){CFG.oferta=Object.assign({},CFG.oferta||DEF.oferta,{preco:fmtKz(_pv)});}}
     if(d.comp){if(d.comp.local&&(!CFG.local||CFG.local===DEF.local))CFG.local=d.comp.local;if(d.comp.tel&&(!CFG.tel||CFG.tel===DEF.tel))CFG.tel=d.comp.tel;var _cb={nome:d.comp.banco||"",iban:d.comp.iban||"",titular:d.comp.titular||"",ref:d.comp.ref||""};if(_cb.iban||_cb.nome||_cb.titular)CFG.banco=_cb;}
+    TURMAS_ALL=d.turmas||[];
     TURMA=turmaRecente(d.turmas);
+    fetch("https://knowledge-angola-default-rtdb.firebaseio.com/publico/catalogo.json").then(function(r){return r.json();}).then(function(dc){
+      if(dc){
+        if(dc.precos){var _extra=Object.keys(dc.precos).filter(function(k){return DEF.cursos.indexOf(k)<0;});CFG.cursos=DEF.cursos.concat(_extra);CFG.precos=Object.assign({},CFG.precos||{},dc.precos);}
+        if(dc.cursosAtivos)CFG.cursosAtivos=dc.cursosAtivos;
+        if(dc.vagasCurso)CFG.vagasCurso=dc.vagasCurso;
+        render();
+      }
+    }).catch(function(){});
     render();
   }).catch(function(){});
 }
