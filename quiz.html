@@ -60,6 +60,8 @@ footer{color:var(--grey);font-size:13px;text-align:center;padding:26px 0}
 <header><div class="wrap hd">
   <svg class="k" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="48" fill="#fff"/><circle cx="50" cy="21" r="4" fill="#BF9000"/><text x="50" y="53" text-anchor="middle" dominant-baseline="central" font-family="Georgia,serif" font-size="52" font-weight="700" fill="#1F3864">K</text></svg>
   <span class="nm">Knowledge <span class="an">Angola</span></span>
+  <span style="flex:1"></span>
+  <a href="catalogo-v2.html" style="color:#fff;opacity:.85;font-size:13.5px;font-weight:600;text-decoration:none">← Voltar ao catálogo</a>
 </div></header>
 
 <div class="hero"><div class="wrap">
@@ -161,13 +163,30 @@ function voltar(){if(step>0){step--;pintar();}}
 function escolher(j){RESP[step]=j;if(step<PERG.length-1){step++;pintar();}else{document.getElementById("prog").style.width="100%";document.getElementById("quizcard").classList.add("hide");var fc=document.getElementById("formcard");fc.classList.remove("hide");fc.scrollIntoView({behavior:"smooth"});}}
 function pontos(){return RESP.reduce(function(a,j,i){return a+((PERG[i]&&PERG[i].o[j])?PERG[i].o[j][1]:0);},0);}
 function nivelDe(p){var mx=maxPontos()||1;var r=p/mx;if(r<=0.35)return "Iniciante";if(r<=0.72)return "Intermédio";return "Avançado";}
+function detectarFonte(){
+ try{
+  var qs=new URLSearchParams(location.search);
+  var utm=qs.get("utm_source")||qs.get("fonte")||qs.get("src");
+  if(utm)return utm;
+  var ref=(document.referrer||"").toLowerCase();
+  if(!ref)return "Directo";
+  if(ref.indexOf("tiktok")>=0)return "TikTok";
+  if(ref.indexOf("instagram")>=0)return "Instagram";
+  if(ref.indexOf("linkedin")>=0)return "LinkedIn";
+  if(ref.indexOf("facebook")>=0||ref.indexOf("fb.com")>=0)return "Facebook";
+  if(ref.indexOf("google")>=0)return "Google";
+  if(ref.indexOf("whatsapp")>=0)return "WhatsApp";
+  var host=ref.replace(/^https?:\/\//,"").split("/")[0];
+  return host?("Outro ("+host+")"):"Directo";
+ }catch(e){return "Desconhecido";}
+}
 function submeter(){
  var nome=(document.getElementById("q_nome").value||"").trim();
  var tel=(document.getElementById("q_tel").value||"").trim();
  var email=(document.getElementById("q_email").value||"").trim();
  if(!nome||!tel){alert("Falta o nome e o WhatsApp.");return;}
  var p=pontos(),niv=nivelDe(p);
- var rec={quando:new Date().toISOString(),tipo:"Quiz Excel",nome:nome,tel:tel,email:email,nivel:niv,pontos:p,de20:Math.round(p/(maxPontos()||1)*20),estado:"Nova",origem:"Quiz",curso:"Excel (do básico ao avançado)"};
+ var rec={quando:new Date().toISOString(),tipo:"Quiz Excel",nome:nome,tel:tel,email:email,nivel:niv,pontos:p,de20:Math.round(p/(maxPontos()||1)*20),estado:"Nova",origem:"Quiz",fonte:detectarFonte(),curso:"Excel (do básico ao avançado)"};
  var btn=document.getElementById("subbtn");btn.textContent="A calcular…";btn.disabled=true;
  function done(){mostrarResultado(nome,p,niv);}
  if(_db){_db.ref("inscricoes").push(rec).then(done).catch(done);}else{done();}
