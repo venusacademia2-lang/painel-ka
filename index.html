@@ -525,7 +525,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v16.10";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v16.11";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -1919,7 +1919,8 @@ function horarioDoFormando(f,t){
  }
  return (t&&t.horario&&!/\//.test(t.horario))?t.horario:"";
 }
-function compDoc(cod){const c=data.comp;const logo=c.logo||((document.querySelector('.wordmark-sm')||{}).src)||"";const hoje=new Date().toLocaleDateString("pt-PT");var _sv=(_segVia&&_segVia.cod===cod)?_segVia:null;var dataEmit=(_sv&&_sv.data)?new Date(_sv.data).toLocaleDateString("pt-PT"):hoje;var segViaNota=_sv?' · 2ª via (reimpresso em '+hoje+')':'';if(cod&&String(cod).slice(0,4)==="ON::")return compDocOnline(data.online[+String(cod).slice(4)]||{},c,logo,hoje);const f=data.formandos.find(x=>x.cod===cod)||{};const t=turmaByCod(f.turma)||{};
+function compEfetivo(){var d=compDefaults();var c=data.comp||{};var out=Object.assign({},d);Object.keys(c).forEach(function(k){if(c[k]!==""&&c[k]!=null)out[k]=c[k];});return out;}
+function compDoc(cod){const c=compEfetivo();const logo=c.logo||((document.querySelector('.wordmark-sm')||{}).src)||"";const hoje=new Date().toLocaleDateString("pt-PT");var _sv=(_segVia&&_segVia.cod===cod)?_segVia:null;var dataEmit=(_sv&&_sv.data)?new Date(_sv.data).toLocaleDateString("pt-PT"):hoje;var segViaNota=_sv?' · 2ª via (reimpresso em '+hoje+')':'';if(cod&&String(cod).slice(0,4)==="ON::")return compDocOnline(data.online[+String(cod).slice(4)]||{},c,logo,hoje);const f=data.formandos.find(x=>x.cod===cod)||{};const t=turmaByCod(f.turma)||{};
  return `<div id="compdoc" style="background:#fff;max-width:820px;margin:16px auto;padding:32px 42px;border:1px solid var(--linha);border-radius:8px;font-size:14px;line-height:1.6;color:#222">
    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px">
      <div>${logo?`<img src="${logo}" style="height:44px">`:'<b style="color:var(--azul);font-size:18px">Knowledge Angola</b>'}</div>
