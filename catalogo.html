@@ -152,6 +152,9 @@
   .certmodel .campo b{color:var(--txt)}
   .certmodel .assin{margin-top:14px;font-size:11px;color:#535353}
   .certnota{text-align:center;font-size:12px;color:#535353;margin-top:10px}
+  .guarbox{display:flex;gap:14px;align-items:flex-start;max-width:680px;margin:0 auto;background:#fff;border:1px solid var(--linha);border-left:4px solid var(--dour);border-radius:10px;padding:20px 22px;font-size:15px;color:var(--txt)}
+  .guarbox .ic{font-size:26px;line-height:1}
+  .guarbox b{color:var(--azul)}
   /* onde e quando */
   .ondequando{max-width:640px;margin:0 auto;display:grid;gap:12px}
   .oq-it{background:#fff;border:1px solid var(--linha);border-radius:8px;padding:16px 18px;font-size:14px;color:#33415a;display:flex;gap:12px;align-items:flex-start}
@@ -170,10 +173,10 @@
 </div></div>
 
 <header><div class="wrap hd">
-  <a class="brand" href="catalogo-v2.html">
+  <div class="brand">
     <svg width="34" height="34" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="48" fill="#1F3864"/><circle cx="50" cy="21" r="4" fill="#BF9000"/><text x="50" y="53" text-anchor="middle" dominant-baseline="central" font-family="Georgia,serif" font-size="50" font-weight="700" fill="#fff">K</text></svg>
     <b>Knowledge Angola</b>
-  </a>
+  </div>
   <div class="sp"></div>
   <a class="btn" id="wa_top" href="#" target="_blank" rel="noopener">Contactar pelo WhatsApp</a>
 </div></header>
@@ -218,7 +221,11 @@
 <section class="sect" id="grid-formacoes"><div class="wrap">
   <div class="secthd" id="resultlabel">Todas as formações</div>
   <div class="grid" id="grid"></div>
-  <div class="semresultados" id="semresultados" style="display:none">Não encontrámos nenhuma formação com esse termo. <a href="#" onclick="document.getElementById('busca').value='';filtrar();return false" style="color:var(--azul);font-weight:700;text-decoration:underline">Ver todas</a> ou <a href="#" id="wa_semresultado" target="_blank" style="color:var(--azul);font-weight:700;text-decoration:underline">fala connosco</a>.</div>
+  <div class="semresultados" id="semresultados" style="display:none">Não encontrámos nenhuma formação com esse termo. <a href="#" onclick="document.getElementById('busca').value='';filtrar();return false" style="color:var(--azul);font-weight:700;text-decoration:underline">Ver todas</a> ou <a href="#" id="wa_semresultado" target="_blank" style="color:var(--azul);font-weight:700;text-decoration:underline">fale connosco</a>.</div>
+</div></section>
+
+<section class="sect2" id="garantiasec"><div class="wrap">
+  <div class="guarbox" id="guarbox" style="display:none"></div>
 </div></section>
 
 <section class="sect2" id="testemunhossec"><div class="wrap">
@@ -255,6 +262,9 @@
 <section class="sect2" id="formadorsec"><div class="wrap">
   <div class="head"><div class="eyebrow">Quem ensina</div><h2>A equipa que te acompanha</h2></div>
   <div id="formadorlista" style="display:flex;flex-direction:column;gap:16px;max-width:680px;margin:0 auto"></div>
+  <div class="publicoressalva" style="max-width:680px;margin:20px auto 0;background:#fff;border:1px solid var(--linha);border-left:4px solid var(--dour);border-radius:10px;padding:16px 20px;font-size:13.5px;color:var(--txt);line-height:1.6">
+    <b style="color:var(--azul)">Para quem é esta formação:</b> esta formação é destinada a pessoas com ensino superior nas áreas de Gestão, Finanças, Economia, Direito Económico, Contabilidade, Auditoria, Recursos Humanos, Banca e Seguros, Logística ou áreas afins — e também a quem trabalha com estas ferramentas no dia a dia e pretende melhorar as suas competências. Se não és destas áreas, não te preocupes: fale connosco e vemos juntos a melhor solução.
+  </div>
 </div></section>
 
 <section class="sect2" id="certificadosec"><div class="wrap">
@@ -270,6 +280,7 @@
   </div>
   <div class="certnota">Modelo ilustrativo — o certificado final é emitido com os teus dados reais no fim da formação.</div>
 </div></section>
+
 
 <footer>
   © <span id="ano"></span> <b>Knowledge Angola</b> — Academia de Formação · <span id="f_local">Morro Bento, Rua Galeria dos Pães, Luanda</span><br>
@@ -291,6 +302,7 @@
       "Excel do Zero ao Fundamental":"https://images.pexels.com/photos/5356220/pexels-photo-5356220.jpeg?auto=compress&cs=tinysrgb&w=800",
       "Power BI":"https://images.pexels.com/photos/7677861/pexels-photo-7677861.jpeg?auto=compress&cs=tinysrgb&w=800"
     },
+    garantia:"Se em 15 dias sentires que não estás a evoluir, devolvemos cada kwanza que pagaste.",
     formadores:[{
       foto:"formador-ventura-web.jpg",
       nome:"Ventura Augusto",
@@ -541,13 +553,22 @@
     renderFaqGeral(cfg);
     renderHero(cfg);
     renderFormador(cfg);
+    renderGarantia(cfg);
+  }
+  function renderGarantia(cfg){
+    var g = cfg.garantia || DEFAULT.garantia;
+    var box = document.getElementById("guarbox");
+    if(!box) return;
+    if(!g){ box.style.display="none"; return; }
+    box.style.display="flex";
+    box.innerHTML = '<div class="ic">🛡️</div><div><b>Garantia:</b> '+g+'</div>';
   }
 
   render(DEFAULT);
   try{bumpStat("catalogov2","v");}catch(e){}
   try{
     fetch(FB).then(function(r){return r.json();}).then(function(d){
-      if(d){ render(Object.assign({},DEFAULT,{whatsapp:d.whatsapp||DEFAULT.whatsapp,landing:d.landing?("landing-v2.html"):DEFAULT.landing,precos:d.precos||DEFAULT.precos,cursosAtivos:d.cursosAtivos||null,vagasCurso:d.vagasCurso||null,formados:d.formados||"",local:d.local||"",testemunhos:d.testemunhos||[],cursoImgs:d.cursoImgs||{},curriculo:d.curriculo||{},modImgs:d.modImgs||{},cursoThumbs:d.cursoThumbs||{},faq:d.faq||[],heroFoto:d.heroFoto||DEFAULT.heroFoto,formadores:(d.formadores&&d.formadores.length)?d.formadores:null})); }
+      if(d){ render(Object.assign({},DEFAULT,{whatsapp:d.whatsapp||DEFAULT.whatsapp,landing:d.landing?("landing-v2.html"):DEFAULT.landing,precos:d.precos||DEFAULT.precos,cursosAtivos:d.cursosAtivos||null,vagasCurso:d.vagasCurso||null,formados:d.formados||"",local:d.local||"",testemunhos:d.testemunhos||[],cursoImgs:d.cursoImgs||{},curriculo:d.curriculo||{},modImgs:d.modImgs||{},cursoThumbs:d.cursoThumbs||{},faq:d.faq||[],heroFoto:d.heroFoto||DEFAULT.heroFoto,formadores:(d.formadores&&d.formadores.length)?d.formadores:null,garantia:d.garantia||DEFAULT.garantia})); }
     }).catch(function(){});
   }catch(e){}
 </script>
