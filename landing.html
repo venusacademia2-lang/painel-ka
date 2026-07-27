@@ -140,6 +140,12 @@ footer b{color:#fff}footer a{color:#fff}
 .mais summary:after{content:" +";color:var(--gold)}
 .mais[open] summary:after{content:" –"}
 .mais .maisin{padding-top:32px}
+.ofchips{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:20px}
+.ofchip{background:#fff;border:1px solid var(--line);border-radius:14px;padding:11px 20px;font-weight:700;color:var(--navy);cursor:pointer;font-size:14.5px;transition:background .15s,color .15s}
+.ofchip:hover{border-color:var(--navy)}
+.ofchip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.ofcard{display:none;margin-bottom:18px}
+.ofcard.on{display:block}
 #stickycta{display:none}
 @media(max-width:640px){
   #stickycta{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:50;background:#fff;box-shadow:0 -6px 20px rgba(20,30,60,.16);padding:10px 12px;gap:10px}
@@ -179,13 +185,19 @@ footer b{color:#fff}footer a{color:#fff}
 </div></div>
 
 <section id="turma"><div class="wrap">
-  <div class="head"><div class="eyebrow">Inscrições abertas</div><h2>Próxima turma presencial</h2><p>Atualizada automaticamente a partir do nosso sistema.</p></div>
+  <div class="head"><div class="eyebrow">Inscrições abertas</div><h2>Próxima turma presencial</h2><p>Actualizada automaticamente a partir do nosso sistema.</p></div>
   <div id="turmacard"></div>
 </div></section>
 
 <section class="alt" id="oferta"><div class="wrap">
   <div class="head"><div class="eyebrow">A oferta</div><h2>Tudo o que levas contigo</h2></div>
-  <div class="oferta" id="ofertabox"></div>
+  <details class="mais" style="max-width:640px;margin:0 auto">
+    <summary>👉 Ver o que levas em cada formação</summary>
+    <div class="maisin">
+      <div id="ofertaChips" class="ofchips"></div>
+      <div id="ofertaCards"></div>
+    </div>
+  </details>
 </div></section>
 
 <section class="formsec" id="reservar"><div class="wrap">
@@ -280,7 +292,7 @@ const DEF={
   ],
   testemunhos:[],
   oferta:{
-    titulo:"Curso de Excel — do Básico ao Avançado",
+    titulo:"Formação de Excel — do Básico ao Avançado",
     preco:"Kz 70.000,00",
     facilidade:"Com entrada + facilidades de pagamento em prestações",
     itens:[
@@ -291,6 +303,20 @@ const DEF={
     ],
     garantia:"Se em duas semanas sentires que não estás a evoluir, devolvemos cada kwanza que pagaste."
   },
+  ofertasPorCurso:{
+    "Excel do Zero ao Fundamental":{
+      titulo:"Formação de Excel — do Zero ao Fundamental",
+      preco:"Kz 24.500,00",
+      facilidade:"Com entrada + facilidades de pagamento em prestações",
+      itens:[
+        "Bases sólidas sem complicação",
+        "Organizar dados com método",
+        "Confiança para o trabalho diário"
+      ],
+      garantia:"Se em duas semanas sentires que não estás a evoluir, devolvemos cada kwanza que pagaste."
+    }
+  },
+  precos:{"Excel do Básico ao Avançado":70000,"Excel do Zero ao Fundamental":24500,"Power BI":50000},
   porque:[
     {t:"Turmas pequenas",d:"Atenção individual, não uma sala cheia."},
     {t:"100% prático",d:"Sais a fazer, não só a ver."},
@@ -375,18 +401,66 @@ function periodosDe(curso){
   return Object.keys(set);
 }
 
+const PERIODO_UNICO={"Excel do Zero ao Fundamental":"Dias de semana"};
 function cursoChg(){
   var curso=val("i_curso");
-  var pers=periodosDe(curso);
+  var forcado=Object.keys(PERIODO_UNICO).find(function(n){return _matchCurso(n,curso);});
+  forcado=forcado?PERIODO_UNICO[forcado]:null;
+  var pers=forcado?[forcado]:periodosDe(curso);
   var sel=document.getElementById("i_periodo");
   if(sel){
     var opts=(pers.length?pers:["Dias de semana","Sábados"]);
     sel.innerHTML='<option value="">Escolhe o período…</option>'+opts.map(function(p){return "<option>"+esc(p)+"</option>";}).join("");
+    if(forcado){sel.value=forcado;sel.disabled=true;}else{sel.disabled=false;}
   }
   if(typeof periodoChg==="function")periodoChg();
-  var pr=(CFG.precos&&CFG.precos[curso])||(function(){var k=Object.keys(CFG.precos||{}).filter(function(n){return _matchCurso(n,curso);})[0];return k?CFG.precos[k]:null;})();
+  var _precos=CFG.precos||DEF.precos||{};
+  var pr=(_precos&&_precos[curso])||(function(){var k=Object.keys(_precos||{}).filter(function(n){return _matchCurso(n,curso);})[0];return k?_precos[k]:null;})();
   var iv=document.getElementById("i_valor");
   if(iv)iv.placeholder=pr?("ex.: "+fmtKz(pr)):"ex.: Kz 70.000,00";
+}
+
+function ofertaPara(curso){
+  var base=CFG.oferta||DEF.oferta;
+  var porCurso=CFG.ofertasPorCurso||DEF.ofertasPorCurso||{};
+  var extra=porCurso[curso];
+  if(!extra){var k=Object.keys(porCurso).find(function(n){return _matchCurso(n,curso);});if(k)extra=porCurso[k];}
+  var isBase=_matchCurso(curso,"Excel do Básico ao Avançado")||_matchCurso(curso,base.titulo||"");
+  var o=Object.assign({},isBase?base:{},extra||{});
+  if(!o.titulo)o.titulo="Formação de "+(curso||"Excel");
+  if(!o.itens||!o.itens.length)o.itens=(isBase&&base.itens)||["Formação prática da Knowledge Angola, com acompanhamento próximo e certificado."];
+  if(!o.facilidade)o.facilidade=base.facilidade||"Com entrada + facilidades de pagamento em prestações";
+  if(!o.garantia)o.garantia=base.garantia||"";
+  if(!o.preco){
+    var _precos2=CFG.precos||DEF.precos||{};
+    var pr=(_precos2&&_precos2[curso])||(function(){var k2=Object.keys(_precos2||{}).find(function(n){return _matchCurso(n,curso);});return k2?_precos2[k2]:null;})();
+    if(pr!=null)o.preco=fmtKz(pr);
+  }
+  return o;
+}
+
+let OF_CURSOS=[];
+function renderOfertaComparativa(){
+  const _base=(CFG.cursos&&CFG.cursos.length?CFG.cursos:DEF.cursos);
+  OF_CURSOS=_base.filter(c=>!CFG.cursosAtivos||CFG.cursosAtivos[c]!==false).filter(c=>!/power\s*bi/i.test(c));
+  const chipsEl=document.getElementById("ofertaChips");
+  const cardsEl=document.getElementById("ofertaCards");
+  if(!chipsEl||!cardsEl)return;
+  chipsEl.innerHTML=OF_CURSOS.map((c,i)=>`<div class="ofchip" id="ofchip_${i}" onclick="toggleOfCard(${i})">${esc(c)}</div>`).join("");
+  cardsEl.innerHTML=OF_CURSOS.map((c,i)=>{
+    const o=ofertaPara(c);
+    return `<div class="oferta ofcard" id="ofcard_${i}"><div class="eyebrow">${esc(o.titulo||"")}</div><div class="price">${esc(o.preco||"")}</div><div class="facil">${esc(o.facilidade||"")}</div><ul>${(o.itens||[]).map(x=>`<li>${esc(x)}</li>`).join("")}</ul>${o.garantia?`<div class="garantia">🛡️ ${esc(o.garantia)}</div>`:""}<a href="#reservar" class="btn btn-block">Quero garantir a minha vaga</a></div>`;
+  }).join("");
+}
+function toggleOfCard(i){
+  const card=document.getElementById("ofcard_"+i);
+  if(!card)return;
+  const jaAberto=card.classList.contains("on");
+  OF_CURSOS.forEach(function(c,ix){
+    const cd=document.getElementById("ofcard_"+ix);const ch=document.getElementById("ofchip_"+ix);
+    if(cd)cd.classList.remove("on");if(ch)ch.classList.remove("on");
+  });
+  if(!jaAberto){card.classList.add("on");var chip=document.getElementById("ofchip_"+i);if(chip)chip.classList.add("on");}
 }
 
 function render(){
@@ -397,16 +471,15 @@ function render(){
   document.getElementById("h_mini").textContent=CFG.mini||DEF.mini;
   document.getElementById("s_tiktok").textContent=CFG.tiktok||DEF.tiktok;
   document.getElementById("turn").textContent=CFG.turn||DEF.turn;
+  renderOfertaComparativa();
   document.getElementById("probbox").innerHTML=(CFG.problema||[]).map(p=>`<div class="it"><span class="x">✕</span><span>${esc(p)}</span></div>`).join("");
   document.getElementById("benefgrid").innerHTML=(CFG.beneficios||[]).map((b,i)=>`<div class="card benef"><div class="ic">${("0"+(i+1)).slice(-2)}</div><div><b>${esc(b.t||b)}</b>${b.d?"<span>"+esc(b.d)+"</span>":""}</div></div>`).join("");
   const ts=(CFG.testemunhos||[]).filter(t=>t&&t.link);const tg=document.getElementById("tgrid");
   if(ts.length)tg.innerHTML=ts.map(t=>`<div class="tcard"><div class="vid"><iframe src="${esc(embedUrl(t.link))}" allowfullscreen loading="lazy"></iframe></div><div class="nm">${esc(t.nome||"Formando")}</div><span class="pill ${((t.tipo||"").toLowerCase().indexOf("online")>=0)?"p-azul":"p-verde"}">${esc(t.tipo||"Presencial")}</span></div>`).join("");
-  const o=CFG.oferta||DEF.oferta;
-  document.getElementById("ofertabox").innerHTML=`<div class="eyebrow">${esc(o.titulo||"")}</div><div class="price">${esc(o.preco||"")}</div><div class="facil">${esc(o.facilidade||"")}</div><ul>${(o.itens||[]).map(x=>`<li>${esc(x)}</li>`).join("")}</ul>${o.garantia?`<div class="garantia">🛡️ ${esc(o.garantia)}</div>`:""}<a href="#reservar" class="btn btn-block">Quero garantir a minha vaga</a>`;
   document.getElementById("porquegrid").innerHTML=(CFG.porque||[]).map(p=>`<div class="pq"><b>${esc(p.t)}</b><span>${esc(p.d)}</span></div>`).join("");
   document.getElementById("faqbox").innerHTML=(CFG.faq||[]).map(f=>`<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join("");
   const _base=(CFG.cursos&&CFG.cursos.length?CFG.cursos:DEF.cursos);
-  const cs=_base.filter(c=>!CFG.cursosAtivos||CFG.cursosAtivos[c]!==false);
+  const cs=_base.filter(c=>!CFG.cursosAtivos||CFG.cursosAtivos[c]!==false).filter(c=>!/power\s*bi/i.test(c));
   const opt=cs.map(c=>`<option>${esc(c)}</option>`).join("");
   document.getElementById("i_curso").innerHTML=opt;
   cursoChg();
