@@ -290,7 +290,7 @@
 <script>
   var DEFAULT = {
     whatsapp:"244939845313",
-    landing:"landing-v2.html",
+    landing:"landing.html",
     precos:{"Excel do Básico ao Avançado":70000,"Excel do Zero ao Fundamental":24500,"Power BI":50000},
     heroFoto:"https://images.pexels.com/photos/30689114/pexels-photo-30689114.jpeg?auto=compress&cs=tinysrgb&w=1200",
     modImgs:{
@@ -568,7 +568,7 @@
   try{bumpStat("catalogov2","v");}catch(e){}
   try{
     fetch(FB).then(function(r){return r.json();}).then(function(d){
-      if(d){ render(Object.assign({},DEFAULT,{whatsapp:d.whatsapp||DEFAULT.whatsapp,landing:d.landing?("landing-v2.html"):DEFAULT.landing,precos:d.precos||DEFAULT.precos,cursosAtivos:d.cursosAtivos||null,vagasCurso:d.vagasCurso||null,formados:d.formados||"",local:d.local||"",testemunhos:d.testemunhos||[],cursoImgs:d.cursoImgs||{},curriculo:d.curriculo||{},modImgs:d.modImgs||{},cursoThumbs:d.cursoThumbs||{},faq:d.faq||[],heroFoto:d.heroFoto||DEFAULT.heroFoto,formadores:(d.formadores&&d.formadores.length)?d.formadores:null,garantia:d.garantia||DEFAULT.garantia})); }
+      if(d){ render(Object.assign({},DEFAULT,{whatsapp:d.whatsapp||DEFAULT.whatsapp,landing:d.landing?("landing.html"):DEFAULT.landing,precos:d.precos||DEFAULT.precos,cursosAtivos:d.cursosAtivos||null,vagasCurso:d.vagasCurso||null,formados:d.formados||"",local:d.local||"",testemunhos:d.testemunhos||[],cursoImgs:d.cursoImgs||{},curriculo:d.curriculo||{},modImgs:d.modImgs||{},cursoThumbs:d.cursoThumbs||{},faq:d.faq||[],heroFoto:d.heroFoto||DEFAULT.heroFoto,formadores:(d.formadores&&d.formadores.length)?d.formadores:null,garantia:d.garantia||DEFAULT.garantia})); }
     }).catch(function(){});
   }catch(e){}
 </script>
