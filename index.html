@@ -562,7 +562,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v17.0";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v18.0";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -678,16 +678,70 @@ let pnlDet=null;
 function pnlDetalhe(tipo,cod){pnlDet={tipo:tipo,cod:cod||""};render();}
 function pnlDetalheCusto(cod){pnlDet={tipo:"custo",cod:cod||""};render();}
 function fecharPnlDet(){pnlDet=null;render();}
-let dividaDet=false;
-function abrirDividaDet(){dividaDet=true;render();}
-function fecharDividaDet(){dividaDet=false;render();}
-function dividaDetModalHTML(){if(!dividaDet)return"";var itens=[];
- data.formandos.forEach(function(f){var p=payOf(f.cod);var d=p?divida(p):0;if(d>0)itens.push({nome:f.nome||f.cod,val:d});});
- (data.online||[]).forEach(function(o){var cod=ensureOnlineCod(o);var p=data.pagamentos.find(function(x){return x.cod===cod;});var d=p?divida(p):0;if(d>0)itens.push({nome:o.nome||cod,val:d});});
- itens.sort(function(a,b){return b.val-a.val;});
- var tot=itens.reduce(function(a,x){return a+x.val;},0);
- var rows=itens.map(function(x){return '<tr><td>'+esc(x.nome)+'</td><td style="text-align:right">'+kz(x.val)+'</td></tr>';}).join("")||'<tr><td colspan="2" class="muted">Ninguém em dívida.</td></tr>';
- return '<div style="position:fixed;inset:0;background:rgba(20,30,60,.4);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharDividaDet()"><div class="card" style="padding:20px;width:440px;max-width:94vw;max-height:86vh;overflow:auto"><div class="flex"><h2 style="color:var(--azul)">Total em dívida</h2><div class="spacer"></div><button class="btn-o" style="padding:4px 10px" onclick="fecharDividaDet()">Fechar ✕</button></div><div class="muted" style="margin-bottom:8px">Quem está em dívida e quanto falta receber.</div><table><thead><tr><th>Aluno</th><th style="text-align:right">Em dívida</th></tr></thead><tbody>'+rows+'</tbody><tfoot><tr><td><b>Total</b></td><td style="text-align:right"><b>'+kz(tot)+'</b></td></tr></tfoot></table></div></div>';}
+/* L18 — Drill-down financeiro unificado (estilo tabela dinâmica): cada quadro do resumo
+   abre o seu próprio detalhe (nunca partilha o mesmo com outro quadro), com ver ficha,
+   editar/apagar (só gestão + senha), ordenar e filtrar por turma, e total geral. */
+let finDet=null; // {tipo:"divida"|"receita"|"atraso"|"vend", vendedor, sort, dir, turmaF}
+function abrirDividaDet(){finDet={tipo:"divida",sort:"valor",dir:"desc",turmaF:""};render();}
+function abrirReceitaDet(){finDet={tipo:"receita",sort:"data",dir:"desc",turmaF:""};render();}
+function abrirAtrasoDet(){finDet={tipo:"atraso",sort:"data",dir:"asc",turmaF:""};render();}
+function abrirVendDet(v){finDet={tipo:"vend",vendedor:v,sort:"valor",dir:"desc",turmaF:""};render();}
+function fecharFinDet(){finDet=null;render();}
+function fecharDividaDet(){fecharFinDet();}
+function fecharVendDet(){fecharFinDet();}
+function finDetSetSort(col){if(!finDet)return;if(finDet.sort===col)finDet.dir=finDet.dir==="asc"?"desc":"asc";else{finDet.sort=col;finDet.dir=(col==="data")?"desc":"asc";}render();}
+function finDetSetTurma(v){if(!finDet)return;finDet.turmaF=v;render();}
+function _finDetTitulo(fd){if(fd.tipo==="divida")return "Total em dívida";if(fd.tipo==="receita")return "Receita recebida";if(fd.tipo==="atraso")return "Pagamentos em atraso";if(fd.tipo==="vend")return (fd.vendedor==="—"?"Sem responsável atribuído":esc(fd.vendedor));return "Detalhe";}
+function _finDetExplic(fd){if(fd.tipo==="divida")return "Quem está em dívida e quanto falta receber.";if(fd.tipo==="receita")return "Pagamentos já recebidos — o que soma a receita.";if(fd.tipo==="atraso")return "Formandos com compromisso de pagamento vencido.";if(fd.tipo==="vend")return "Alunos/pagamentos que somam este valor.";return "";}
+function finDetItens(fd){var itens=[];
+ function pushFrom(cod,nomeFallback,vend){var p=payOf(cod)||{};
+  var f=data.formandos.find(function(x){return x.cod===cod;});
+  var o=!f?(data.online||[]).find(function(x){return ensureOnlineCod(x)===cod;}):null;
+  var nome=(f&&f.nome)||(o&&o.nome)||nomeFallback||cod;
+  var turmaCod=(f&&f.turma)||"";
+  var dataRef=(p.prestacoes&&p.prestacoes.length)?p.prestacoes[p.prestacoes.length-1].data:(p.criadoEm||(f&&f.data)||"");
+  var proc=+p.total||0,rec=_recOfPag(p),div=divida(p);
+  var val=(fd.tipo==="divida"||fd.tipo==="atraso")?div:rec;
+  itens.push({cod:cod,nome:nome,turmaCod:turmaCod,data:(dataRef||"").slice(0,10),val:val,proc:proc,rec:rec,vendedor:vend||(f&&f.vendedor)||(o&&o.vendedor)||"—"});}
+ if(fd.tipo==="vend"){
+  data.formandos.forEach(function(f){if((f.vendedor||"—")!==fd.vendedor)return;pushFrom(f.cod,f.nome,fd.vendedor);});
+  (data.online||[]).forEach(function(o){if((o.vendedor||"—")!==fd.vendedor)return;pushFrom(ensureOnlineCod(o),o.nome,fd.vendedor);});
+  if(fd.vendedor==="—"){var seen={};data.formandos.forEach(function(f){seen[f.cod]=1;});(data.online||[]).forEach(function(o){seen[ensureOnlineCod(o)]=1;});
+   data.pagamentos.forEach(function(p){if(seen[p.cod])return;pushFrom(p.cod,p.cod,"—");});}
+ }else if(fd.tipo==="receita"){
+  data.formandos.forEach(function(f){pushFrom(f.cod,f.nome);});
+  (data.online||[]).forEach(function(o){pushFrom(ensureOnlineCod(o),o.nome);});
+  var seen2={};data.formandos.forEach(function(f){seen2[f.cod]=1;});(data.online||[]).forEach(function(o){seen2[ensureOnlineCod(o)]=1;});
+  data.pagamentos.forEach(function(p){if(seen2[p.cod])return;pushFrom(p.cod,p.cod);});
+  itens=itens.filter(function(it){return it.rec>0;});
+ }else{ // divida, atraso — só formandos/online com nome (mesma regra do KPI original)
+  data.formandos.forEach(function(f){pushFrom(f.cod,f.nome);});
+  (data.online||[]).forEach(function(o){pushFrom(ensureOnlineCod(o),o.nome);});
+  if(fd.tipo==="divida")itens=itens.filter(function(it){return it.val>0;});
+  if(fd.tipo==="atraso")itens=itens.filter(function(it){var p=payOf(it.cod);return p&&estadoPag(p)==="Em atraso";});
+ }
+ if(fd.turmaF)itens=itens.filter(function(it){return it.turmaCod===fd.turmaF;});
+ itens.sort(function(a,b){if(fd.sort==="nome")return (a.nome||"").localeCompare(b.nome||"");if(fd.sort==="turma"){var ta=turmaByCod(a.turmaCod),tb=turmaByCod(b.turmaCod);return((ta?+ta.ed:0)-(tb?+tb.ed:0));}if(fd.sort==="proc")return a.proc-b.proc;if(fd.sort==="data")return (a.data||"").localeCompare(b.data||"");return a.val-b.val;});
+ if(fd.dir==="desc")itens.reverse();
+ return itens;}
+function finDetVerFicha(cod){var f=data.formandos.find(function(x){return x.cod===cod;});if(f){fFicha=cod;fecharFinDet();show('formandos');return;}var oi=(data.online||[]).findIndex(function(o){return ensureOnlineCod(o)===cod;});if(oi>=0){onDetail=oi;fecharFinDet();show('online');return;}toast("Sem ficha associada a este registo");}
+function finDetEditar(cod){if(role!=="admin"){toast("Só a gestão");return;}var i=data.pagamentos.findIndex(function(p){return p.cod===cod;});if(i<0){toast("Pagamento não encontrado");return;}if(!_reauthGestor()){toast("Senha errada — não editei");return;}var p=data.pagamentos[i];var tot=prompt("Total (Kz):",p.total||0);if(tot===null)return;var pg=prompt("Pago / recebido (Kz):",p.pago||0);if(pg===null)return;p.total=+String(tot).replace(/\D/g,"")||0;p.pago=+String(pg).replace(/\D/g,"")||0;if(divida(p)<=0)p.dataPrometida="";persist();toast("Pagamento actualizado");render();}
+function finDetApagar(cod){if(role!=="admin"){toast("Só a gestão");return;}var i=data.pagamentos.findIndex(function(p){return p.cod===cod;});if(i<0){toast("Pagamento não encontrado");return;}var p=data.pagamentos[i];var f=data.formandos.find(function(x){return x.cod===p.cod;})||{};if(!confirm("Apagar o registo de pagamento de "+(f.nome||p.cod)+"? Fica no registo de apagados (recuperável)."))return;if(!_reauthGestor()){toast("Senha errada — não apaguei");return;}var motivo=prompt("Motivo para apagar este pagamento:");if(motivo===null||!motivo.trim()){toast("É preciso indicar um motivo");return;}if(!Array.isArray(data.apagados))data.apagados=[];data.apagados.unshift({quando:new Date().toISOString().slice(0,16).replace('T',' '),quem:(currentUser&&currentUser.nome)||"Gestão",aba:"pagamentos",registo:JSON.parse(JSON.stringify(p)),motivo:motivo.trim()});data.pagamentos.splice(i,1);persist();toast("Pagamento apagado");render();}
+function finDetModalHTML(){if(!finDet)return"";var fd=finDet;var itens=finDetItens(fd);
+ var tot=itens.reduce(function(a,x){return a+(x.val||0);},0);
+ var turmasUsadas=[...new Set(itens.map(function(x){return x.turmaCod;}).filter(Boolean))];
+ var valLabel=(fd.tipo==="divida"||fd.tipo==="atraso")?"Em dívida":"Recebido";
+ var sortHead=function(col,label){return '<th style="cursor:pointer;user-select:none" onclick="finDetSetSort(\''+col+'\')">'+label+' '+(fd.sort===col?(fd.dir==="asc"?"▲":"▼"):'<span style="opacity:.3">↕</span>')+'</th>';};
+ var rows=itens.map(function(x){var t=turmaByCod(x.turmaCod);var turmaLabel=t?(t.ed+"ª — "+(t.curso||"")):(x.turmaCod?x.turmaCod:"—");
+  return '<tr><td>'+esc(x.nome)+'</td><td>'+esc(turmaLabel)+'</td>'+(fd.tipo==="vend"?'<td style="text-align:right">'+kz(x.proc)+'</td>':'')+'<td>'+(x.data||"—")+'</td><td style="text-align:right">'+kz(x.val)+'</td>'
+   +'<td class="flex" style="gap:5px"><button class="btn-o" style="padding:3px 8px" onclick="finDetVerFicha(\''+esc(x.cod)+'\')">Ficha</button>'+(role==="admin"?'<button class="btn-o" style="padding:3px 8px" title="Editar" onclick="finDetEditar(\''+esc(x.cod)+'\')">✎</button><button class="btn-o" style="padding:3px 8px" title="Apagar" onclick="finDetApagar(\''+esc(x.cod)+'\')">🗑</button>':"")+'</td></tr>';
+ }).join("")||'<tr><td colspan="'+(fd.tipo==="vend"?6:5)+'" class="muted">Sem registos.</td></tr>';
+ return '<div style="position:fixed;inset:0;background:rgba(20,30,60,.4);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharFinDet()"><div class="card" style="padding:20px;width:680px;max-width:96vw;max-height:88vh;overflow:auto">'
+  +'<div class="flex"><h2 style="color:var(--azul)">'+_finDetTitulo(fd)+'</h2><div class="spacer"></div><button class="btn-o" style="padding:4px 10px" onclick="fecharFinDet()">Fechar ✕</button></div>'
+  +'<div class="muted" style="margin-bottom:8px">'+_finDetExplic(fd)+'</div>'
+  +(turmasUsadas.length>1?'<select onchange="finDetSetTurma(this.value)" style="width:auto;margin-bottom:8px"><option value="">Todas as turmas</option>'+turmasUsadas.map(function(tc){var t=turmaByCod(tc);return '<option value="'+esc(tc)+'" '+(fd.turmaF===tc?"selected":"")+'>'+esc(t?(t.ed+"ª — "+(t.curso||"")):tc)+'</option>';}).join("")+'</select>':"")
+  +'<table><thead><tr>'+sortHead("nome","Aluno")+sortHead("turma","Turma")+(fd.tipo==="vend"?sortHead("proc","Processado"):"")+sortHead("data","Data")+sortHead("valor",valLabel)+'<th></th></tr></thead><tbody>'+rows+'</tbody>'
+  +'<tfoot><tr style="font-weight:700;border-top:2px solid var(--linha)"><td colspan="'+(fd.tipo==="vend"?4:3)+'">Total geral</td><td style="text-align:right">'+kz(tot)+'</td><td></td></tr></tfoot></table></div></div>';}
 function _recOfPag(p){return (p.prestacoes&&p.prestacoes.length)?p.prestacoes.reduce(function(s,x){return s+(+x.valor||0);},0):(+p.pago||0);}
 function atribuirTurmaOrfao(cod,sel){if(role!=="admin"){toast("Só a gestão");return;}var novaTurma=sel.value;if(!novaTurma)return;var f=data.formandos.find(function(x){return x.cod===cod;});if(!f){toast("Não encontrei este formando");return;}f.turma=novaTurma;persist();toast("Turma atribuída — o P&L já reflecte");render();}
 function pnlDetModalHTML(){if(!pnlDet)return"";var itens=[],titulo="",ehOutros=false;if(pnlDet.tipo==="custo"){const F=fin();var t=turmaByCod(pnlDet.cod)||{};titulo="Custos — "+(t.ed||"")+"ª — "+(t.curso||"");(F.gastos||[]).filter(function(g){return g.centroCusto===pnlDet.cod;}).forEach(function(g){itens.push({nome:(g.categoria||"Gasto")+(g.descricao?" — "+g.descricao:""),val:+g.valor||0});});}else if(pnlDet.tipo==="turma"){var t=turmaByCod(pnlDet.cod)||{};titulo=(t.ed||"")+"ª — "+(t.curso||"");data.formandos.filter(function(f){return f.turma===pnlDet.cod;}).forEach(function(f){var p=payOf(f.cod);itens.push({nome:f.nome||f.cod,val:p?_recOfPag(p):0});});}else if(pnlDet.tipo==="online"){titulo="Formação Online";data.pagamentos.filter(function(p){return /^ONL-/.test(p.cod||"")||p.plano==="Turma Online";}).forEach(function(p){var o=(data.online||[]).find(function(x){return ensureOnlineCod(x)===p.cod;});itens.push({nome:(o&&o.nome)||p.cod,val:_recOfPag(p)});});}else{titulo="Sem turma (outros)";ehOutros=true;var tc={};data.turmas.forEach(function(t){data.formandos.filter(function(f){return f.turma===t.cod;}).forEach(function(f){tc[f.cod]=1;});});data.pagamentos.filter(function(p){var isOnl=/^ONL-/.test(p.cod||"")||p.plano==="Turma Online";return !isOnl&&!tc[p.cod];}).forEach(function(p){var f=data.formandos.find(function(x){return x.cod===p.cod;});itens.push({nome:(f&&f.nome)||p.cod,val:_recOfPag(p),cod:p.cod,ehFormando:!!f});});}var ehCusto=pnlDet.tipo==="custo";var tot=itens.reduce(function(a,x){return a+x.val;},0);
@@ -1122,7 +1176,7 @@ function vPainel(){
  const perfRows=Object.entries(perf).sort((a,b)=>b[1].vendas-a[1].vendas);
  const K=(lab,v,cls,tab)=>`<div class="kpi ${cls||''}" onclick="show('${tab}')"><div class="lab">${lab}</div><div class="val">${v}</div></div>`;
  const Kc=(lab,v,cls,estado)=>`<div class="kpi ${cls||''}" onclick="certEstado='${estado}';show('certificados')"><div class="lab">${lab}</div><div class="val">${v}</div></div>`;
- return `${dividaDetModalHTML()}<details class="sec accdet" open><summary style="font-family:Georgia,'Times New Roman',serif;font-weight:700;color:var(--azul);font-size:16px">📞 Registar comunicado agora</summary>
+ return `${finDetModalHTML()}<details class="sec accdet" open><summary style="font-family:Georgia,'Times New Roman',serif;font-weight:700;color:var(--azul);font-size:16px">📞 Registar comunicado agora</summary>
   <div class="muted">Chegou uma mensagem de um formando? Regista aqui sem sair do Painel — o histórico fica em "Comunicados &amp; Tarefas".</div>
   <div class="formgrid" style="margin-top:8px">
    <div><label>Telefone (id)</label><input id="pk_tel" placeholder="9XX XXX XXX"></div>
@@ -1134,9 +1188,9 @@ function vPainel(){
   <div class="row-actions"><button class="btn-p" onclick="addComunicadoRapido()">Gravar comunicado</button> <button class="btn-o" onclick="show('notas')">Ver todos ↗</button></div></details>
   <div class="kpigrid">
   ${K("Formandos activos",ativos,"","formandos")}
-  ${K("Receita recebida",kz(receita),"money","pagamentos")}
+  <div class="kpi money" onclick="abrirReceitaDet()"><div class="lab">Receita recebida</div><div class="val">${kz(receita)}</div></div>
   <div class="kpi ${emdivida>0?'alert':''}" onclick="abrirDividaDet()"><div class="lab">Total em dívida</div><div class="val">${kz(emdivida)}</div></div>
-  ${K("Pagamentos em atraso",atraso,atraso>0?"alert":"","pagamentos")}
+  <div class="kpi ${atraso>0?'alert':''}" onclick="abrirAtrasoDet()"><div class="lab">Pagamentos em atraso</div><div class="val">${atraso}</div></div>
   ${K("Edições em andamento",turmas,"","calendario")}
   ${K("Já formámos",formados,"","formandos")}
   ${K("Leads captados (mês)",(function(){var m=new Date().toISOString().slice(0,7);return data.leads.filter(x=>(x.data||"").slice(0,7)===m).length;})(),"","leads")}
@@ -1157,23 +1211,13 @@ function vPainel(){
  <div class="sec" style="display:none"><div class="flex"><h2>Desempenho comercial — este mês</h2><div class="spacer"></div><button class="btn-o" style="padding:4px 10px" onclick="show('desempenho')">Abrir Desempenho &amp; Horas</button></div><div class="muted">Leads → inscrições → receita → quota-parte, por pessoa.</div>
   ${(function(){var m=new Date().toISOString().slice(0,7),ini=m+"-01",fim=m+"-31";var pes=colaboradoresComMeta();var tot=pes.reduce(function(s,n){return s+_receitaDe(n,ini,fim);},0);var rs=pes.map(function(n){var ld=_leadsDe(n,ini,fim),ins=_convDe(n,ini,fim),rec=_receitaDe(n,ini,fim);return{n:n,ld:ld,ins:ins,rec:rec,q:tot?Math.round(rec/tot*100):0};}).sort(function(a,b){return b.rec-a.rec;});return '<table style="margin-top:8px"><thead><tr><th>Pessoa</th><th style="text-align:center">Leads</th><th style="text-align:center">Inscreveu</th><th style="text-align:center">Receita</th><th style="text-align:center">Quota-parte</th></tr></thead><tbody>'+rs.map(function(r){return '<tr><td>'+esc(r.n)+'</td><td style="text-align:center">'+r.ld+'</td><td style="text-align:center">'+r.ins+'</td><td style="text-align:center">'+kz(r.rec)+'</td><td style="text-align:center"><b>'+r.q+'%</b></td></tr>';}).join("")+'</tbody></table>';})()}</div>
  <div class="sec"><h2>Funil de captação</h2><div class="muted">Leads por estado.</div><div class="chartwrap"><canvas id="chart"></canvas></div></div>
- <div class="sec">${vendDetModalHTML()}<div class="flex"><h2>Vendas por responsável</h2><div class="spacer"></div>${role==="admin"?'<button class="btn-o" style="padding:4px 10px" onclick="recalcularFin()">↻ Actualizar valores</button>':''}</div><div class="muted">Quem vendeu quanto (valor total das vendas e já recebido). Clica no nome para ver quais alunos/pagamentos somam o valor. O "↻ Actualizar" re-sincroniza o recebido a partir dos pagamentos reais.</div>
-  <table><thead><tr><th>Responsável</th><th>Vendas</th><th>Valor vendido</th><th>Recebido</th></tr></thead><tbody>
+ <div class="sec"><div class="flex"><h2>Vendas por responsável</h2><div class="spacer"></div>${role==="admin"?'<button class="btn-o" style="padding:4px 10px" onclick="recalcularFin()">↻ Actualizar valores</button>':''}</div><div class="muted">Quem vendeu quanto (valor total das vendas e já recebido). Clica no nome para ver quais alunos/pagamentos somam o valor. O "↻ Actualizar" re-sincroniza o recebido a partir dos pagamentos reais.</div>
+  <table><thead><tr><th>Responsável</th><th>Vendas</th><th>Valor processado</th><th>Recebido</th></tr></thead><tbody>
   ${vrows.map(([v,o])=>`<tr><td><span style="cursor:pointer;color:var(--azul2);text-decoration:underline" onclick="abrirVendDet('${esc(v).replace(/'/g,"\\'")}')">${v==="—"?"Sem responsável atribuído":esc(v)}</span>${role==="admin"&&v!=="—"?` <button class="btn-o" style="padding:1px 7px;font-size:11px" data-v="${esc(v)}" onclick="renomearVendedor(this.dataset.v)" title="Unificar/renomear este vendedor">unificar</button>`:""}</td><td>${o.n}</td><td>${kz(o.tot)}</td><td>${kz(o.pago)}</td></tr>`).join("")||`<tr><td colspan="4" class="muted">Sem vendas.</td></tr>`}
   </tbody><tfoot><tr style="font-weight:700;border-top:2px solid var(--linha)"><td>Total geral</td><td>${vTotGeral.n}</td><td>${kz(vTotGeral.tot)}</td><td>${kz(vTotGeral.pago)}</td></tr></tfoot></table>
   ${vTotGeral.pago!==_finTotalPago?`<div class="note" style="background:#fdecea;border-color:#f0b8ad;color:#a3311f;margin-top:8px">⚠ O total geral (${kz(vTotGeral.pago)}) não bate com o recebido em Finanças (${kz(_finTotalPago)}) — avisa a gestão.</div>`:`<div class="muted" style="margin-top:6px">✓ O total geral bate certo com o valor recebido em Finanças.</div>`}
   </div>`;
 }
-let vendDet=null;
-function abrirVendDet(v){vendDet=v;render();}
-function fecharVendDet(){vendDet=null;render();}
-function vendDetModalHTML(){if(vendDet===null)return"";var v=vendDet;var itens=[];
- data.formandos.forEach(function(f){if((f.vendedor||"—")!==v)return;var p=payOf(f.cod);itens.push({nome:f.nome||f.cod,val:p?(+p.pago||0):0});});
- (data.online||[]).forEach(function(o){if((o.vendedor||"—")!==v)return;var cod=ensureOnlineCod(o);var p=data.pagamentos.find(function(x){return x.cod===cod;});itens.push({nome:o.nome||cod,val:p?(+p.pago||0):0});});
- if(v==="—"){var seen={};data.formandos.forEach(function(f){seen[f.cod]=1;});(data.online||[]).forEach(function(o){seen[ensureOnlineCod(o)]=1;});data.pagamentos.forEach(function(p){if(seen[p.cod])return;var f=data.formandos.find(function(x){return x.cod===p.cod;});itens.push({nome:(f&&f.nome)||p.cod,val:(+p.pago||0)});});}
- var tot=itens.reduce(function(a,x){return a+x.val;},0);
- var rows=itens.map(function(x){return '<tr><td>'+esc(x.nome)+'</td><td style="text-align:right">'+kz(x.val)+'</td></tr>';}).join("")||'<tr><td colspan="2" class="muted">Sem vendas.</td></tr>';
- return '<div style="position:fixed;inset:0;background:rgba(20,30,60,.4);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharVendDet()"><div class="card" style="padding:20px;width:440px;max-width:94vw;max-height:86vh;overflow:auto"><div class="flex"><h2 style="color:var(--azul)">'+(v==="—"?"Sem responsável atribuído":esc(v))+'</h2><div class="spacer"></div><button class="btn-o" style="padding:4px 10px" onclick="fecharVendDet()">Fechar ✕</button></div><div class="muted" style="margin-bottom:8px">Alunos/pagamentos que somam este valor.</div><table><thead><tr><th>Aluno</th><th style="text-align:right">Recebido</th></tr></thead><tbody>'+rows+'</tbody><tfoot><tr><td><b>Total</b></td><td style="text-align:right"><b>'+kz(tot)+'</b></td></tr></tfoot></table></div></div>';}
 let chartObj=null;
 function drawChart(){const ctx=document.getElementById("chart");if(!ctx)return;const counts=LEAD_ESTADOS.map(e=>data.leads.filter(l=>l.estado===e).length);if(chartObj)chartObj.destroy();
  chartObj=new Chart(ctx,{type:"bar",data:{labels:LEAD_ESTADOS,datasets:[{data:counts,backgroundColor:["#2E5496","#5B7FBD","#BF9000","#C0392B"],borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}});}
@@ -1462,11 +1506,11 @@ function vPagamentos(){
    <div><label>Foto do comprovativo (opcional)</label><input id="p_compimg" type="file" accept="image/*" style="display:none" onchange="onPayComp(this)"><div class="file" onclick="document.getElementById('p_compimg').click()" id="p_complabel" style="border:1.5px dashed var(--linha);border-radius:9px;padding:9px;text-align:center;color:#7b869c;cursor:pointer;font-size:13px">📎 Carregar comprovativo</div></div>
    <div><label>Data prometida do restante</label><input id="p_prom" type="date"></div>
   </div><div class="row-actions"><button class="btn-p" onclick="addPay()">Lançar pagamento</button></div></details>
- <div class="sec"><h2>Quem deve</h2><div class="muted">Ordenado por compromissos vencidos e maior dívida.</div>
+ <div class="sec"><h2>1. Quem deve</h2><div class="muted"><b>Só quem ainda tem dívida em aberto</b> (não inclui quem já liquidou). Ordenado por compromissos vencidos e maior dívida.</div>
   <table><thead><tr><th>Código</th><th>Nome</th><th>Em dívida</th><th>Data prometida</th><th>Situação</th><th>Acções</th></tr></thead><tbody>
   ${emAberto.map(p=>{const f=data.formandos.find(x=>x.cod===p.cod)||{};const venc=compromissoVencido(p);return `<tr><td>${esc(p.cod)}</td><td>${esc(f.nome||"")}</td><td><b>${kz(divida(p))}</b></td><td>${esc(p.dataPrometida||"—")}</td><td>${venc?'<span class="pill p-verm">compromisso vencido</span>':'<span class="pill p-dour">a aguardar</span>'}</td><td class="flex" style="gap:6px">${f.cod?`<button class="btn-o" style="padding:4px 10px" onclick="fFicha='${esc(f.cod)}';show('formandos')">Ficha</button>`:""}<button class="btn-p" style="padding:4px 10px" onclick="irPagar('${esc(p.cod)}')">Registar pagamento</button></td></tr>`}).join("")||`<tr><td colspan="6" class="muted">Ninguém em dívida. 👍</td></tr>`}
   </tbody></table></div>
- <div class="sec"><h2>Conta de cada formando</h2>
+ <div class="sec"><h2>2. Conta de cada formando</h2><div class="muted"><b>Livro-razão completo</b> — todos os formandos com pagamento registado, liquidados ou não.</div>
   ${role==="admin"&&_semNome?`<div class="note" style="background:#fff7e6;border-color:#f0d999;color:#8a6d00">Há <b>${_semNome}</b> registo(s) de pagamento <b>sem nome</b> (parecem exemplos). Vê-os assinalados abaixo e apaga com o botão 🗑 (pede a tua senha).</div>`:""}
   <table><thead><tr><th>Código</th><th>Nome</th><th>Vendedor</th><th>Plano</th><th>Total</th><th>Pago</th><th>Em dívida</th><th>Prest.</th><th>Comprov.</th><th>Estado</th>${role==="admin"?"<th>Acções</th>":""}</tr></thead><tbody>
   ${data.pagamentos.map((p,i)=>{const f=data.formandos.find(x=>x.cod===p.cod)||{};const st=estadoPag(p);const np=(p.prestacoes||[]).length;const semN=!((f.nome||"").trim());return `<tr${semN?' style="background:#fff7e6"':''}><td>${esc(p.cod)}</td><td>${esc(f.nome||"")||'<span class="pill p-verm">sem nome</span>'}</td><td>${esc(f.vendedor||"—")}</td><td>${esc(p.plano)}</td><td>${kz(p.total)}</td><td>${kz(p.pago)}</td><td>${divida(p)>0?kz(divida(p)):"—"}</td><td>${np}/2</td><td>${p.comprovativo==='Sim'?'<span class="pill p-verde">Sim</span>':'<span class="pill p-verm">Não</span>'}</td><td><span class="pill ${st==='Liquidado'?'p-azul':st==='Em atraso'?'p-verm':'p-verde'}">${st}</span></td>${role==="admin"?`<td class="flex" style="gap:5px"><button class="btn-o" style="padding:4px 8px" title="Editar" onclick="editPagamento(${i})">✎</button><button class="btn-o" style="padding:4px 8px" title="Apagar (pede senha)" onclick="delPagamento(${i})">🗑</button></td>`:""}</tr>`}).join("")||`<tr><td colspan="11" class="muted">Sem pagamentos.</td></tr>`}
