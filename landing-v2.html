@@ -95,7 +95,7 @@ footer b{color:#fff}
         <div id="i_horariowrap"><label>Horário</label><select id="i_horario"><option>Manhã (8:30 às 13:00)</option><option>Tarde (14:00 às 18:00)</option></select></div>
       </div>
       <div id="onlinenota" class="wa-note" style="display:none">O dia e horário das aulas online são combinados directamente com o(a) formador(a) após a inscrição.</div>
-      <label>Valor pago (Kz)</label><input id="i_valor" type="number" placeholder="ex.: 70.000">
+      <label>Valor pago (Kz)</label><input id="i_valor" type="text" inputmode="numeric" placeholder="ex.: 70.000" oninput="maskMil(this)">
       <label>O que esperas aprender (opcional)</label><textarea id="i_exp" rows="3" placeholder="Conta-nos rapidamente o que procuras…"></textarea>
       <label>Comprovativo de pagamento (opcional)</label>
       <input id="i_comp" type="file" accept="image/*" style="display:none" onchange="onComp(this)">
@@ -392,6 +392,10 @@ function boot(){
 boot();
 
 function val(id){const e=document.getElementById(id);return e?e.value.trim():"";}
+/* Kz sem ambiguidade: aceita 35.000 / 35 000 / 35000 e guarda sempre o número inteiro (35000). */
+function fmtMil(n){n=Math.round(+n||0);if(!n)return"";var s=String(Math.abs(n)),o="",c=0;for(var i=s.length-1;i>=0;i--){o=s[i]+o;c++;if(c%3===0&&i>0)o="."+o;}return o;}
+function maskMil(el){const d=(el.value||"").replace(/\D/g,"");el.value=fmtMil(d);}
+function numVal(id){return parseInt((val(id)||"").replace(/\D/g,""))||0;}
 function periodoChg(){var p=val("i_periodo");var sab=/s[áa]bado/i.test(p),sem=/semana/i.test(p);var w=document.getElementById("i_horariowrap"),w2=document.getElementById("i_semwrap");if(w)w.style.display=sab?"block":"none";if(w2)w2.style.display=sem?"block":"none";}
 function modChg(){
   var online=val("i_mod").toLowerCase().indexOf("online")>=0;
@@ -414,7 +418,7 @@ function enviar(){
   if(!val("i_curso")){alert("Por favor selecciona a formação que pretendes.");document.getElementById("i_curso").focus();return;}
   const pcEl=document.querySelector('input[name="i_pc"]:checked');
   const online=val("i_mod").toLowerCase().indexOf("online")>=0;
-  const rec={quando:new Date().toISOString(),tipo:(COMP_B64?"Pagamento":"Interesse"),nome:nome,tel:tel,email:val("i_email"),bi:val("i_bi"),nascimento:val("i_nasc"),temComputador:pcEl?pcEl.value:"",curso:val("i_curso"),modalidade:val("i_mod"),periodo:(online?"Combinado com o formador(a)":val("i_periodo")),horario:(online?"":(/s[áa]bado/i.test(val("i_periodo"))?val("i_horario"):(/semana/i.test(val("i_periodo"))?"9h às 11h":""))),turma:(TURMA&&TURMA.cod)||"",edicao:(TURMA&&TURMA.ed)||"",valorPago:+val("i_valor")||0,expectativas:val("i_exp"),comprovativo:COMP_B64||"",viaWhatsapp:!COMP_B64,estado:"Nova",fonte:(typeof FONTE_TRAFEGO!=="undefined"?FONTE_TRAFEGO:""),origem:"Landing-v2"};
+  const rec={quando:new Date().toISOString(),tipo:(COMP_B64?"Pagamento":"Interesse"),nome:nome,tel:tel,email:val("i_email"),bi:val("i_bi"),nascimento:val("i_nasc"),temComputador:pcEl?pcEl.value:"",curso:val("i_curso"),modalidade:val("i_mod"),periodo:(online?"Combinado com o formador(a)":val("i_periodo")),horario:(online?"":(/s[áa]bado/i.test(val("i_periodo"))?val("i_horario"):(/semana/i.test(val("i_periodo"))?"9h às 11h":""))),turma:(TURMA&&TURMA.cod)||"",edicao:(TURMA&&TURMA.ed)||"",valorPago:numVal("i_valor"),expectativas:val("i_exp"),comprovativo:COMP_B64||"",viaWhatsapp:!COMP_B64,estado:"Nova",fonte:(typeof FONTE_TRAFEGO!=="undefined"?FONTE_TRAFEGO:""),origem:"Landing-v2"};
   const btn=document.getElementById("i_btn");btn.textContent="A enviar…";btn.disabled=true;
   function done(){document.getElementById("formfields").style.display="none";const ok=document.getElementById("okbox");ok.style.display="block";
     var msgVentura="Nova inscrição — "+nome+" — "+(rec.curso||"")+" ("+(rec.modalidade||"")+"). Contacto: "+tel;

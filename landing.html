@@ -59,88 +59,88 @@ footer b{color:#fff}
 <body>
 
 <header class="idhead"><div class="wrap">
-  <div class="idhead-top">
-    <svg viewBox="0 0 100 100" width="30" height="30" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="48" fill="#1F3864"/><circle cx="50" cy="21" r="4" fill="#BF9000"/><text x="50" y="53" text-anchor="middle" dominant-baseline="central" font-family="Georgia,serif" font-size="50" font-weight="700" fill="#fff">K</text></svg>
-    <b>Knowledge Angola</b>
-  </div>
-  <div class="fichalabel">Ficha de Inscrição Electrónica</div>
-  <h1 id="h_head">Garante já a tua vaga</h1>
-  <p id="h_sub">Preenche os teus dados e escolhe, no formulário abaixo, a formação, a modalidade e o período que preferires.</p>
-  <div class="idmeta">
-    <span>🎓 <b>Certificado</b> incluído</span>
-    <span>📍 <span id="f_local2">Morro Bento, junto ao IMETRO — Rua: Galeria dos Pães, Luanda</span></span>
-  </div>
-  <div class="guarbanner"><span>🛡️</span><span><b>Garantia:</b> <span id="guar_txt">Se em 15 dias sentires que não estás a evoluir, devolvemos cada kwanza que pagaste.</span></span></div>
+<div class="idhead-top">
+<svg viewBox="0 0 100 100" width="30" height="30" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="48" fill="#1F3864"/><circle cx="50" cy="21" r="4" fill="#BF9000"/><text x="50" y="53" text-anchor="middle" dominant-baseline="central" font-family="Georgia,serif" font-size="50" font-weight="700" fill="#fff">K</text></svg>
+<b>Knowledge Angola</b>
+</div>
+<div class="fichalabel">Ficha de Inscrição Electrónica</div>
+<h1 id="h_head">Garante já a tua vaga</h1>
+<p id="h_sub">Preenche os teus dados e escolhe, no formulário abaixo, a formação, a modalidade e o período que preferires.</p>
+<div class="idmeta">
+<span>🎓 <b>Certificado</b> incluído</span>
+<span>📍 <span id="f_local2">Morro Bento, junto ao IMETRO — Rua: Galeria dos Pães, Luanda</span></span>
+</div>
+<div class="guarbanner"><span>🛡️</span><span><b>Garantia:</b> <span id="guar_txt">Se em 15 dias sentires que não estás a evoluir, devolvemos cada kwanza que pagaste.</span></span></div>
 </div></header>
 
 <section class="formsec" id="reservar"><div class="wrap">
-  <div class="formcard" id="pcard">
-    <div id="formfields">
-      <div id="bankbox" style="display:none"></div>
-      <label>Nome Completo *</label><input id="i_nome" placeholder="O teu nome">
-      <label>B.I. ou Passaporte (opcional — podes enviar depois por WhatsApp)</label><input id="i_bi" placeholder="Número do documento">
-      <label>Data de Nascimento</label><input id="i_nasc" type="date">
-      <label>Contacto Telefónico / WhatsApp *</label><input id="i_tel" placeholder="9XX XXX XXX">
-      <label>E-mail</label><input id="i_email" type="email" placeholder="oteu@email.com">
-      <label>Dispões de um computador portátil?</label>
-      <div class="radio-row">
-        <label><input type="radio" name="i_pc" value="Sim" checked>Sim</label>
-        <label><input type="radio" name="i_pc" value="Não">Não</label>
-      </div>
-      <label>Formação</label><select id="i_curso" onchange="cursoChg()"></select>
-      <label>Modalidade</label><select id="i_mod" onchange="modChg()"><option>Presencial</option><option>Online</option></select>
-      <div id="periodowrap">
-        <label>Período</label><select id="i_periodo" onchange="periodoChg()"><option value="">Escolhe o período…</option><option>Dias de semana</option><option>Sábados</option></select>
-        <div id="i_semwrap"><label>Horário</label><input id="i_semh" value="9h às 11h" readonly></div>
-        <div id="i_horariowrap"><label>Horário</label><select id="i_horario"><option>Manhã (8:30 às 13:00)</option><option>Tarde (14:00 às 18:00)</option></select></div>
-      </div>
-      <div id="onlinenota" class="wa-note" style="display:none">O dia e horário das aulas online são combinados directamente com o(a) formador(a) após a inscrição.</div>
-      <label>Valor pago (Kz)</label><input id="i_valor" type="number" placeholder="ex.: 70.000">
-      <label>O que esperas aprender (opcional)</label><textarea id="i_exp" rows="3" placeholder="Conta-nos rapidamente o que procuras…"></textarea>
-      <label>Comprovativo de pagamento (opcional)</label>
-      <input id="i_comp" type="file" accept="image/*" style="display:none" onchange="onComp(this)">
-      <div class="file" onclick="document.getElementById('i_comp').click()" id="i_complabel">📎 Carregar comprovativo</div>
-      <button class="btn-cta" style="margin-top:22px" onclick="enviar()" id="i_btn">Finalizar Inscrição</button>
-      <div class="privnote"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V7a4 4 0 1 1 8 0v4"></path></svg>Os teus dados estão seguros e protegidos</div>
-      <div class="privressalva">Os dados recolhidos destinam-se apenas a fins formativos da Knowledge Angola e não são partilhados com terceiros.</div>
-      <div class="wa-note">
-        Preferes falar já connosco? <a class="wa-btn" id="wa_link" target="_blank">Enviar mensagem pelo WhatsApp</a>
-        <div style="margin-top:14px;padding-top:14px;border-top:1px solid #bfe8ce">
-          <label style="text-transform:none;letter-spacing:0;font-weight:600;font-size:13.5px;color:#176b39;margin:0 0 6px">Tens alguma dúvida? Escreve aqui</label>
-          <textarea id="i_duvida" rows="2" placeholder="Escreve a tua dúvida…" style="background:#fff"></textarea>
-          <button type="button" class="wa-btn" style="margin-top:8px;background:var(--azul)" onclick="enviarDuvida()">Enviar dúvida</button>
-          <div id="duvidaok" style="display:none;margin-top:8px;font-weight:600">Obrigado, responderemos o mais breve possível a sua questão.</div>
-        </div>
-      </div>
-    </div>
-    <div id="okbox" style="display:none"></div>
-  </div>
+<div class="formcard" id="pcard">
+<div id="formfields">
+<div id="bankbox" style="display:none"></div>
+<label>Nome Completo *</label><input id="i_nome" placeholder="O teu nome">
+<label>B.I. ou Passaporte (opcional — podes enviar depois por WhatsApp)</label><input id="i_bi" placeholder="Número do documento">
+<label>Data de Nascimento</label><input id="i_nasc" type="date">
+<label>Contacto Telefónico / WhatsApp *</label><input id="i_tel" placeholder="9XX XXX XXX">
+<label>E-mail</label><input id="i_email" type="email" placeholder="oteu@email.com">
+<label>Dispões de um computador portátil?</label>
+<div class="radio-row">
+<label><input type="radio" name="i_pc" value="Sim" checked>Sim</label>
+<label><input type="radio" name="i_pc" value="Não">Não</label>
+</div>
+<label>Formação</label><select id="i_curso" onchange="cursoChg()"></select>
+<label>Modalidade</label><select id="i_mod" onchange="modChg()"><option>Presencial</option><option>Online</option></select>
+<div id="periodowrap">
+<label>Período</label><select id="i_periodo" onchange="periodoChg()"><option value="">Escolhe o período…</option><option>Dias de semana</option><option>Sábados</option></select>
+<div id="i_semwrap"><label>Horário</label><input id="i_semh" value="9h às 11h" readonly></div>
+<div id="i_horariowrap"><label>Horário</label><select id="i_horario"><option>Manhã (8:30 às 13:00)</option><option>Tarde (14:00 às 18:00)</option></select></div>
+</div>
+<div id="onlinenota" class="wa-note" style="display:none">O dia e horário das aulas online são combinados directamente com o(a) formador(a) após a inscrição.</div>
+<label>Valor pago (Kz)</label><input id="i_valor" type="text" inputmode="numeric" placeholder="ex.: 70.000" oninput="maskMil(this)">
+<label>O que esperas aprender (opcional)</label><textarea id="i_exp" rows="3" placeholder="Conta-nos rapidamente o que procuras…"></textarea>
+<label>Comprovativo de pagamento (opcional)</label>
+<input id="i_comp" type="file" accept="image/*" style="display:none" onchange="onComp(this)">
+<div class="file" onclick="document.getElementById('i_comp').click()" id="i_complabel">📎 Carregar comprovativo</div>
+<button class="btn-cta" style="margin-top:22px" onclick="enviar()" id="i_btn">Finalizar Inscrição</button>
+<div class="privnote"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V7a4 4 0 1 1 8 0v4"></path></svg>Os teus dados estão seguros e protegidos</div>
+<div class="privressalva">Os dados recolhidos destinam-se apenas a fins formativos da Knowledge Angola e não são partilhados com terceiros.</div>
+<div class="wa-note">
+Preferes falar já connosco? <a class="wa-btn" id="wa_link" target="_blank">Enviar mensagem pelo WhatsApp</a>
+<div style="margin-top:14px;padding-top:14px;border-top:1px solid #bfe8ce">
+<label style="text-transform:none;letter-spacing:0;font-weight:600;font-size:13.5px;color:#176b39;margin:0 0 6px">Tens alguma dúvida? Escreve aqui</label>
+<textarea id="i_duvida" rows="2" placeholder="Escreve a tua dúvida…" style="background:#fff"></textarea>
+<button type="button" class="wa-btn" style="margin-top:8px;background:var(--azul)" onclick="enviarDuvida()">Enviar dúvida</button>
+<div id="duvidaok" style="display:none;margin-top:8px;font-weight:600">Obrigado, responderemos o mais breve possível a sua questão.</div>
+</div>
+</div>
+</div>
+<div id="okbox" style="display:none"></div>
+</div>
 </div></section>
 
 <footer><div class="wrap fl">
-  <div><b>Knowledge Angola</b> — Academia de Formação<br><span id="f_local">Morro Bento, junto ao IMETRO — Rua: Galeria dos Pães, Luanda</span></div>
-  <div>Tel: <span id="f_tel">+(244) 939 845 313</span><br><a href="mailto:academico@knowledgeangola.ao">academico@knowledgeangola.ao</a><br><a id="f_wa" target="_blank">WhatsApp</a></div>
+<div><b>Knowledge Angola</b> — Academia de Formação<br><span id="f_local">Morro Bento, junto ao IMETRO — Rua: Galeria dos Pães, Luanda</span></div>
+<div>Tel: <span id="f_tel">+(244) 939 845 313</span><br><a href="mailto:academico@knowledgeangola.ao">academico@knowledgeangola.ao</a><br><a id="f_wa" target="_blank">WhatsApp</a></div>
 </div></footer>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 <script>
 function detectarFonte(){
-  try{
-    var qs=new URLSearchParams(location.search);
-    var utm=qs.get("utm_source")||qs.get("fonte")||qs.get("src");
-    if(utm)return utm;
-    var ref=(document.referrer||"").toLowerCase();
-    if(!ref)return "Directo";
-    if(ref.indexOf("tiktok")>=0)return "TikTok";
-    if(ref.indexOf("instagram")>=0)return "Instagram";
-    if(ref.indexOf("linkedin")>=0)return "LinkedIn";
-    if(ref.indexOf("facebook")>=0||ref.indexOf("fb.com")>=0)return "Facebook";
-    if(ref.indexOf("google")>=0)return "Google";
-    if(ref.indexOf("whatsapp")>=0)return "WhatsApp";
-    var host=ref.replace(/^https?:\/\//,"").split("/")[0];
-    return host?("Outro ("+host+")"):"Directo";
-  }catch(e){return "Desconhecido";}
+try{
+var qs=new URLSearchParams(location.search);
+var utm=qs.get("utm_source")||qs.get("fonte")||qs.get("src");
+if(utm)return utm;
+var ref=(document.referrer||"").toLowerCase();
+if(!ref)return "Directo";
+if(ref.indexOf("tiktok")>=0)return "TikTok";
+if(ref.indexOf("instagram")>=0)return "Instagram";
+if(ref.indexOf("linkedin")>=0)return "LinkedIn";
+if(ref.indexOf("facebook")>=0||ref.indexOf("fb.com")>=0)return "Facebook";
+if(ref.indexOf("google")>=0)return "Google";
+if(ref.indexOf("whatsapp")>=0)return "WhatsApp";
+var host=ref.replace(/^https?:\/\//,"").split("/")[0];
+return host?("Outro ("+host+")"):"Directo";
+}catch(e){return "Desconhecido";}
 }
 var FONTE_TRAFEGO=(function(){try{return sessionStorage.getItem("fonteTrafego")||(function(){var f=detectarFonte();sessionStorage.setItem("fonteTrafego",f);return f;})();}catch(e){return detectarFonte();}})();
 const FB_CONFIG={apiKey:"AIzaSyBBgqJJ1SsbpxXVJBiypRMntNjSywrgGtg",authDomain:"knowledge-angola.firebaseapp.com",databaseURL:"https://knowledge-angola-default-rtdb.firebaseio.com",projectId:"knowledge-angola",storageBucket:"knowledge-angola.firebasestorage.app",messagingSenderId:"1060751471100",appId:"1:1060751471100:web:1b416c95cd040265da4279"};
@@ -149,71 +149,71 @@ let _db=null;try{firebase.initializeApp(FB_CONFIG);_db=firebase.database();}catc
 function qsCurso(){try{var p=new URLSearchParams(window.location.search);return p.get("curso")||"";}catch(e){return "";}}
 
 const DEF={
-  whatsapp:"244939845313",
-  banco:{nome:"",iban:"",titular:"",ref:""},
-  tiktok:"+10 mil na comunidade @venturaexcel",
-  problema:[
-    "Perdes horas em tarefas que uma fórmula resolve em segundos.",
-    "Candidatas-te a vagas que pedem \"Excel avançado\" e não te sentes seguro.",
-    "Vês colegas a subir porque dominam relatórios e análises — e tu ficas para trás.",
-    "Já passaste vergonha com um mapa ou relatório com erros."
-  ],
-  turn:"A boa notícia: isto aprende-se — e mais depressa do que pensas. ↓",
-  porque:[
-    {t:"Turmas pequenas",d:"Atenção individual, não uma sala cheia."},
-    {t:"100% prático",d:"Sais a fazer, não só a ver."},
-    {t:"Formador que se vê",d:"Aprende com quem ensina Excel a +10 mil no TikTok."},
-    {t:"Presencial ou online",d:"Escolhes o que te dá mais jeito."}
-  ],
-  beneficios:[
-    {t:"Relatórios em minutos",d:"Faz em 2 minutos o que hoje te rouba a tarde toda."},
-    {t:"Tabelas dinâmicas",d:"Analisa milhares de linhas e tira conclusões num instante."},
-    {t:"Gráficos que impressionam",d:"Apresenta dados que convencem chefes e clientes."},
-    {t:"Automatização",d:"Deixa o Excel trabalhar por ti, sem repetição."},
-    {t:"Currículo mais forte",d:"Excel avançado que abre portas a melhores empregos."},
-    {t:"Certificado",d:"Prova que sabes, com certificado da Knowledge Angola."}
-  ],
-  testemunhos:[],
-  oferta:{
-    titulo:"Formação de Excel — do Básico ao Avançado",
-    preco:"Kz 70.000,00",
-    facilidade:"Com entrada + facilidades de pagamento em prestações",
-    itens:["Formação completa do básico ao avançado (presencial ou online)","Certificado de conclusão","Material de apoio e modelos prontos","Grupo de apoio no WhatsApp durante e após o curso"],
-    garantia:"Se em 15 dias sentires que não estás a evoluir, devolvemos cada kwanza que pagaste."
-  },
-  ofertasPorCurso:{
-    "Excel do Zero ao Fundamental":{
-      titulo:"Formação de Excel — do Zero ao Fundamental",
-      preco:"Kz 24.500,00",
-      facilidade:"Com entrada + facilidades de pagamento em prestações",
-      itens:["Bases sólidas sem complicação","Organizar dados com método","Confiança para o trabalho diário"],
-      garantia:"Se em 15 dias sentires que não estás a evoluir, devolvemos cada kwanza que pagaste."
-    }
-  },
-  precos:{"Excel do Básico ao Avançado":70000,"Excel do Zero ao Fundamental":24500,"Power BI":50000},
-  curriculo:{
-    "Excel do Básico ao Avançado":[
-      {t:"Módulo I — Funcionalidades Básicas",top:["O ambiente do Excel: friso, guias e menu Ficheiro","Barra de Acesso Rápido e operações com livros e folhas","Edição, selecção e formatação de células"]},
-      {t:"Módulo II — Funções Intermediárias",top:["Operações aritméticas e referências (relativas, absolutas, mistas)","Filtros, pesquisa/substituição e formatação condicional","Funções matemáticas, estatísticas, de data/hora, lógicas e de texto"]},
-      {t:"Módulo III — Combinação de Funções",top:["Procv, Proch, Índice e Corresp","Se composto e combinação de fórmulas","Tratamento de erros (####, #REF!, #N/D…)"]},
-      {t:"Módulo IV — Gestão de Dados",top:["Eliminar duplicatas, validação e importação de dados","Construção e formatação de gráficos","Tabelas dinâmicas (Pivot Table) e análise de dados"]},
-      {t:"Módulo V — Visualização",top:["Macros e automatização de tarefas","Google Sheets e Excel Online","Objectos, organogramas e configuração de impressão profissional"]}
-    ],
-    "Excel do Zero ao Fundamental":[
-      {t:"Módulo I — Funcionalidades Básicas",top:["O ambiente do Excel: friso, guias e menu Ficheiro","Barra de Acesso Rápido e operações com livros e folhas","Edição, selecção e formatação de células, do zero"]}
-    ]
-  },
-  faq:[
-    {q:"Preciso de saber alguma coisa antes?",a:"Não. Começamos do zero, do básico ao avançado, ao teu ritmo."},
-    {q:"É presencial ou online?",a:"As duas. Tens turma presencial em Luanda e também turmas online."},
-    {q:"Quanto tempo dura a formação?",a:"Nas turmas de dias de semana, 1 mês. Nas turmas de sábados, são 5 sábados (1 mês e uma semana)."},
-    {q:"Recebo certificado?",a:"Sim, com certificado de conclusão da Knowledge Angola, devidamente reconhecido pelo INEFOP."},
-    {q:"E se eu tiver dúvidas depois das aulas?",a:"Tens acompanhamento do formador e grupo de apoio para tirar dúvidas."},
-    {q:"Como faço o pagamento?",a:"Podes pagar a pronto ou em prestações. Anexa o comprovativo na inscrição ou envia pelo WhatsApp."}
-  ],
-  cursos:["Excel do Básico ao Avançado","Excel do Zero ao Fundamental","Power BI"],
-  local:"Morro Bento, junto ao IMETRO — Rua: Galeria dos Pães, Luanda",
-  tel:"+(244) 939 845 313"
+whatsapp:"244939845313",
+banco:{nome:"",iban:"",titular:"",ref:""},
+tiktok:"+10 mil na comunidade @venturaexcel",
+problema:[
+"Perdes horas em tarefas que uma fórmula resolve em segundos.",
+"Candidatas-te a vagas que pedem \"Excel avançado\" e não te sentes seguro.",
+"Vês colegas a subir porque dominam relatórios e análises — e tu ficas para trás.",
+"Já passaste vergonha com um mapa ou relatório com erros."
+],
+turn:"A boa notícia: isto aprende-se — e mais depressa do que pensas. ↓",
+porque:[
+{t:"Turmas pequenas",d:"Atenção individual, não uma sala cheia."},
+{t:"100% prático",d:"Sais a fazer, não só a ver."},
+{t:"Formador que se vê",d:"Aprende com quem ensina Excel a +10 mil no TikTok."},
+{t:"Presencial ou online",d:"Escolhes o que te dá mais jeito."}
+],
+beneficios:[
+{t:"Relatórios em minutos",d:"Faz em 2 minutos o que hoje te rouba a tarde toda."},
+{t:"Tabelas dinâmicas",d:"Analisa milhares de linhas e tira conclusões num instante."},
+{t:"Gráficos que impressionam",d:"Apresenta dados que convencem chefes e clientes."},
+{t:"Automatização",d:"Deixa o Excel trabalhar por ti, sem repetição."},
+{t:"Currículo mais forte",d:"Excel avançado que abre portas a melhores empregos."},
+{t:"Certificado",d:"Prova que sabes, com certificado da Knowledge Angola."}
+],
+testemunhos:[],
+oferta:{
+titulo:"Formação de Excel — do Básico ao Avançado",
+preco:"Kz 70.000,00",
+facilidade:"Com entrada + facilidades de pagamento em prestações",
+itens:["Formação completa do básico ao avançado (presencial ou online)","Certificado de conclusão","Material de apoio e modelos prontos","Grupo de apoio no WhatsApp durante e após o curso"],
+garantia:"Se em 15 dias sentires que não estás a evoluir, devolvemos cada kwanza que pagaste."
+},
+ofertasPorCurso:{
+"Excel do Zero ao Fundamental":{
+titulo:"Formação de Excel — do Zero ao Fundamental",
+preco:"Kz 24.500,00",
+facilidade:"Com entrada + facilidades de pagamento em prestações",
+itens:["Bases sólidas sem complicação","Organizar dados com método","Confiança para o trabalho diário"],
+garantia:"Se em 15 dias sentires que não estás a evoluir, devolvemos cada kwanza que pagaste."
+}
+},
+precos:{"Excel do Básico ao Avançado":70000,"Excel do Zero ao Fundamental":24500,"Power BI":50000},
+curriculo:{
+"Excel do Básico ao Avançado":[
+{t:"Módulo I — Funcionalidades Básicas",top:["O ambiente do Excel: friso, guias e menu Ficheiro","Barra de Acesso Rápido e operações com livros e folhas","Edição, selecção e formatação de células"]},
+{t:"Módulo II — Funções Intermediárias",top:["Operações aritméticas e referências (relativas, absolutas, mistas)","Filtros, pesquisa/substituição e formatação condicional","Funções matemáticas, estatísticas, de data/hora, lógicas e de texto"]},
+{t:"Módulo III — Combinação de Funções",top:["Procv, Proch, Índice e Corresp","Se composto e combinação de fórmulas","Tratamento de erros (####, #REF!, #N/D…)"]},
+{t:"Módulo IV — Gestão de Dados",top:["Eliminar duplicatas, validação e importação de dados","Construção e formatação de gráficos","Tabelas dinâmicas (Pivot Table) e análise de dados"]},
+{t:"Módulo V — Visualização",top:["Macros e automatização de tarefas","Google Sheets e Excel Online","Objectos, organogramas e configuração de impressão profissional"]}
+],
+"Excel do Zero ao Fundamental":[
+{t:"Módulo I — Funcionalidades Básicas",top:["O ambiente do Excel: friso, guias e menu Ficheiro","Barra de Acesso Rápido e operações com livros e folhas","Edição, selecção e formatação de células, do zero"]}
+]
+},
+faq:[
+{q:"Preciso de saber alguma coisa antes?",a:"Não. Começamos do zero, do básico ao avançado, ao teu ritmo."},
+{q:"É presencial ou online?",a:"As duas. Tens turma presencial em Luanda e também turmas online."},
+{q:"Quanto tempo dura a formação?",a:"Nas turmas de dias de semana, 1 mês. Nas turmas de sábados, são 5 sábados (1 mês e uma semana)."},
+{q:"Recebo certificado?",a:"Sim, com certificado de conclusão da Knowledge Angola, devidamente reconhecido pelo INEFOP."},
+{q:"E se eu tiver dúvidas depois das aulas?",a:"Tens acompanhamento do formador e grupo de apoio para tirar dúvidas."},
+{q:"Como faço o pagamento?",a:"Podes pagar a pronto ou em prestações. Anexa o comprovativo na inscrição ou envia pelo WhatsApp."}
+],
+cursos:["Excel do Básico ao Avançado","Excel do Zero ao Fundamental","Power BI"],
+local:"Morro Bento, junto ao IMETRO — Rua: Galeria dos Pães, Luanda",
+tel:"+(244) 939 845 313"
 };
 
 let CFG=Object.assign({},DEF);
@@ -223,11 +223,11 @@ let CURSO_SEL=qsCurso()||"";
 
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 function embedUrl(link){link=String(link||"");
-  let m=link.match(/[?&]v=([A-Za-z0-9_-]{6,})/)||link.match(/youtu\.be\/([A-Za-z0-9_-]{6,})/)||link.match(/youtube\.com\/embed\/([A-Za-z0-9_-]{6,})/)||link.match(/youtube\.com\/shorts\/([A-Za-z0-9_-]{6,})/);
-  if(m)return"https://www.youtube.com/embed/"+m[1];
-  let g=link.match(/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]+)/)||link.match(/[?&]id=([A-Za-z0-9_-]+)/);
-  if(g&&link.indexOf("drive.google")>=0)return"https://drive.google.com/file/d/"+g[1]+"/preview";
-  return link;
+let m=link.match(/[?&]v=([A-Za-z0-9_-]{6,})/)||link.match(/youtu\.be\/([A-Za-z0-9_-]{6,})/)||link.match(/youtube\.com\/embed\/([A-Za-z0-9_-]{6,})/)||link.match(/youtube\.com\/shorts\/([A-Za-z0-9_-]{6,})/);
+if(m)return"https://www.youtube.com/embed/"+m[1];
+let g=link.match(/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]+)/)||link.match(/[?&]id=([A-Za-z0-9_-]+)/);
+if(g&&link.indexOf("drive.google")>=0)return"https://drive.google.com/file/d/"+g[1]+"/preview";
+return link;
 }
 function waLink(txt){const n=(CFG.whatsapp||"244939845313").replace(/\D/g,"");return"https://wa.me/"+n+"?text="+encodeURIComponent(txt||"Olá! Quero a minha vaga na formação de Excel da Knowledge Angola.");}
 function bumpStat(page,kind){try{var d=new Date().toISOString().slice(0,10);fetch("https://knowledge-angola-default-rtdb.firebaseio.com/publico/hits/"+page+".json",{method:"POST",body:JSON.stringify({d:d,k:kind})});}catch(e){}}
@@ -235,205 +235,209 @@ function _matchCurso(a,b){a=(a||"").toLowerCase();b=(b||"").toLowerCase();return
 function fmtKz(n){n=Math.round(+n||0);var str=String(Math.abs(n)),out="",c=0;for(var i=str.length-1;i>=0;i--){out=str.charAt(i)+out;c++;if(c%3===0&&i>0)out="."+out;}return "Kz "+out+",00";}
 
 function turmaRecente(turmas){var pres=(turmas||[]).filter(function(t){return((t.modalidade||"Presencial")+"").toLowerCase().indexOf("presenc")>=0;});
-  var hoje=new Date(new Date().toDateString());
-  var fut=pres.filter(function(t){return t.inicio&&new Date(t.inicio)>=hoje;}).sort(function(a,b){return new Date(a.inicio)-new Date(b.inicio);});
-  if(fut.length)return fut[0];
-  pres.sort(function(a,b){return (new Date(b.inicio||0))-(new Date(a.inicio||0))||((+b.ed||0)-(+a.ed||0));});return pres[0]||null;}
+var hoje=new Date(new Date().toDateString());
+var fut=pres.filter(function(t){return t.inicio&&new Date(t.inicio)>=hoje;}).sort(function(a,b){return new Date(a.inicio)-new Date(b.inicio);});
+if(fut.length)return fut[0];
+pres.sort(function(a,b){return (new Date(b.inicio||0))-(new Date(a.inicio||0))||((+b.ed||0)-(+a.ed||0));});return pres[0]||null;}
 
 function vagasInfo(curso){
-  var vc=CFG.vagasCurso||{};var livres=null;
-  if(vc[curso]!=null)livres=vc[curso];
-  else{var k=Object.keys(vc).filter(function(n){return _matchCurso(n,curso);})[0];if(k!=null)livres=vc[k];}
-  if(livres==null)return {livres:null,badge:"📅 Inscrições abertas",cheia:false};
-  livres=+livres;
-  var cheia=livres<=0;
-  var badge=cheia?"🚫 Turma cheia":(livres<=3?"🔥 Últimas "+livres+" vagas!":"🔥 Restam "+livres+" vagas");
-  return {livres:livres,badge:badge,cheia:cheia};
+var vc=CFG.vagasCurso||{};var livres=null;
+if(vc[curso]!=null)livres=vc[curso];
+else{var k=Object.keys(vc).filter(function(n){return _matchCurso(n,curso);})[0];if(k!=null)livres=vc[k];}
+if(livres==null)return {livres:null,badge:"📅 Inscrições abertas",cheia:false};
+livres=+livres;
+var cheia=livres<=0;
+var badge=cheia?"🚫 Turma cheia":(livres<=3?"🔥 Últimas "+livres+" vagas!":"🔥 Restam "+livres+" vagas");
+return {livres:livres,badge:badge,cheia:cheia};
 }
 
 function periodosDe(curso){
-  var hoje=new Date(new Date().toDateString());
-  var arr=(TURMAS_ALL||[]).filter(function(t){
-    if(((t.modalidade||"Presencial")+"").toLowerCase().indexOf("presenc")<0)return false;
-    if(!_matchCurso(t.curso,curso))return false;
-    if(t.fim){var f=new Date(t.fim);if(!isNaN(f)&&f<hoje)return false;}
-    return true;
-  });
-  var set={};
-  arr.forEach(function(t){
-    if(Array.isArray(t.turnos)&&t.turnos.length){
-      t.turnos.forEach(function(tn){set[tn.tipo==="semana"?"Dias de semana":"Sábados"]=true;});
-    }else{
-      var h=t.horario||"";
-      if(/s[áa]b/i.test(h))set["Sábados"]=true;
-      if(/semana/i.test(h)||!h)set["Dias de semana"]=true;
-    }
-  });
-  return Object.keys(set);
+var hoje=new Date(new Date().toDateString());
+var arr=(TURMAS_ALL||[]).filter(function(t){
+if(((t.modalidade||"Presencial")+"").toLowerCase().indexOf("presenc")<0)return false;
+if(!_matchCurso(t.curso,curso))return false;
+if(t.fim){var f=new Date(t.fim);if(!isNaN(f)&&f<hoje)return false;}
+return true;
+});
+var set={};
+arr.forEach(function(t){
+if(Array.isArray(t.turnos)&&t.turnos.length){
+t.turnos.forEach(function(tn){set[tn.tipo==="semana"?"Dias de semana":"Sábados"]=true;});
+}else{
+var h=t.horario||"";
+if(/s[áa]b/i.test(h))set["Sábados"]=true;
+if(/semana/i.test(h)||!h)set["Dias de semana"]=true;
+}
+});
+return Object.keys(set);
 }
 
 const PERIODO_UNICO={"Excel do Zero ao Fundamental":"Dias de semana"};
 function cursoChg(){
-  var curso=val("i_curso")||CURSO_SEL;
-  CURSO_SEL=curso;
-  var forcado=Object.keys(PERIODO_UNICO).find(function(n){return _matchCurso(n,curso);});
-  forcado=forcado?PERIODO_UNICO[forcado]:null;
-  var pers=forcado?[forcado]:periodosDe(curso);
-  var sel=document.getElementById("i_periodo");
-  if(sel){
-    var opts=(pers.length?pers:["Dias de semana","Sábados"]);
-    sel.innerHTML='<option value="">Escolhe o período…</option>'+opts.map(function(p){return "<option>"+esc(p)+"</option>";}).join("");
-    if(forcado){sel.value=forcado;sel.disabled=true;}else{sel.disabled=false;}
-  }
-  if(typeof periodoChg==="function")periodoChg();
-  var _precos=CFG.precos||DEF.precos||{};
-  var pr=(_precos&&_precos[curso])||(function(){var k=Object.keys(_precos||{}).filter(function(n){return _matchCurso(n,curso);})[0];return k?_precos[k]:null;})();
-  var iv=document.getElementById("i_valor");
-  if(iv)iv.placeholder=pr?("ex.: "+fmtKz(pr)):"ex.: Kz 70.000,00";
-  renderCurriculo(curso);
-  renderEnrollCard(curso);
+var curso=val("i_curso")||CURSO_SEL;
+CURSO_SEL=curso;
+var forcado=Object.keys(PERIODO_UNICO).find(function(n){return _matchCurso(n,curso);});
+forcado=forcado?PERIODO_UNICO[forcado]:null;
+var pers=forcado?[forcado]:periodosDe(curso);
+var sel=document.getElementById("i_periodo");
+if(sel){
+var opts=(pers.length?pers:["Dias de semana","Sábados"]);
+sel.innerHTML='<option value="">Escolhe o período…</option>'+opts.map(function(p){return "<option>"+esc(p)+"</option>";}).join("");
+if(forcado){sel.value=forcado;sel.disabled=true;}else{sel.disabled=false;}
+}
+if(typeof periodoChg==="function")periodoChg();
+var _precos=CFG.precos||DEF.precos||{};
+var pr=(_precos&&_precos[curso])||(function(){var k=Object.keys(_precos||{}).filter(function(n){return _matchCurso(n,curso);})[0];return k?_precos[k]:null;})();
+var iv=document.getElementById("i_valor");
+if(iv)iv.placeholder=pr?("ex.: "+fmtKz(pr)):"ex.: Kz 70.000,00";
+renderCurriculo(curso);
+renderEnrollCard(curso);
 }
 
 function ofertaPara(curso){
-  var base=CFG.oferta||DEF.oferta;
-  var porCurso=CFG.ofertasPorCurso||DEF.ofertasPorCurso||{};
-  var extra=porCurso[curso];
-  if(!extra){var k=Object.keys(porCurso).find(function(n){return _matchCurso(n,curso);});if(k)extra=porCurso[k];}
-  var isBase=_matchCurso(curso,"Excel do Básico ao Avançado")||_matchCurso(curso,base.titulo||"");
-  var o=Object.assign({},isBase?base:{},extra||{});
-  if(!o.titulo)o.titulo="Formação de "+(curso||"Excel");
-  if(!o.itens||!o.itens.length)o.itens=(isBase&&base.itens)||["Formação prática da Knowledge Angola, com acompanhamento próximo e certificado."];
-  if(!o.facilidade)o.facilidade=base.facilidade||"Com entrada + facilidades de pagamento em prestações";
-  if(!o.garantia)o.garantia=base.garantia||"";
-  if(!o.preco){
-    var _precos2=CFG.precos||DEF.precos||{};
-    var pr=(_precos2&&_precos2[curso])||(function(){var k2=Object.keys(_precos2||{}).find(function(n){return _matchCurso(n,curso);});return k2?_precos2[k2]:null;})();
-    if(pr!=null)o.preco=fmtKz(pr);
-  }
-  return o;
+var base=CFG.oferta||DEF.oferta;
+var porCurso=CFG.ofertasPorCurso||DEF.ofertasPorCurso||{};
+var extra=porCurso[curso];
+if(!extra){var k=Object.keys(porCurso).find(function(n){return _matchCurso(n,curso);});if(k)extra=porCurso[k];}
+var isBase=_matchCurso(curso,"Excel do Básico ao Avançado")||_matchCurso(curso,base.titulo||"");
+var o=Object.assign({},isBase?base:{},extra||{});
+if(!o.titulo)o.titulo="Formação de "+(curso||"Excel");
+if(!o.itens||!o.itens.length)o.itens=(isBase&&base.itens)||["Formação prática da Knowledge Angola, com acompanhamento próximo e certificado."];
+if(!o.facilidade)o.facilidade=base.facilidade||"Com entrada + facilidades de pagamento em prestações";
+if(!o.garantia)o.garantia=base.garantia||"";
+if(!o.preco){
+var _precos2=CFG.precos||DEF.precos||{};
+var pr=(_precos2&&_precos2[curso])||(function(){var k2=Object.keys(_precos2||{}).find(function(n){return _matchCurso(n,curso);});return k2?_precos2[k2]:null;})();
+if(pr!=null)o.preco=fmtKz(pr);
+}
+return o;
 }
 
 function renderEnrollCard(curso){
-  var box=document.getElementById("enrollcard");if(!box)return;
-  var o=ofertaPara(curso);
-  var vi=vagasInfo(curso);
-  box.innerHTML =
-    '<div class="price">'+esc(o.preco||"")+'</div>'+
-    '<div class="facil">'+esc(o.facilidade||"")+'</div>'+
-    (vi.livres!=null?'<div class="vagas">'+esc(vi.badge)+'</div>':'')+
-    '<ul>'+(o.itens||[]).map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul>'+
-    '<a href="#reservar" class="btn btn-block">Inscrever-me agora</a>'+
-    (o.garantia?'<div class="garantia">🛡️ '+esc(o.garantia)+'</div>':'');
+var box=document.getElementById("enrollcard");if(!box)return;
+var o=ofertaPara(curso);
+var vi=vagasInfo(curso);
+box.innerHTML =
+'<div class="price">'+esc(o.preco||"")+'</div>'+
+'<div class="facil">'+esc(o.facilidade||"")+'</div>'+
+(vi.livres!=null?'<div class="vagas">'+esc(vi.badge)+'</div>':'')+
+'<ul>'+(o.itens||[]).map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul>'+
+'<a href="#reservar" class="btn btn-block">Inscrever-me agora</a>'+
+(o.garantia?'<div class="garantia">🛡️ '+esc(o.garantia)+'</div>':'');
 }
 
 function renderCurriculo(curso){
-  var box=document.getElementById("syllbox");if(!box)return;
-  var cur=CFG.curriculo||DEF.curriculo||{};
-  var mods=cur[curso];
-  if(!mods){var k=Object.keys(cur).find(function(n){return _matchCurso(n,curso);});if(k)mods=cur[k];}
-  if(!mods||!mods.length){box.innerHTML='<div class="muted">Grade curricular a confirmar para esta formação — fala connosco para saberes mais.</div>';return;}
-  box.innerHTML=mods.map(function(m,i){return '<details'+(i===0?' open':'')+'><summary>'+esc(m.t)+'</summary><ul class="topicos">'+(m.top||[]).map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul></details>';}).join("");
+var box=document.getElementById("syllbox");if(!box)return;
+var cur=CFG.curriculo||DEF.curriculo||{};
+var mods=cur[curso];
+if(!mods){var k=Object.keys(cur).find(function(n){return _matchCurso(n,curso);});if(k)mods=cur[k];}
+if(!mods||!mods.length){box.innerHTML='<div class="muted">Grade curricular a confirmar para esta formação — fala connosco para saberes mais.</div>';return;}
+box.innerHTML=mods.map(function(m,i){return '<details'+(i===0?' open':'')+'><summary>'+esc(m.t)+'</summary><ul class="topicos">'+(m.top||[]).map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul></details>';}).join("");
 }
 
 function render(){
-  document.getElementById("h_sub").textContent="Preenche os teus dados e escolhe, no formulário abaixo, a formação, a modalidade e o período que preferires.";
-  var stk=document.getElementById("s_tiktok");if(stk)stk.textContent=CFG.tiktok||DEF.tiktok;
-  var pb=document.getElementById("probbox");if(pb)pb.innerHTML=(CFG.problema||DEF.problema||[]).map(function(p){return '<div class="it"><span class="x">✕</span><span>'+esc(p)+'</span></div>';}).join("");
-  var tn=document.getElementById("turn");if(tn)tn.textContent=CFG.turn||DEF.turn;
-  var pq=document.getElementById("porquegrid");if(pq)pq.innerHTML=(CFG.porque||DEF.porque||[]).map(function(p){return '<div class="pq"><b>'+esc(p.t)+'</b><span>'+esc(p.d)+'</span></div>';}).join("");
-  var lg=document.getElementById("learngrid");if(lg)lg.innerHTML=(CFG.beneficios||[]).map(function(b){return '<div class="it">'+esc(b.t||b)+(b.d?' — <span class="muted">'+esc(b.d)+'</span>':'')+'</div>';}).join("");
-  const ts=(CFG.testemunhos||[]).filter(function(t){return t&&t.link;});const tg=document.getElementById("tgrid");
-  if(tg&&ts.length)tg.innerHTML=ts.map(function(t){return '<div class="tcard"><div class="vid"><iframe src="'+esc(embedUrl(t.link))+'" allowfullscreen loading="lazy"></iframe></div><div class="nm">'+esc(t.nome||"Formando")+'</div></div>';}).join("");
-  var fb=document.getElementById("faqbox");if(fb)fb.innerHTML=(CFG.faq||[]).map(function(f){return '<details><summary>'+esc(f.q)+'</summary><p>'+esc(f.a)+'</p></details>';}).join("");
-  var f2=document.getElementById("f_local2");if(f2)f2.textContent=CFG.local||DEF.local;
-  var gt=document.getElementById("guar_txt");if(gt){var og=(CFG.oferta&&CFG.oferta.garantia)||DEF.oferta.garantia;if(og)gt.textContent=og;}
-  const _base=(CFG.cursos&&CFG.cursos.length?CFG.cursos:DEF.cursos);
-  const cs=_base.filter(function(c){return !CFG.cursosAtivos||CFG.cursosAtivos[c]!==false;}).filter(function(c){return !/power\s*bi/i.test(c);});
-  document.getElementById("i_curso").innerHTML='<option value=""'+(CURSO_SEL?"":" selected")+'>Selecciona a formação…</option>'+cs.map(function(c){return "<option"+(CURSO_SEL&&_matchCurso(c,CURSO_SEL)?" selected":"")+">"+esc(c)+"</option>";}).join("");
-  cursoChg();
-  modChg();
-  const b=CFG.banco||{};const bx=document.getElementById("bankbox");
-  if(bx){if(b.iban||b.nome||b.titular){bx.style.display="block";bx.innerHTML='<div class="bankbox"><div class="bt">Dados para pagamento</div>'+(b.nome?'<div><b>Banco:</b> '+esc(b.nome)+'</div>':'')+(b.iban?'<div><b>Nº de conta / IBAN:</b> '+esc(b.iban)+'</div>':'')+(b.titular?'<div><b>Titular:</b> '+esc(b.titular)+'</div>':'')+'</div>';}else{bx.style.display="none";bx.innerHTML="";}}
-  document.getElementById("f_local").textContent=CFG.local||DEF.local;
-  document.getElementById("f_tel").textContent=CFG.tel||DEF.tel;
-  document.getElementById("wa_link").href=waLink("Olá! Acabei de me inscrever e envio o comprovativo de pagamento.");
-  document.getElementById("f_wa").href=waLink();
-  var hv=document.getElementById("h_vagas");
-  var vi=vagasInfo(CURSO_SEL);
-  if(hv)hv.textContent=vi.livres!=null?vi.badge:"📅 Inscrições abertas";
-  const sw=document.getElementById("stickywa");if(sw)sw.href=waLink();
+document.getElementById("h_sub").textContent="Preenche os teus dados e escolhe, no formulário abaixo, a formação, a modalidade e o período que preferires.";
+var stk=document.getElementById("s_tiktok");if(stk)stk.textContent=CFG.tiktok||DEF.tiktok;
+var pb=document.getElementById("probbox");if(pb)pb.innerHTML=(CFG.problema||DEF.problema||[]).map(function(p){return '<div class="it"><span class="x">✕</span><span>'+esc(p)+'</span></div>';}).join("");
+var tn=document.getElementById("turn");if(tn)tn.textContent=CFG.turn||DEF.turn;
+var pq=document.getElementById("porquegrid");if(pq)pq.innerHTML=(CFG.porque||DEF.porque||[]).map(function(p){return '<div class="pq"><b>'+esc(p.t)+'</b><span>'+esc(p.d)+'</span></div>';}).join("");
+var lg=document.getElementById("learngrid");if(lg)lg.innerHTML=(CFG.beneficios||[]).map(function(b){return '<div class="it">'+esc(b.t||b)+(b.d?' — <span class="muted">'+esc(b.d)+'</span>':'')+'</div>';}).join("");
+const ts=(CFG.testemunhos||[]).filter(function(t){return t&&t.link;});const tg=document.getElementById("tgrid");
+if(tg&&ts.length)tg.innerHTML=ts.map(function(t){return '<div class="tcard"><div class="vid"><iframe src="'+esc(embedUrl(t.link))+'" allowfullscreen loading="lazy"></iframe></div><div class="nm">'+esc(t.nome||"Formando")+'</div></div>';}).join("");
+var fb=document.getElementById("faqbox");if(fb)fb.innerHTML=(CFG.faq||[]).map(function(f){return '<details><summary>'+esc(f.q)+'</summary><p>'+esc(f.a)+'</p></details>';}).join("");
+var f2=document.getElementById("f_local2");if(f2)f2.textContent=CFG.local||DEF.local;
+var gt=document.getElementById("guar_txt");if(gt){var og=(CFG.oferta&&CFG.oferta.garantia)||DEF.oferta.garantia;if(og)gt.textContent=og;}
+const _base=(CFG.cursos&&CFG.cursos.length?CFG.cursos:DEF.cursos);
+const cs=_base.filter(function(c){return !CFG.cursosAtivos||CFG.cursosAtivos[c]!==false;}).filter(function(c){return !/power\s*bi/i.test(c);});
+document.getElementById("i_curso").innerHTML='<option value=""'+(CURSO_SEL?"":" selected")+'>Selecciona a formação…</option>'+cs.map(function(c){return "<option"+(CURSO_SEL&&_matchCurso(c,CURSO_SEL)?" selected":"")+">"+esc(c)+"</option>";}).join("");
+cursoChg();
+modChg();
+const b=CFG.banco||{};const bx=document.getElementById("bankbox");
+if(bx){if(b.iban||b.nome||b.titular){bx.style.display="block";bx.innerHTML='<div class="bankbox"><div class="bt">Dados para pagamento</div>'+(b.nome?'<div><b>Banco:</b> '+esc(b.nome)+'</div>':'')+(b.iban?'<div><b>Nº de conta / IBAN:</b> '+esc(b.iban)+'</div>':'')+(b.titular?'<div><b>Titular:</b> '+esc(b.titular)+'</div>':'')+'</div>';}else{bx.style.display="none";bx.innerHTML="";}}
+document.getElementById("f_local").textContent=CFG.local||DEF.local;
+document.getElementById("f_tel").textContent=CFG.tel||DEF.tel;
+document.getElementById("wa_link").href=waLink("Olá! Acabei de me inscrever e envio o comprovativo de pagamento.");
+document.getElementById("f_wa").href=waLink();
+var hv=document.getElementById("h_vagas");
+var vi=vagasInfo(CURSO_SEL);
+if(hv)hv.textContent=vi.livres!=null?vi.badge:"📅 Inscrições abertas";
+const sw=document.getElementById("stickywa");if(sw)sw.href=waLink();
 }
 
 function boot(){
-  render();
-  try{bumpStat("landingv2","v");document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest('a[href*="wa.me"]');if(a)bumpStat("landingv2","w");});}catch(e){}
-  if(!_db)return;
-  _db.ref("publico/landing").once("value").then(function(sn){var v=sn.val();if(v){CFG=Object.assign({},CFG,v);render();}}).catch(function(){});
-  _db.ref("estado").once("value").then(function(snap){
-    var s=snap.val();if(!s)return;var d;try{d=JSON.parse(s);}catch(e){return;}
-    var _pb=CFG.banco;
-    if(d.landing)CFG=Object.assign({},CFG,d.landing);
-    if(_pb&&(_pb.iban||_pb.nome||_pb.titular))CFG.banco=_pb;
-    if(d.precos)CFG.precos=d.precos;
-    if(d.comp){if(d.comp.local&&(!CFG.local||CFG.local===DEF.local))CFG.local=d.comp.local;if(d.comp.tel&&(!CFG.tel||CFG.tel===DEF.tel))CFG.tel=d.comp.tel;var _cb={nome:d.comp.banco||"",iban:d.comp.iban||"",titular:d.comp.titular||"",ref:d.comp.ref||""};if(_cb.iban||_cb.nome||_cb.titular)CFG.banco=_cb;}
-    TURMAS_ALL=d.turmas||[];
-    TURMA=turmaRecente(d.turmas);
-    fetch("https://knowledge-angola-default-rtdb.firebaseio.com/publico/catalogo.json").then(function(r){return r.json();}).then(function(dc){
-      if(dc){
-        if(dc.precos){var _extra=Object.keys(dc.precos).filter(function(k){return DEF.cursos.indexOf(k)<0;});CFG.cursos=DEF.cursos.concat(_extra);CFG.precos=Object.assign({},CFG.precos||{},dc.precos);}
-        if(dc.cursosAtivos)CFG.cursosAtivos=dc.cursosAtivos;
-        if(dc.vagasCurso)CFG.vagasCurso=dc.vagasCurso;
-        render();
-      }
-    }).catch(function(){});
-    render();
-  }).catch(function(){});
+render();
+try{bumpStat("landingv2","v");document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest('a[href*="wa.me"]');if(a)bumpStat("landingv2","w");});}catch(e){}
+if(!_db)return;
+_db.ref("publico/landing").once("value").then(function(sn){var v=sn.val();if(v){CFG=Object.assign({},CFG,v);render();}}).catch(function(){});
+_db.ref("estado").once("value").then(function(snap){
+var s=snap.val();if(!s)return;var d;try{d=JSON.parse(s);}catch(e){return;}
+var _pb=CFG.banco;
+if(d.landing)CFG=Object.assign({},CFG,d.landing);
+if(_pb&&(_pb.iban||_pb.nome||_pb.titular))CFG.banco=_pb;
+if(d.precos)CFG.precos=d.precos;
+if(d.comp){if(d.comp.local&&(!CFG.local||CFG.local===DEF.local))CFG.local=d.comp.local;if(d.comp.tel&&(!CFG.tel||CFG.tel===DEF.tel))CFG.tel=d.comp.tel;var _cb={nome:d.comp.banco||"",iban:d.comp.iban||"",titular:d.comp.titular||"",ref:d.comp.ref||""};if(_cb.iban||_cb.nome||_cb.titular)CFG.banco=_cb;}
+TURMAS_ALL=d.turmas||[];
+TURMA=turmaRecente(d.turmas);
+fetch("https://knowledge-angola-default-rtdb.firebaseio.com/publico/catalogo.json").then(function(r){return r.json();}).then(function(dc){
+if(dc){
+if(dc.precos){var _extra=Object.keys(dc.precos).filter(function(k){return DEF.cursos.indexOf(k)<0;});CFG.cursos=DEF.cursos.concat(_extra);CFG.precos=Object.assign({},CFG.precos||{},dc.precos);}
+if(dc.cursosAtivos)CFG.cursosAtivos=dc.cursosAtivos;
+if(dc.vagasCurso)CFG.vagasCurso=dc.vagasCurso;
+render();
+}
+}).catch(function(){});
+render();
+}).catch(function(){});
 }
 boot();
 
 function val(id){const e=document.getElementById(id);return e?e.value.trim():"";}
+/* Kz sem ambiguidade: aceita 35.000 / 35 000 / 35000 e guarda sempre o número inteiro (35000). */
+function fmtMil(n){n=Math.round(+n||0);if(!n)return"";var s=String(Math.abs(n)),o="",c=0;for(var i=s.length-1;i>=0;i--){o=s[i]+o;c++;if(c%3===0&&i>0)o="."+o;}return o;}
+function maskMil(el){const d=(el.value||"").replace(/\D/g,"");el.value=fmtMil(d);}
+function numVal(id){return parseInt((val(id)||"").replace(/\D/g,""))||0;}
 function periodoChg(){var p=val("i_periodo");var sab=/s[áa]bado/i.test(p),sem=/semana/i.test(p);var w=document.getElementById("i_horariowrap"),w2=document.getElementById("i_semwrap");if(w)w.style.display=sab?"block":"none";if(w2)w2.style.display=sem?"block":"none";}
 function modChg(){
-  var online=val("i_mod").toLowerCase().indexOf("online")>=0;
-  var pw=document.getElementById("periodowrap"),nota=document.getElementById("onlinenota");
-  if(pw)pw.style.display=online?"none":"block";
-  if(nota)nota.style.display=online?"block":"none";
-  if(online){var sel=document.getElementById("i_periodo");if(sel)sel.value="";}
+var online=val("i_mod").toLowerCase().indexOf("online")>=0;
+var pw=document.getElementById("periodowrap"),nota=document.getElementById("onlinenota");
+if(pw)pw.style.display=online?"none":"block";
+if(nota)nota.style.display=online?"block":"none";
+if(online){var sel=document.getElementById("i_periodo");if(sel)sel.value="";}
 }
 
 let COMP_B64="";
 function onComp(inp){const f=inp.files&&inp.files[0];if(!f)return;const r=new FileReader();
-  r.onload=e=>{const img=new Image();img.onload=()=>{const max=1100;let w=img.width,h=img.height;if(w>max){h=Math.round(h*max/w);w=max;}
-    const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);
-    COMP_B64=c.toDataURL("image/jpeg",0.7);document.getElementById("i_complabel").innerHTML="✅ Comprovativo carregado — "+esc(f.name);};img.src=e.target.result;};
-  r.readAsDataURL(f);}
+r.onload=e=>{const img=new Image();img.onload=()=>{const max=1100;let w=img.width,h=img.height;if(w>max){h=Math.round(h*max/w);w=max;}
+const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);
+COMP_B64=c.toDataURL("image/jpeg",0.7);document.getElementById("i_complabel").innerHTML="✅ Comprovativo carregado — "+esc(f.name);};img.src=e.target.result;};
+r.readAsDataURL(f);}
 
 function enviar(){
-  const nome=val("i_nome"),tel=val("i_tel");
-  if(!nome||!tel){alert("Falta o nome e o WhatsApp.");return;}
-  if(!val("i_curso")){alert("Por favor selecciona a formação que pretendes.");document.getElementById("i_curso").focus();return;}
-  const pcEl=document.querySelector('input[name="i_pc"]:checked');
-  const online=val("i_mod").toLowerCase().indexOf("online")>=0;
-  const rec={quando:new Date().toISOString(),tipo:(COMP_B64?"Pagamento":"Interesse"),nome:nome,tel:tel,email:val("i_email"),bi:val("i_bi"),nascimento:val("i_nasc"),temComputador:pcEl?pcEl.value:"",curso:val("i_curso"),modalidade:val("i_mod"),periodo:(online?"Combinado com o formador(a)":val("i_periodo")),horario:(online?"":(/s[áa]bado/i.test(val("i_periodo"))?val("i_horario"):(/semana/i.test(val("i_periodo"))?"9h às 11h":""))),turma:(TURMA&&TURMA.cod)||"",edicao:(TURMA&&TURMA.ed)||"",valorPago:+val("i_valor")||0,expectativas:val("i_exp"),comprovativo:COMP_B64||"",viaWhatsapp:!COMP_B64,estado:"Nova",fonte:(typeof FONTE_TRAFEGO!=="undefined"?FONTE_TRAFEGO:""),origem:"Landing-v2"};
-  const btn=document.getElementById("i_btn");btn.textContent="A enviar…";btn.disabled=true;
-  function done(){document.getElementById("formfields").style.display="none";const ok=document.getElementById("okbox");ok.style.display="block";
-    var msgVentura="Nova inscrição — "+nome+" — "+(rec.curso||"")+" ("+(rec.modalidade||"")+"). Contacto: "+tel;
-    var linkVentura=waLink(msgVentura);
-    try{window.open(linkVentura,"_blank");}catch(e){}
-    ok.innerHTML='<div class="ok"><div style="font-size:34px">🎉</div><h3 style="color:#176b39;margin:6px 0">Inscrição concluída!</h3><p>Obrigado, '+esc(nome)+'. A nossa equipa entra em contacto contigo pelo WhatsApp para confirmar tudo.</p><a class="wa-btn" target="_blank" href="'+esc(linkVentura)+'">Notificar a nossa equipa pelo WhatsApp</a></div>';}
-  if(_db){_db.ref("inscricoes").push(rec).then(done).catch(done);}else{done();}
+const nome=val("i_nome"),tel=val("i_tel");
+if(!nome||!tel){alert("Falta o nome e o WhatsApp.");return;}
+if(!val("i_curso")){alert("Por favor selecciona a formação que pretendes.");document.getElementById("i_curso").focus();return;}
+const pcEl=document.querySelector('input[name="i_pc"]:checked');
+const online=val("i_mod").toLowerCase().indexOf("online")>=0;
+const rec={quando:new Date().toISOString(),tipo:(COMP_B64?"Pagamento":"Interesse"),nome:nome,tel:tel,email:val("i_email"),bi:val("i_bi"),nascimento:val("i_nasc"),temComputador:pcEl?pcEl.value:"",curso:val("i_curso"),modalidade:val("i_mod"),periodo:(online?"Combinado com o formador(a)":val("i_periodo")),horario:(online?"":(/s[áa]bado/i.test(val("i_periodo"))?val("i_horario"):(/semana/i.test(val("i_periodo"))?"9h às 11h":""))),turma:(TURMA&&TURMA.cod)||"",edicao:(TURMA&&TURMA.ed)||"",valorPago:numVal("i_valor"),expectativas:val("i_exp"),comprovativo:COMP_B64||"",viaWhatsapp:!COMP_B64,estado:"Nova",fonte:(typeof FONTE_TRAFEGO!=="undefined"?FONTE_TRAFEGO:""),origem:"Landing-v2"};
+const btn=document.getElementById("i_btn");btn.textContent="A enviar…";btn.disabled=true;
+function done(){document.getElementById("formfields").style.display="none";const ok=document.getElementById("okbox");ok.style.display="block";
+var msgVentura="Nova inscrição — "+nome+" — "+(rec.curso||"")+" ("+(rec.modalidade||"")+"). Contacto: "+tel;
+var linkVentura=waLink(msgVentura);
+try{window.open(linkVentura,"_blank");}catch(e){}
+ok.innerHTML='<div class="ok"><div style="font-size:34px">🎉</div><h3 style="color:#176b39;margin:6px 0">Inscrição concluída!</h3><p>Obrigado, '+esc(nome)+'. A nossa equipa entra em contacto contigo pelo WhatsApp para confirmar tudo.</p><a class="wa-btn" target="_blank" href="'+esc(linkVentura)+'">Notificar a nossa equipa pelo WhatsApp</a></div>';}
+if(_db){_db.ref("inscricoes").push(rec).then(done).catch(done);}else{done();}
 }
 
 function enviarDuvida(){
-  const texto=val("i_duvida");
-  if(!texto){alert("Escreve a tua dúvida antes de enviar.");return;}
-  const nome=val("i_nome"),tel=val("i_tel");
-  const rec={quando:new Date().toISOString(),nome:nome,tel:tel,email:val("i_email"),curso:val("i_curso"),duvida:texto,fonte:(typeof FONTE_TRAFEGO!=="undefined"?FONTE_TRAFEGO:""),origem:"Landing-v2"};
-  const msg="Tenho uma dúvida"+(nome?(" — "+nome):"")+": "+texto;
-  try{window.open(waLink(msg),"_blank");}catch(e){}
-  if(_db){_db.ref("publico/duvidas").push(rec);}
-  const ok=document.getElementById("duvidaok");if(ok)ok.style.display="block";
-  const ta=document.getElementById("i_duvida");if(ta){ta.value="";ta.disabled=true;}
+const texto=val("i_duvida");
+if(!texto){alert("Escreve a tua dúvida antes de enviar.");return;}
+const nome=val("i_nome"),tel=val("i_tel");
+const rec={quando:new Date().toISOString(),nome:nome,tel:tel,email:val("i_email"),curso:val("i_curso"),duvida:texto,fonte:(typeof FONTE_TRAFEGO!=="undefined"?FONTE_TRAFEGO:""),origem:"Landing-v2"};
+const msg="Tenho uma dúvida"+(nome?(" — "+nome):"")+": "+texto;
+try{window.open(waLink(msg),"_blank");}catch(e){}
+if(_db){_db.ref("publico/duvidas").push(rec);}
+const ok=document.getElementById("duvidaok");if(ok)ok.style.display="block";
+const ta=document.getElementById("i_duvida");if(ta){ta.value="";ta.disabled=true;}
 }
 </script>
 </body>
