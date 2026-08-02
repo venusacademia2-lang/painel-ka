@@ -470,6 +470,10 @@ if(!data.perfis.length)data.perfis.push({nome:"Ventura Camilo",funcao:"Gestor",e
  (data.perfis||[]).forEach(function(p){if(!Array.isArray(p.bloqueadas)){p.bloqueadas=(Array.isArray(p.abas)&&p.abas.length)?TEAM_ABAS_MIGRACAO.filter(function(id){return p.abas.indexOf(id)<0;}):[];}});
  /* L32: unifica nomes de curso antigos (antes do rebranding da landing) com os novos, em todo o lado. */
  try{migrarNomesCursos();}catch(e){}
+ /* L33: qualquer pagamento já marcado como Bónus mas que ainda tenha prestações antigas por resolver
+    (de antes de zerar) deixa de contar essas prestações para a receita — corrige de imediato quem já
+    foi zerado, sem ser preciso repetir a acção. */
+ (data.pagamentos||[]).forEach(function(p){if(p&&p.bonus&&Array.isArray(p.prestacoes)&&p.prestacoes.length)p.prestacoes=[];});
 }
 function setRespOnline(){data.responsaveis=data.responsaveis||{};data.responsaveis.online=val("resp_online")||"";persist();toast("Gestora da Turma Online actualizada");render();}
 function ultimaTransferencia(nome){var arr=(data.transferencias||[]).filter(function(x){return x.nome===nome;});if(!arr.length)return null;arr=arr.slice().sort(function(a,b){return (a.criadoEm||"").localeCompare(b.criadoEm||"");});return arr[arr.length-1];}
@@ -641,7 +645,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v26.1";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v26.2";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -1236,7 +1240,7 @@ function certificadoJaDevido(c){
 }
 function vPainel(){
  const ativos=data.formandos.filter(f=>f.estado==="Activo").length;
- const receita=data.pagamentos.reduce((s,p)=>s+((p.prestacoes&&p.prestacoes.length)?p.prestacoes.reduce((a,x)=>a+(+x.valor||0),0):(+p.pago||0)),0);
+ const receita=data.pagamentos.reduce((s,p)=>s+_recOfPag(p),0);
  const _nm=p=>((data.formandos.find(x=>x.cod===p.cod)||{}).nome||"").trim();
  const emdivida=data.pagamentos.reduce((s,p)=>s+(_nm(p)?divida(p):0),0);
  const atraso=data.pagamentos.filter(p=>_nm(p)&&estadoPag(p)==="Em atraso").length;
@@ -1646,12 +1650,12 @@ function vPagamentos(){
   </tbody></table></div>`;}
 function _reauthGestor(){var p=(currentUser&&currentUser.pass)||"";if(!p)return confirm("Confirmar esta acção?");var v=prompt("Confirma a tua senha de gestão para continuar:");return v!==null&&v===p;}
 function delPagamento(i){if(role!=="admin"){toast("Só a gestão");return;}var p=data.pagamentos[i];if(!p)return;var f=data.formandos.find(x=>x.cod===p.cod)||{};if(!confirm("Apagar o registo de pagamento de "+(f.nome||p.cod)+"? Fica no registo de apagados (recuperável)."))return;if(!_reauthGestor()){toast("Senha errada — não apaguei");return;}if(!Array.isArray(data.apagados))data.apagados=[];data.apagados.unshift({quando:new Date().toISOString().slice(0,16).replace('T',' '),quem:(currentUser&&currentUser.nome)||"Gestão",aba:"pagamentos",registo:JSON.parse(JSON.stringify(p))});data.pagamentos.splice(i,1);persist();toast("Pagamento apagado");render();}
-function editPagamento(i){if(role!=="admin"){toast("Só a gestão");return;}var p=data.pagamentos[i];if(!p)return;var tot=prompt("Total (Kz):",p.total||0);if(tot===null)return;var pg=prompt("Pago / recebido (Kz):",p.pago||0);if(pg===null)return;p.total=+String(tot).replace(/\D/g,"")||0;p.pago=+String(pg).replace(/\D/g,"")||0;if(divida(p)<=0)p.dataPrometida="";persist();toast("Pagamento actualizado");render();}
+function editPagamento(i){if(role!=="admin"){toast("Só a gestão");return;}var p=data.pagamentos[i];if(!p)return;var tot=prompt("Total (Kz):",p.total||0);if(tot===null)return;var pg=prompt("Pago / recebido (Kz):",p.pago||0);if(pg===null)return;p.total=+String(tot).replace(/\D/g,"")||0;p.pago=+String(pg).replace(/\D/g,"")||0;p.prestacoes=[];if(divida(p)<=0)p.dataPrometida="";persist();toast("Pagamento actualizado");render();}
 let PAY_COMP="";
 function onPayComp(inp){const f=inp.files&&inp.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const img=new Image();img.onload=()=>{const max=1100;let w=img.width,h=img.height;if(w>max){h=Math.round(h*max/w);w=max;}const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);PAY_COMP=c.toDataURL("image/jpeg",0.7);const l=document.getElementById("p_complabel");if(l)l.textContent="✅ Comprovativo carregado";};img.src=e.target.result;};r.readAsDataURL(f);}
 let payPre="";
 function irPagar(cod){payPre=cod;show("pagamentos");}
-function zerarBonus(cod){if(role!=="admin"){toast("Só a gestão pode marcar bónus");return;}if(!confirm("Marcar este aluno como BÓNUS? Põe o valor a 0."))return;var p=payOf(cod);if(!p){p={cod:cod,plano:"Bónus",total:0,pago:0,comprovativo:"Não",dataPrometida:"",prestacoes:[]};data.pagamentos.push(p);}p.total=0;p.pago=0;p.plano="Bónus";p.bonus=true;p.bonusPor=(currentUser&&currentUser.nome)||role;p.dataPrometida="";persist();toast("Marcado como bónus (0 Kz)");render();}
+function zerarBonus(cod){if(role!=="admin"){toast("Só a gestão pode marcar bónus");return;}if(!confirm("Marcar este aluno como BÓNUS? Põe o valor a 0."))return;var p=payOf(cod);if(!p){p={cod:cod,plano:"Bónus",total:0,pago:0,comprovativo:"Não",dataPrometida:"",prestacoes:[]};data.pagamentos.push(p);}p.total=0;p.pago=0;p.prestacoes=[];p.plano="Bónus";p.bonus=true;p.bonusPor=(currentUser&&currentUser.nome)||role;p.dataPrometida="";persist();toast("Marcado como bónus (0 Kz)");render();}
 function zerarTurmaBonus(tcod){if(role!=="admin"){toast("Só a gestão");return;}var t=turmaByCod(tcod)||{};var cods=data.formandos.filter(function(f){return f.turma===tcod;}).map(function(f){return f.cod;});if(!cods.length){toast("Sem alunos nesta edição");return;}if(!confirm("Marcar TODA a edição "+(t.ed||"")+"ª ("+cods.length+" alunos) como bónus? Põe o valor a 0 em todos."))return;var quem=(currentUser&&currentUser.nome)||role;cods.forEach(function(cod){var p=payOf(cod);if(!p){p={cod:cod,plano:"Bónus",total:0,pago:0,comprovativo:"Não",dataPrometida:"",prestacoes:[]};data.pagamentos.push(p);}p.total=0;p.pago=0;p.plano="Bónus";p.bonus=true;p.bonusPor=quem;p.dataPrometida="";p.prestacoes=[];});persist();toast(cods.length+" alunos marcados como bónus");render();}
 function limparPagamentosDuplicados(){if(role!=="admin"){toast("Só a gestão");return;}var seen={},extras=[];(data.pagamentos||[]).forEach(function(p){(seen[p.cod]=seen[p.cod]||[]).push(p);});Object.keys(seen).forEach(function(k){if(seen[k].length>1){var arr=seen[k].slice().sort(function(a,b){return ((b.prestacoes||[]).length-(a.prestacoes||[]).length)||((+b.pago||0)-(+a.pago||0));});extras=extras.concat(arr.slice(1));}});if(!extras.length){toast("Sem pagamentos duplicados");return;}if(!confirm("Encontrados "+extras.length+" pagamento(s) duplicado(s). Remover os repetidos (fica 1 por aluno)?"))return;data.pagamentos=data.pagamentos.filter(function(p){return extras.indexOf(p)<0;});persist();toast(extras.length+" pagamento(s) duplicado(s) removido(s)");render();}
 function addPay(){const cod=val("p_cod");const v=+val("p_val")||0;if(!cod||v<=0){toast("Escolhe formando e valor");return}
