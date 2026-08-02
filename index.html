@@ -470,6 +470,7 @@ if(!data.perfis.length)data.perfis.push({nome:"Ventura Camilo",funcao:"Gestor",e
  (data.perfis||[]).forEach(function(p){if(!Array.isArray(p.bloqueadas)){p.bloqueadas=(Array.isArray(p.abas)&&p.abas.length)?TEAM_ABAS_MIGRACAO.filter(function(id){return p.abas.indexOf(id)<0;}):[];}});
  /* L32: unifica nomes de curso antigos (antes do rebranding da landing) com os novos, em todo o lado. */
  try{migrarNomesCursos();}catch(e){}
+ try{migrarHorariosFormandos();}catch(e){}
  /* L33: qualquer pagamento já marcado como Bónus mas que ainda tenha prestações antigas por resolver
     (de antes de zerar) deixa de contar essas prestações para a receita — corrige de imediato quem já
     foi zerado, sem ser preciso repetir a acção. */
@@ -519,7 +520,27 @@ function pcOcupados(cod){return data.formandos.filter(f=>f.turma===cod&&f.estado
 /* "Vagas" é definido por turno (ex.: 20 por turno de manhã e 20 à tarde), não partilhado entre turnos da mesma edição. */
 function vagasLivres(t,turno){if(!t.vagas)return null;return Math.max(0,(+t.vagas||0)-inscritosPagosDe(t.cod,turno));}
 function vagasLivresPorTurno(t){if(!t||!t.vagas||!Array.isArray(t.turnos)||t.turnos.length<2)return null;return t.turnos.map(function(tn){return{horario:tn.horario,vl:vagasLivres(t,tn.horario)};});}
-function inscritosPorTurno(t){if(!t||!Array.isArray(t.turnos)||t.turnos.length<2)return null;return t.turnos.map(function(tn){var pg=inscritosPagosDe(t.cod,tn.horario);var ins=inscritosDe(t.cod,tn.horario);return{horario:tn.horario,pg:pg,dv:ins-pg};});}
+function inscritosPorTurno(t){if(!t||!Array.isArray(t.turnos)||t.turnos.length<2)return null;
+ var totalIns=inscritosDe(t.cod),totalPg=inscritosPagosDe(t.cod),somaIns=0,somaPg=0;
+ var linhas=t.turnos.map(function(tn){var pg=inscritosPagosDe(t.cod,tn.horario);var ins=inscritosDe(t.cod,tn.horario);somaIns+=ins;somaPg+=pg;return{horario:tn.horario,pg:pg,dv:ins-pg};});
+ var restIns=totalIns-somaIns,restPg=Math.max(0,totalPg-somaPg);
+ /* Alunos cujo horário guardado não bate exactamente com nenhum turno da edição (normalmente vindos da landing antes de confirmar o turno) — aparecem aqui em vez de desaparecerem da contagem. */
+ if(restIns>0)linhas.push({horario:"Sem turno / a confirmar",pg:restPg,dv:Math.max(0,restIns-restPg),aviso:true});
+ return linhas;}
+/* Tenta adivinhar o turno certo por palavra-chave (manhã/tarde/dias de semana) quando o texto livre não bate com o horário canónico do turno. */
+function _turnoPorPalavra(turnos,texto){var t=(texto||"").toLowerCase();
+ if(/manh/.test(t))return turnos.find(function(tn){return tn.tipo==="sabManha"||/manh/i.test(tn.horario||"");})||null;
+ if(/tarde/.test(t))return turnos.find(function(tn){return tn.tipo==="sabTarde"||/tarde/i.test(tn.horario||"");})||null;
+ if(/semana/.test(t))return turnos.find(function(tn){return tn.tipo==="semana"||/semana/i.test(tn.horario||"");})||null;
+ return null;}
+function _turnoGuessHorario(t,r){if(!t||!Array.isArray(t.turnos)||t.turnos.length<2)return (r&&r.horario)||"";var g=_turnoPorPalavra(t.turnos,((r&&r.horario)||"")+" "+((r&&r.periodo)||""));return (g&&g.horario)||t.turnos[0].horario;}
+/* Corrige retroactivamente formandos cujo f.horario não corresponde a nenhum turno da sua edição (normalmente vindos da landing com texto livre) — reatribui por palavra-chave quando possível. */
+function migrarHorariosFormandos(){(data.formandos||[]).forEach(function(f){
+ if(!f.turma)return;var t=turmaByCod(f.turma);if(!t||!Array.isArray(t.turnos)||t.turnos.length<2)return;
+ var jaBate=t.turnos.some(function(tn){return tn.horario===f.horario;});if(jaBate)return;
+ var g=_turnoPorPalavra(t.turnos,(f.horario||"")+" "+(f.turno||"")+" "+(f.periodo||""));
+ if(g&&g.horario)f.horario=g.horario;
+});}
 function vagasLivresLabel(t){var pt=vagasLivresPorTurno(t);if(pt)return pt.map(function(x){return esc(x.horario)+': '+(x.vl===0?'CHEIA':x.vl);}).join(' · ');var vl=vagasLivres(t);return vl==null?"":String(vl);}
 /* L21: vagas livres contando TODOS os inscritos (pagos + por pagar) — reflecte o lugar físico ocupado na sala,
    ao contrário de vagasLivres()/vagasLivresPorTurno() que só descontam quem já pagou (uso financeiro). */
@@ -645,7 +666,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v26.3";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v26.4";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -937,16 +958,19 @@ function vFinancas(){const F=fin();const admin=role==="admin";const mes=finMes||
  var despPessoaisMes=gastosMes.filter(g=>g.categoria==="Despesas pessoais").reduce((s,g)=>s+(+g.valor||0),0);gastosMes=gastosMes.filter(g=>g.categoria!=="Despesas pessoais");
  const totalGastoMes=gastosMes.reduce((s,g)=>s+(+g.valor||0),0);const margem=Math.max(0,receitaMes-totalGastoMes);
  var anoP=String(new Date().getFullYear());var receitaYTD=data.pagamentos.reduce((s,p)=>s+((p.prestacoes||[]).filter(x=>(x.data||"").slice(0,4)===anoP).reduce((a,x)=>a+(+x.valor||0),0)),0);var gastoYTD=(F.gastos||[]).filter(g=>(g.dataCompra||g.data||"").slice(0,4)===anoP&&g.categoria!=="Despesas pessoais").reduce((a,g)=>a+(+g.valor||0),0);var margemYTD=Math.max(0,receitaYTD-gastoYTD);
+ var receitaOnlineYTD=data.pagamentos.filter(p=>/^ONL-/.test(p.cod||"")||p.plano==="Turma Online").reduce((s,p)=>s+((p.prestacoes||[]).filter(x=>(x.data||"").slice(0,4)===anoP).reduce((a,x)=>a+(+x.valor||0),0)),0);var receitaPresYTD=Math.max(0,receitaYTD-receitaOnlineYTD);
  const salTotal=Object.values(data.salarios||{}).reduce((a,v)=>a+(+v||0),0);
  const metasTotal=Object.values(F.metas||{}).reduce((a,v)=>a+(+v||0),0);
  const compromissos=salTotal+metasTotal;const disponivel=(+F.saldoBanco||0)-compromissos;
- const sp=F.split||{};const retorno=receitaMes-totalGastoMes;const painelHtml=`<div class="sec"><div class="flex"><h2>Painel do mês</h2><div class="spacer"></div><button class="btn-o" onclick="relatorioMensal()">📄 Relatório mensal (PDF)</button><button class="btn-o" onclick="relatorioYTD()">📊 Relatório do ano (YTD)</button></div><div class="kpigrid">
-   <div class="kpi"><div class="lab">Receita ${mes}</div><div class="val" style="font-size:20px">${kz(receitaMes)}</div></div>
-   <div class="kpi"><div class="lab">Online vs Presencial</div><div class="val" style="font-size:16px">💻 ${kz(receitaOnlineMes)}<br>🏫 ${kz(receitaPresMes)}</div></div>
-   <div class="kpi"><div class="lab">Gasto ${mes}</div><div class="val" style="font-size:20px">${kz(totalGastoMes)}</div></div>
-   <div class="kpi ${retorno<0?'alert':''}"><div class="lab">Resultado (receita − gasto)</div><div class="val" style="font-size:20px">${kz(retorno)}</div></div>
-   <div class="kpi"><div class="lab">Reserva do mês (da margem)</div><div class="val" style="font-size:20px">${kz(Math.round(margem*(+sp.reserva||0)/100))}</div></div>
-   <div class="kpi"><div class="lab">Investimento do mês (da margem)</div><div class="val" style="font-size:20px">${kz(Math.round(margem*(+sp.investimento||0)/100))}</div></div>
+ const sp=F.split||{};const retorno=receitaMes-totalGastoMes;
+ const verYTD=finPer==="ytd";const pReceita=verYTD?receitaYTD:receitaMes;const pOnline=verYTD?receitaOnlineYTD:receitaOnlineMes;const pPres=verYTD?receitaPresYTD:receitaPresMes;const pGasto=verYTD?gastoYTD:totalGastoMes;const pRetorno=pReceita-pGasto;const pMargem=verYTD?margemYTD:margem;const pLab=verYTD?("Ano "+anoP+" (YTD)"):mes;
+ const painelHtml=`<div class="sec"><div class="flex" style="flex-wrap:wrap;gap:8px"><h2>Painel — ${pLab}</h2><div class="spacer"></div><button class="btn-${verYTD?'o':'p'}" style="padding:4px 10px" onclick="setFinPer('mes')">Mês</button><button class="btn-${verYTD?'p':'o'}" style="padding:4px 10px" onclick="setFinPer('ytd')">Ano (YTD)</button><button class="btn-o" onclick="relatorioMensal()">📄 Relatório mensal (PDF)</button><button class="btn-o" onclick="relatorioYTD()">📊 Relatório do ano (YTD)</button></div><div class="kpigrid">
+   <div class="kpi"><div class="lab">Receita — ${pLab}</div><div class="val" style="font-size:20px">${kz(pReceita)}</div></div>
+   <div class="kpi"><div class="lab">Online vs Presencial</div><div class="val" style="font-size:16px">💻 ${kz(pOnline)}<br>🏫 ${kz(pPres)}</div></div>
+   <div class="kpi"><div class="lab">Gasto — ${pLab}</div><div class="val" style="font-size:20px">${kz(pGasto)}</div></div>
+   <div class="kpi ${pRetorno<0?'alert':''}"><div class="lab">Resultado (receita − gasto)</div><div class="val" style="font-size:20px">${kz(pRetorno)}</div></div>
+   <div class="kpi"><div class="lab">Reserva — ${pLab} (da margem)</div><div class="val" style="font-size:20px">${kz(Math.round(pMargem*(+sp.reserva||0)/100))}</div></div>
+   <div class="kpi"><div class="lab">Investimento — ${pLab} (da margem)</div><div class="val" style="font-size:20px">${kz(Math.round(pMargem*(+sp.investimento||0)/100))}</div></div>
   </div></div>`;let html=pnlDetModalHTML()+gastoCompModalHTML()+'<div class="sec"><div class="flex" style="flex-wrap:wrap;gap:8px;align-items:center"><b>Mês:</b> <input type="month" value="'+mes+'" onchange="finMes=this.value;render()" style="width:auto"> <button class="btn-o" style="padding:4px 10px" onclick="finMes=&#39;&#39;;render()">Mês actual</button>'+(admin?' <button class="btn-o" style="padding:4px 10px" onclick="recalcularFin()" title="Recompõe os totais a partir das prestações reais">↻ Recalcular</button>':'')+'</div></div>'+(admin?dupHTML():"")+(admin?painelHtml:"")+`<details class="sec accdet" style="display:none"><summary>Registar gasto</summary><div class="muted">A data de registo é automática. Indica também a data da compra/pagamento.</div>
   <div class="formgrid">
    <div><label>Categoria</label><select id="g_cat" onchange="gastoCatChg()">${GASTO_CATS.map(c=>`<option>${c}</option>`).join("")}${admin?'<option>Despesas pessoais</option>':''}</select></div>
@@ -1519,7 +1543,7 @@ function vTurmas(){
   <div class="row-actions"><button class="btn-p" onclick="addTurma()">Gravar edição</button></div></details>
  <div class="sec"><h2>Edições</h2>
   <table><thead><tr><th>Edição</th><th>Curso</th><th>Responsável</th><th>Horário</th><th>Início</th><th>Fim</th><th>Inscritos</th><th>Vagas livres</th><th>Computadores</th><th>Estado</th><th></th></tr></thead><tbody>
-  ${turmasVisiveis().slice().sort((a,b)=>(+b.ed||0)-(+a.ed||0)).map(t=>{const i=data.turmas.indexOf(t);const st=estadoTurma(t);const insc=inscritosDe(t.cod);const inscPagos=inscritosPagosDe(t.cod);const ipt=inscritosPorTurno(t);const vl=vagasLivres(t);const vpt=vagasLivresPorTurno(t);const pc=pcOcupados(t.cod);const cdp=computadoresDe(t);const cheia=vl===0;const pcFull=pc>=cdp;const vlCell=vpt?vpt.map(function(x){return '<div style="white-space:nowrap"><span class="muted" style="font-size:10.5px">'+esc(x.horario)+':</span> <span class="pill '+(x.vl===0?'p-verm':'p-verde')+'" style="padding:1px 7px">'+(x.vl===0?'CHEIA':x.vl)+'</span></div>';}).join(""):null;return `<tr><td><b>${esc(t.ed)}ª</b></td><td>${esc(t.curso)}</td><td>${esc(t.resp||"")}</td><td>${esc(t.horario||"")}</td><td>${esc(t.inicio||"")}</td><td>${esc(t.fim||"")}</td><td>${inscPagos} pago(s)${insc>inscPagos?' + '+(insc-inscPagos)+' pendente(s)':''}${t.vagas?' / '+esc(t.vagas)+(vpt?' por turno':''):''}${ipt?ipt.map(function(x){return '<div style="white-space:nowrap;font-size:10.5px" class="muted">'+esc(x.horario)+': '+x.pg+' pago(s)'+(x.dv?' + '+x.dv+' pend.':'')+'</div>';}).join(""):""}</td><td>${vlCell!=null?vlCell:(vl==null?'<span class="muted">sem limite</span>':(cheia?'<span class="pill p-verm">CHEIA</span>':'<span class="pill p-verde">'+vl+'</span>'))}</td><td><span class="pill ${pcFull?'p-verm':'p-cinza'}">${pc}/${cdp}</span></td><td><span class="pill ${st==='Em andamento'?'p-verde':st==='Planeada'?'p-dour':'p-cinza'}">${st==='Concluída'?'Edição passada':st}</span>${t.excecaoAte&&st==='Em andamento'?'<br><span class="muted" style="font-size:10.5px" title="'+esc(t.excecaoMotivo||'')+'">exceção até '+esc(t.excecaoAte)+'</span>':''}</td><td class="flex" style="gap:6px"><button class="btn-o" style="padding:4px 8px" onclick="verEdicao('${esc(t.cod)}')">Ver alunos</button>${role==="admin"&&t.fim?`<button class="btn-o" style="padding:4px 8px" title="Manter a turma aberta depois da data de fim (com motivo registado)" onclick="pedirExcecaoTurma('${esc(t.cod)}')">Exceção</button>`:""}${(role==="admin"||(currentUser&&currentUser.nome===t.gestora))?`<button class="btn-${t.concluida?'g':'o'}" style="padding:4px 8px" onclick="marcarTurmaConcluida(${i})">${t.concluida?'✓ Concluída':'Concluir turma'}</button>`:""}${podeExportar()?`<button class="btn-o" style="padding:4px 8px" onclick="exportTurma('${esc(t.cod)}')">Exportar</button>`:""}${podeExportar()?`<button class="btn-o" style="padding:4px 8px" onclick="exportTurmaPDF('${esc(t.cod)}')">PDF</button>`:""}${role==="admin"?`<button class="btn-o" style="padding:4px 8px" title="Editar tudo: datas, curso, vagas, computadores, orçamento e equipa" onclick="editTurma(${i})">Editar</button>`:""}${(function(){var p=procProgresso(t.cod);return '<span class="pill '+(p.feitos>=p.total?'p-verde':'p-dour')+'" title="Procedimentos da turma">📋 '+p.feitos+'/'+p.total+'</span>';})()}${(Array.isArray(t.turnos)&&t.turnos.length?t.turnos:[{horario:t.horario||"",gestora:t.gestora||"",formador:t.resp||""}]).map(function(tn,ti){var prog=feedbackProgresso(t.cod,ti);return '<button class="btn-o" style="padding:3px 8px" title="Recolher feedback deste turno" onclick="abrirFeedback(\''+esc(t.cod)+'\','+ti+')">🎤 '+prog+'/5</button>';}).join("")}${role==="admin"?`<button class="btn-o" style="padding:4px 10px" onclick="delTurma(${i})">✕</button>`:""}</td></tr>`}).join("")||`<tr><td colspan="11" class="muted">Sem edições. Abre a primeira acima.</td></tr>`}
+  ${turmasVisiveis().slice().sort((a,b)=>(+b.ed||0)-(+a.ed||0)).map(t=>{const i=data.turmas.indexOf(t);const st=estadoTurma(t);const insc=inscritosDe(t.cod);const inscPagos=inscritosPagosDe(t.cod);const ipt=inscritosPorTurno(t);const vl=vagasLivres(t);const vpt=vagasLivresPorTurno(t);const pc=pcOcupados(t.cod);const cdp=computadoresDe(t);const cheia=vl===0;const pcFull=pc>=cdp;const vlCell=vpt?vpt.map(function(x){return '<div style="white-space:nowrap"><span class="muted" style="font-size:10.5px">'+esc(x.horario)+':</span> <span class="pill '+(x.vl===0?'p-verm':'p-verde')+'" style="padding:1px 7px">'+(x.vl===0?'CHEIA':x.vl)+'</span></div>';}).join(""):null;return `<tr><td><b>${esc(t.ed)}ª</b></td><td>${esc(t.curso)}</td><td>${esc(t.resp||"")}</td><td>${(t.horario||"").split(" / ").filter(Boolean).map(function(h){return '<div style="white-space:nowrap;font-size:12px;line-height:1.5">'+esc(h)+'</div>';}).join("")||'<span class="muted">—</span>'}</td><td>${esc(t.inicio||"")}</td><td>${esc(t.fim||"")}</td><td><span class="pill p-cinza" style="font-size:12px;white-space:nowrap">${inscPagos} pago(s)${insc>inscPagos?' + '+(insc-inscPagos)+' pend.':''}${t.vagas?' / '+esc(t.vagas)+(vpt?' turno':''):''}</span>${ipt?'<div style="margin-top:5px;display:flex;flex-direction:column;gap:2px">'+ipt.map(function(x){return '<div style="white-space:nowrap;font-size:10.5px'+(x.aviso?';color:#b8860b;font-weight:600':'')+'" class="'+(x.aviso?'':'muted')+'">'+(x.aviso?'⚠ ':'')+esc(x.horario)+': '+x.pg+' pago(s)'+(x.dv?' + '+x.dv+' pend.':'')+'</div>';}).join("")+'</div>':''}</td><td>${vlCell!=null?vlCell:(vl==null?'<span class="muted">sem limite</span>':(cheia?'<span class="pill p-verm">CHEIA</span>':'<span class="pill p-verde">'+vl+'</span>'))}</td><td><span class="pill ${pcFull?'p-verm':'p-cinza'}">${pc}/${cdp}</span></td><td><span class="pill ${st==='Em andamento'?'p-verde':st==='Planeada'?'p-dour':'p-cinza'}">${st==='Concluída'?'Edição passada':st}</span>${t.excecaoAte&&st==='Em andamento'?'<br><span class="muted" style="font-size:10.5px" title="'+esc(t.excecaoMotivo||'')+'">exceção até '+esc(t.excecaoAte)+'</span>':''}</td><td class="flex" style="gap:6px"><button class="btn-o" style="padding:4px 8px" onclick="verEdicao('${esc(t.cod)}')">Ver alunos</button>${role==="admin"&&t.fim?`<button class="btn-o" style="padding:4px 8px" title="Manter a turma aberta depois da data de fim (com motivo registado)" onclick="pedirExcecaoTurma('${esc(t.cod)}')">Exceção</button>`:""}${(role==="admin"||(currentUser&&currentUser.nome===t.gestora))?`<button class="btn-${t.concluida?'g':'o'}" style="padding:4px 8px" onclick="marcarTurmaConcluida(${i})">${t.concluida?'✓ Concluída':'Concluir turma'}</button>`:""}${podeExportar()?`<button class="btn-o" style="padding:4px 8px" onclick="exportTurma('${esc(t.cod)}')">Exportar</button>`:""}${podeExportar()?`<button class="btn-o" style="padding:4px 8px" onclick="exportTurmaPDF('${esc(t.cod)}')">PDF</button>`:""}${role==="admin"?`<button class="btn-o" style="padding:4px 8px" title="Editar tudo: datas, curso, vagas, computadores, orçamento e equipa" onclick="editTurma(${i})">Editar</button>`:""}${(function(){var p=procProgresso(t.cod);return '<span class="pill '+(p.feitos>=p.total?'p-verde':'p-dour')+'" title="Procedimentos da turma">📋 '+p.feitos+'/'+p.total+'</span>';})()}${(Array.isArray(t.turnos)&&t.turnos.length?t.turnos:[{horario:t.horario||"",gestora:t.gestora||"",formador:t.resp||""}]).map(function(tn,ti){var prog=feedbackProgresso(t.cod,ti);return '<button class="btn-o" style="padding:3px 8px" title="Recolher feedback deste turno" onclick="abrirFeedback(\''+esc(t.cod)+'\','+ti+')">🎤 '+prog+'/5</button>';}).join("")}${role==="admin"?`<button class="btn-o" style="padding:4px 10px" onclick="delTurma(${i})">✕</button>`:""}</td></tr>`}).join("")||`<tr><td colspan="11" class="muted">Sem edições. Abre a primeira acima.</td></tr>`}
   </tbody></table></div>`;
 }
 function addTurma(){const ed=val("t_ed");if(!ed){toast("Falta o nº da edição");return}
@@ -2483,28 +2507,36 @@ function formandoDuplicado(tel,nome){var nt=normTel(tel);return (data.formandos|
 function turmasAtivasPara(curso){var cl=(curso||"").trim().toLowerCase();return data.turmas.filter(function(t){if(estadoTurma(t)==="Concluída")return false;if(!cl)return true;return (t.curso||"").trim().toLowerCase()===cl;}).sort(function(a,b){return (+b.ed||0)-(+a.ed||0);});}
 /* Tenta adivinhar a edição certa a partir do que já veio na ficha (edição do panfleto, ou a mais recente activa). */
 function turmaAutoPara(r){if(r.turma){var t=turmaByCod(r.turma);if(t&&estadoTurma(t)!=="Concluída")return t.cod;}var ativas=turmasAtivasPara(r.curso);if(r.edicao){var porEd=ativas.find(function(t){return String(t.ed)===String(r.edicao);});if(porEd)return porEd.cod;}return ativas.length?ativas[0].cod:"";}
-let inscConfirmModal=null;let confCursoSel=null;
-function abrirConfirmarInscricao(i){inscConfirmModal=i;confCursoSel=null;render();}
-function fecharConfirmarInscricao(){inscConfirmModal=null;confCursoSel=null;render();}
-function setConfCurso(el){confCursoSel=el.value;render();}
+let inscConfirmModal=null;let confCursoSel=null;let confTurmaSel=null;let confTurnoSel=null;
+function abrirConfirmarInscricao(i){inscConfirmModal=i;confCursoSel=null;confTurmaSel=null;confTurnoSel=null;render();}
+function fecharConfirmarInscricao(){inscConfirmModal=null;confCursoSel=null;confTurmaSel=null;confTurnoSel=null;render();}
+function setConfCurso(el){confCursoSel=el.value;confTurmaSel=null;confTurnoSel=null;render();}
+function setConfTurma(el){confTurmaSel=el.value;confTurnoSel=null;render();}
+function setConfTurno(el){confTurnoSel=el.value;}
 function confirmarInscricaoModalHTML(){if(inscConfirmModal===null||!Array.isArray(INSCR)||!INSCR[inscConfirmModal])return"";const r=INSCR[inscConfirmModal];const i=inscConfirmModal;
  const dup=formandoDuplicado(r.tel,r.nome);
  const cursoAtual=confCursoSel||r.curso||"";
- const ativas=turmasAtivasPara(cursoAtual);const autoCod=turmaAutoPara(Object.assign({},r,{curso:cursoAtual}));
+ const ativas=turmasAtivasPara(cursoAtual);const autoCod=confTurmaSel||turmaAutoPara(Object.assign({},r,{curso:cursoAtual}));
+ const turmaSel=turmaByCod(autoCod);
+ const turnosSel=(turmaSel&&Array.isArray(turmaSel.turnos)&&turmaSel.turnos.length>1)?turmaSel.turnos:null;
+ const turnoGuess=turnosSel?(confTurnoSel||_turnoGuessHorario(turmaSel,r)):"";
  return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.55);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharConfirmarInscricao()"><div class="card" style="padding:16px;max-width:460px;width:100%;max-height:90vh;overflow:auto">
  <div class="flex"><b style="color:var(--azul)">Confirmar inscrição — ${esc(r.nome||"")}</b><div class="spacer"></div><button class="btn-o" style="padding:4px 10px" onclick="fecharConfirmarInscricao()">Fechar ✕</button></div>
  ${dup?`<div style="background:#fdecea;border:1px solid #f0b8ad;border-left:3px solid #C0392B;border-radius:8px;padding:10px 14px;margin-top:10px;font-size:13.5px;color:#a3311f"><b>⚠ Duplicado:</b> ${esc(dup.nome)} (${esc(dup.cod)}) já está registado como formando com este contacto. Não é possível inscrever de novo.</div>`:""}
  <div style="margin-top:10px;font-size:13.5px;line-height:1.7">
   <div><b>Modalidade:</b> ${esc(r.modalidade||"—")}</div>
-  <div><b>Período/Horário:</b> ${esc(r.periodo||"—")}${r.horario?" · "+esc(r.horario):""}</div>
+  <div><b>Período/Horário (como veio da landing):</b> ${esc(r.periodo||"—")}${r.horario?" · "+esc(r.horario):""}</div>
   <div><b>Valor pago:</b> ${r.valorPago?kz(r.valorPago):"—"}</div>
  </div>
  <div style="margin-top:10px"><label style="display:block;font-weight:700;font-size:12px;color:var(--azul);text-transform:uppercase;margin-bottom:5px">Formação</label>
  <select id="conf_curso" ${dup?"disabled":""} onchange="setConfCurso(this)">${cursosLista().map(function(c){return '<option value="'+esc(c)+'" '+(c===cursoAtual?"selected":"")+'>'+esc(c)+'</option>';}).join("")}</select>
  ${cursoAtual!==(r.curso||"")?`<div class="muted" style="margin-top:4px">Veio da landing como "${esc(r.curso||"—")}" — a corrigir para "${esc(cursoAtual)}".</div>`:""}</div>
  <div style="margin-top:10px"><label style="display:block;font-weight:700;font-size:12px;color:var(--azul);text-transform:uppercase;margin-bottom:5px">Edição/turma</label>
- <select id="conf_turma" ${dup?"disabled":""}>${ativas.length?ativas.map(function(t){return '<option value="'+esc(t.cod)+'" '+(t.cod===autoCod?"selected":"")+'>'+esc(t.ed)+'ª — '+esc(t.curso||"")+'</option>';}).join(""):'<option value="">Sem edição activa para este curso</option>'}</select>
+ <select id="conf_turma" ${dup?"disabled":""} onchange="setConfTurma(this)">${ativas.length?ativas.map(function(t){return '<option value="'+esc(t.cod)+'" '+(t.cod===autoCod?"selected":"")+'>'+esc(t.ed)+'ª — '+esc(t.curso||"")+'</option>';}).join(""):'<option value="">Sem edição activa para este curso</option>'}</select>
  <div class="muted" style="margin-top:4px">Só aparecem edições ainda a decorrer ou por começar — edições já concluídas não são opção.</div></div>
+ ${turnosSel?`<div style="margin-top:10px"><label style="display:block;font-weight:700;font-size:12px;color:var(--azul);text-transform:uppercase;margin-bottom:5px">Turno</label>
+ <select id="conf_turno" ${dup?"disabled":""} onchange="setConfTurno(this)">${turnosSel.map(function(tn){return '<option value="'+esc(tn.horario)+'" '+(tn.horario===turnoGuess?"selected":"")+'>'+esc(tn.horario)+'</option>';}).join("")}</select>
+ <div class="muted" style="margin-top:4px">Palpite automático a partir do que veio da landing — confirma ou corrige antes de gravar, para os números por turno baterem certo.</div></div>`:""}
  <div style="margin-top:10px"><label style="display:block;font-weight:700;font-size:12px;color:var(--azul);text-transform:uppercase;margin-bottom:5px">Responsável pela venda</label>
  <select id="conf_resp"><option value="">— Gestão (sem comissão a ninguém) —</option>${todosColaboradores().map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+'</option>';}).join("")}</select>
  <div class="muted" style="margin-top:4px">Se ninguém for indicado, a venda fica atribuída à Gestão — não gera comissão para ninguém.</div></div>
@@ -2515,7 +2547,9 @@ function finalizarInscricao(i){const r=Array.isArray(INSCR)&&INSCR[i];if(!r)retu
  const cursoFinal=confCursoSel||r.curso||"";
  const n=data.formandos.reduce((m,f)=>{const x=parseInt((f.cod||"").replace(/\D/g,""))||0;return x>m?x:m},0)+1;const cod="KA-"+String(n).padStart(3,"0");
  const turma=val("conf_turma")||"";
- data.formandos.push({cod,nome:r.nome||"",tel:r.tel||"",email:r.email||"",curso:cursoFinal,turma,periodo:r.periodo||"",horario:r.horario||"",modalidade:r.modalidade||"",canal:"Landing",fonte:r.fonte||"",data:new Date().toISOString().slice(0,10),criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role,estado:"Activo",vendedor:val("conf_resp")||"Gestão"});
+ const turmaObj=turmaByCod(turma);
+ const horarioFinal=(turmaObj&&Array.isArray(turmaObj.turnos)&&turmaObj.turnos.length>1)?(val("conf_turno")||_turnoGuessHorario(turmaObj,r)):(r.horario||"");
+ data.formandos.push({cod,nome:r.nome||"",tel:r.tel||"",email:r.email||"",curso:cursoFinal,turma,periodo:r.periodo||"",horario:horarioFinal,modalidade:r.modalidade||"",canal:"Landing",fonte:r.fonte||"",data:new Date().toISOString().slice(0,10),criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role,estado:"Activo",vendedor:val("conf_resp")||"Gestão"});
  const total=precoDe(cursoFinal)||0;const pago=+r.valorPago||0;
  data.pagamentos.push({cod,plano:(pago>=total&&total>0)?"A pronto":"Prestações",total:total,pago:pago,comprovativo:r.comprovativo?"Sim":"Não",dataPrometida:"",prestacoes:pago>0?[{valor:pago,data:new Date().toISOString().slice(0,10),comprovativo:r.comprovativo?"Sim":"Não",comprovativoImg:r.comprovativo||""}]:[],criadoEm:new Date().toISOString()});
  persist();inscConfirmModal=null;confCursoSel=null;toast("Inscrito como formando"+(turma?" na turma":"")); fFicha=cod; show("formandos");}
