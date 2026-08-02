@@ -476,7 +476,7 @@ function actualizarDados(){toast("A actualizar…");try{if(_fbRef){_fbRef.once("
 function compDefaults(){return{director:"Ventura Camilo Augusto",cargo:"Director",tel:"+(244) 939 845 313",email:"academico@knowledgeangola.com",morada:"Morro Bento – Rua Galeria dos Pães, Luanda, Angola",inefop:"855.01/LDA./2023",gps:"https://maps.app.goo.gl/PEHFdPePoC3TzgVt8?g_st=ic",local:LOCAL_PADRAO,banco:"",iban:"",titular:"",ref:"",landingUrl:"https://venusacademia2-lang.github.io/painel-ka/landing.html",intro:"Serve o presente documento para confirmar a recepção e validação da sua inscrição na formação abaixo detalhada.",fecho:"Estamos ao dispor para qualquer esclarecimento adicional.",qr:COMP_QR,carimbo:COMP_CARIMBO,logo:"",parabens:"Parabéns {nome}!\n\nConcluíste com sucesso a tua formação na Knowledge Angola. Estamos muito orgulhosos do teu percurso e desejamos-te o maior sucesso na aplicação do que aprendeste.\n\nCom os melhores cumprimentos,\nKnowledge Angola"}}
 function nextTuesday(from){const d=from?new Date(from):new Date();d.setHours(0,0,0,0);do{d.setDate(d.getDate()+1)}while(d.getDay()!==2);return d.toISOString().slice(0,10)}
 
-let ocultar=true;
+let ocultar=true;try{var _ko=localStorage.getItem("ka_ocultar");if(_ko!==null)ocultar=_ko==="1";}catch(e){}
 const kz=n=>ocultar?"•••• Kz":((+n||0).toLocaleString("de-DE"))+" Kz";
 const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function toast(m){const t=document.getElementById("toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1900)}
@@ -529,7 +529,7 @@ function escolherRecente(nome){var r=getRecentes().find(function(x){return x.nom
 function renderRecentes(){var wrap=document.getElementById("recentesWrap"),box=document.getElementById("recentesBox");if(!wrap||!box)return;var r=getRecentes();if(!r.length){wrap.style.display="none";return;}wrap.style.display="block";box.innerHTML=r.map(function(x){var ini=(x.nome||"?").trim().split(/\s+/).map(function(w){return w[0]||"";}).slice(0,2).join("").toUpperCase();var av=x.foto?'<div style="width:54px;height:54px;border-radius:50%;background-image:url('+x.foto+');background-size:cover;background-position:center;margin:0 auto 6px;border:2px solid #fff;box-shadow:0 2px 8px rgba(20,30,60,.18)"></div>':'<div style="width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,#2E5496,#1F3864);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px;margin:0 auto 6px;border:2px solid #fff;box-shadow:0 2px 8px rgba(20,30,60,.18)">'+esc(ini)+'</div>';var nomeSeg=esc(x.nome).replace(/'/g,"\\'");return '<div style="position:relative;width:74px;text-align:center;cursor:pointer;transition:transform .15s" onmouseover="this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.transform=\'none\'" onclick="escolherRecente(\''+nomeSeg+'\')" title="Entrar como '+esc(x.nome)+'"><span onclick="removerRecente(\''+nomeSeg+'\',event)" title="Esquecer neste aparelho" style="position:absolute;top:-2px;right:8px;background:rgba(30,40,70,.75);color:#fff;border-radius:50%;width:16px;height:16px;font-size:10px;line-height:16px;text-align:center;z-index:2">✕</span>'+av+'<div style="font-size:11.5px;font-weight:600;color:#3d4863;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc((x.nome||"").split(" ")[0])+'</div></div>';}).join("");}
 function ocultIcon(off){var a='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">';return off?a+'<path d="M17.9 17.9A10.6 10.6 0 0 1 12 20C5 20 1 12 1 12a19 19 0 0 1 5.1-5.9"/><path d="M9.9 4.2A10.6 10.6 0 0 1 12 4c7 0 11 8 11 8a19 19 0 0 1-2.2 3.2"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="M1 1l22 22"/></svg>':a+'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';}
 function updateOcultBtn(){var b=document.getElementById("ocultBtn");if(!b)return;b.innerHTML=(ocultar?ocultIcon(false):ocultIcon(true))+'<span style="vertical-align:middle">'+(ocultar?"Mostrar valores":"Ocultar valores")+'</span>';}
-function toggleOcultar(){ocultar=!ocultar;updateOcultBtn();render();}
+function toggleOcultar(){ocultar=!ocultar;try{localStorage.setItem("ka_ocultar",ocultar?"1":"0");}catch(e){}updateOcultBtn();render();}
 function toggleTema(){var dark=document.documentElement.getAttribute("data-theme")==="dark";if(dark)document.documentElement.removeAttribute("data-theme");else document.documentElement.setAttribute("data-theme","dark");try{localStorage.setItem("ka_tema",dark?"":"dark");}catch(e){}}
 function enterTeam(){document.getElementById("passbox").classList.add("hidden");const tb=document.getElementById("teambox");
  tb.innerHTML='<label>ID do Colaborador</label><input id="lg_id" placeholder="o teu ID" onkeydown="if(event.key===\'Enter\'){var e=document.getElementById(\'lg_pin\');if(e)e.focus();}"><label style="margin-top:8px">PIN</label><input id="lg_pin" type="password" placeholder="PIN" onkeydown="if(event.key===\'Enter\')loginById()"><div class="flex" style="margin-top:10px"><button class="btn-p" onclick="loginById()">Entrar</button><span id="lgerr" class="muted" style="color:var(--verm)"></span></div>';
@@ -617,11 +617,11 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v22.0";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v24.0";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
-let current="";
+let current="";try{current=sessionStorage.getItem("ka_current")||"";}catch(e){}
 const NAVICON={
  notificacoes:'<path d="M11 3a5 5 0 0 0-5 5v3l-1.4 2.3a1 1 0 0 0 .9 1.5h11a1 1 0 0 0 .9-1.5L16 11V8a5 5 0 0 0-5-5z"/><path d="M9.5 18a1.5 1.5 0 0 0 3 0"/>',
  financas:'<rect x="3" y="6" width="16" height="12" rx="2"/><path d="M3 10h16"/><circle cx="15" cy="14" r="1.2"/>',
@@ -677,13 +677,14 @@ function buildNav(){
    pgs.forEach(id=>{const b=document.createElement("button");b.className="navbtn";b.dataset.id=id;b.innerHTML=`${iconSVG(id)} ${PAGES[id][0]}`+navBadge(id);b.onclick=()=>{show(id);closeNav()};det.appendChild(b);if(first===null)first=id;});
    if(pgs.indexOf(first)>=0)det.open=true;
    nav.appendChild(det);});
- if(first)show(first);
+ if(current&&items.indexOf(current)>=0){[...nav.querySelectorAll("details.navgrp")].forEach(function(d){if([...d.querySelectorAll(".navbtn")].some(function(b){return b.dataset.id===current;}))d.open=true;});show(current);}
+ else if(first)show(first);
 }
-function show(id){current=id;[...document.querySelectorAll('.navbtn')].forEach(b=>b.classList.toggle("active",b.dataset.id===id));
+function show(id){current=id;try{sessionStorage.setItem("ka_current",id);}catch(e){}[...document.querySelectorAll('.navbtn')].forEach(b=>b.classList.toggle("active",b.dataset.id===id));
  document.getElementById("ptitle").textContent=PAGES[id][0];document.getElementById("psub").textContent=PAGES[id][1];var _a=document.getElementById("app");if(_a)_a.classList.remove("navopen");if(typeof updateTopAvatar==="function")updateTopAvatar();render()}
 function updateTopAvatar(){var el=document.getElementById("topavatar");if(!el)return;var nome=(currentUser&&currentUser.nome)||"";var p=(data.perfis||[]).find(function(x){return x.nome===nome;});if(p&&p.foto){el.style.backgroundImage="url("+p.foto+")";el.style.display="inline-block";el.title=nome;}else{el.style.display="none";}}
 let _refocus=null;function refocusSearch(id){_refocus=id;}
-function render(){document.getElementById("views").innerHTML=rowEditModalHTML()+cropModalHTML()+({painel:vPainel,notificacoes:vNotificacoes,financas:vFinancas,gastos:vGastos,analytics:vAnalytics,paginas:vPaginas,quiz:vQuizPainel,quizleads:vQuizLeads,formandos:vFormandos,turmas:vTurmas,calendario:vCalendario,online:vOnline,pagamentos:vPagamentos,comprovativo:vComprovativo,leads:vLeads,carteira:vCarteira,b2b:vB2B,emailmkt:vEmailMkt,inscricoes:vInscricoes,chamadas:vChamadas,presencas:vPresencas,avaliacoes:vAvaliacoes,certificados:vCertificados,formador:vFormador,presencial:vPresencial,comunicados:vComunicados,notas:vNotas,chat:vChat,melhorias:vMelhorias,actividade:vActividade,rh:vRH,desempenho:vDesempenho,dados:vDados,exportar:vExportar,defs:vDefs}[current]||(()=>""))();if(typeof _initOrdenar==="function")_initOrdenar();if(current==="painel"){drawChart();drawPerfChart();}if(typeof atualizarAlertaGlobal==="function")atualizarAlertaGlobal();if(_refocus){const e=document.getElementById(_refocus);if(e){e.focus();const v=e.value||"";try{e.setSelectionRange(v.length,v.length)}catch(_){}}_refocus=null;}}
+function render(){try{sessionStorage.setItem("ka_fficha",fFicha||"");sessionStorage.setItem("ka_fsearch",fSearch||"");}catch(e){}document.getElementById("views").innerHTML=rowEditModalHTML()+cropModalHTML()+({painel:vPainel,notificacoes:vNotificacoes,financas:vFinancas,gastos:vGastos,analytics:vAnalytics,paginas:vPaginas,quiz:vQuizPainel,quizleads:vQuizLeads,formandos:vFormandos,turmas:vTurmas,calendario:vCalendario,online:vOnline,pagamentos:vPagamentos,comprovativo:vComprovativo,leads:vLeads,carteira:vCarteira,b2b:vB2B,emailmkt:vEmailMkt,inscricoes:vInscricoes,chamadas:vChamadas,presencas:vPresencas,avaliacoes:vAvaliacoes,certificados:vCertificados,formador:vFormador,presencial:vPresencial,comunicados:vComunicados,notas:vNotas,chat:vChat,melhorias:vMelhorias,actividade:vActividade,rh:vRH,desempenho:vDesempenho,dados:vDados,exportar:vExportar,defs:vDefs}[current]||(()=>""))();if(typeof _initOrdenar==="function")_initOrdenar();if(current==="painel"){drawChart();drawPerfChart();}if(typeof atualizarAlertaGlobal==="function")atualizarAlertaGlobal();if(_refocus){const e=document.getElementById(_refocus);if(e){e.focus();const v=e.value||"";try{e.setSelectionRange(v.length,v.length)}catch(_){}}_refocus=null;}}
 
 function fin(){if(!data.financas)data.financas={saldoBanco:0,saldoData:"",gastos:[],metas:{Marketing:0,Renda:0,"Comunicação":0,Outras:0},split:{proLabore:30,operacao:40,reserva:15,investimento:10,marketing:5}};return data.financas;}
 const GASTO_CATS=["Marketing","Renda","Comunicação","Água","Detergentes","Consumíveis","Deslocação","Serviços de limpeza","Outras"];
@@ -1282,7 +1283,7 @@ function drawPerfChart(){const ctx=document.getElementById("perfchart");if(!ctx)
  perfChartObj=new Chart(ctx,{type:"bar",data:{labels,datasets:[{label:"Vendas",data:labels.map(l=>perf[l].v),backgroundColor:"#1F3864",borderRadius:5},{label:"Contactos",data:labels.map(l=>perf[l].c),backgroundColor:"#BF9000",borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom"}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}});}
 
 /* FORMANDOS / REGISTO DE VENDA */
-let fSearch="",fTurmaF="",fSort="nome",fDir="asc",fTurno="",fSemEmail=false;
+let fSearch="",fTurmaF="",fSort="nome",fDir="asc",fTurno="",fSemEmail=false;try{fSearch=sessionStorage.getItem("ka_fsearch")||"";}catch(e){}
 function ordenar(arr,modo){var a=arr.slice();if(modo==="nome")a.sort(function(x,y){return (x.nome||"").localeCompare(y.nome||"");});else if(modo==="turma")a.sort(function(x,y){return (x.turma||"").localeCompare(y.turma||"");});else if(modo==="data")a.sort(function(x,y){return (y.data||y.criadoEm||"").localeCompare(x.data||x.criadoEm||"");});else if(modo==="divida")a.sort(function(x,y){function dv(c){var p=payOf(c);return p?divida(p):0;}return dv(y.cod)-dv(x.cod);});return a;}
 function setFSort(col){if(fSort===col)fDir=(fDir==="asc"?"desc":"asc");else{fSort=col;fDir="asc";}render();}
 function fHead(col,label){return '<th style="cursor:pointer;user-select:none" onclick="setFSort(\''+col+'\')">'+label+' '+(fSort===col?(fDir==="asc"?"▲":"▼"):'<span style="opacity:.3">↕</span>')+'</th>';}
@@ -1404,7 +1405,7 @@ function addVenda(){const nome=val("f_nome");if(!nome){toast("Falta o nome");ret
   if(vl===0&&!confirm("A turma "+t.ed+"ª está CHEIA. Inscrever mesmo assim?"))return;
   if(usaPC==="Sim"&&pcOcupados(t.cod)>=computadoresDe(t)&&!confirm("Já não há computadores livres nesta turma (limite "+computadoresDe(t)+"). Inscrever mesmo assim?"))return;}
  const n=data.formandos.reduce((m,f)=>{const x=parseInt((f.cod||"").replace(/\D/g,""))||0;return x>m?x:m},0)+1;const cod="KA-"+String(n).padStart(3,"0");
- data.formandos.push({cod,nome,tel:val("f_tel"),tel2:val("f_tel2"),bi:val("f_bi"),nasc:val("f_nasc"),email:val("f_email"),area:val("f_area"),curso:val("f_curso"),proximoCurso:val("f_prox"),nota:val("f_nota"),turma,turno:turnoSelInfo().turno,periodo:turnoSelInfo().periodo,horario:turnoSelInfo().horario,gestora:turnoSelInfo().gestora,formador:turnoSelInfo().formador,canal:val("f_canal"),fonte:fonteDeTel(val("f_tel")),data:new Date().toISOString().slice(0,10),criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role,estado:"Activo",vendedor:val("f_vend")||((currentUser&&currentUser.nome)||""),usaPC});
+ data.formandos.push({cod,nome,tel:val("f_tel"),tel2:val("f_tel2"),bi:val("f_bi"),nasc:val("f_nasc"),email:val("f_email"),area:val("f_area"),curso:val("f_curso"),proximoCurso:val("f_prox"),nota:val("f_nota"),turma,turno:turnoSelInfo().turno,periodo:turnoSelInfo().periodo,horario:turnoSelInfo().horario,gestora:turnoSelInfo().gestora,formador:turnoSelInfo().formador,canal:val("f_canal"),fonte:fonteDeTel(val("f_tel")),data:new Date().toISOString().slice(0,10),criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role,estado:"Activo",vendedor:val("f_vend")||"Gestão",usaPC});
  const bonus=(val("f_bonus")==="Sim");const total=bonus?0:numVal("f_total");const pagoAgora=bonus?0:numVal("f_pago");const comp=val("f_comp");
  const plano=bonus?"Bónus":((pagoAgora>=total&&total>0)?"A pronto":"Prestações");
  const pag={cod,plano,total,pago:pagoAgora,bonus:bonus,bonusPor:bonus?((currentUser&&currentUser.nome)||role):"",comprovativo:comp,dataPrometida:val("f_prom"),criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role,prestacoes:[]};
@@ -1905,7 +1906,7 @@ function _chamDe(nome,ini,fim){return data.chamadas.filter(function(c){if((c.res
 function _convDe(nome,ini,fim){return data.formandos.filter(function(f){if((f.vendedor||"")!==nome)return false;var d=(f.data||(f.criadoEm||"").slice(0,10))||"";if(ini&&d<ini)return false;if(fim&&d>fim)return false;var p=payOf(f.cod);return p&&(+p.pago||0)>0;}).length;}
 function statusMetaDia(nome,dataISO){const util=ehDiaUtil(dataISO);const meta=util?metaDe(nome):0;const feitas=chamadasDoDia(nome,dataISO);const pendentes=leadsPendentesDe(nome);const falta=Math.max(0,meta-feitas);return{feitas,meta,falta,util,cumpriuChamadas:!util||feitas>=meta,pendentes};}
 function colaboradoresComMeta(){var vend=new Set((data.formandos||[]).map(function(f){return f.vendedor;}).filter(Boolean));var out=new Set();(data.perfis||[]).forEach(function(p){var t=((p.departamento||"")+" "+(p.categorias||"")+" "+(p.funcao||"")).toLowerCase();if(p.incluirDesempenho===true||/marketing|vendas|comercial|vendedor|assistente/.test(t)||vend.has(p.nome)){if(p.nome)out.add(p.nome);}});vend.forEach(function(n){out.add(n);});return [...out].filter(Boolean).filter(function(n){return !estaArquivado(n);}).sort(function(a,b){return a.localeCompare(b);});}
-function todosColaboradores(){var s=new Set((data.perfis||[]).map(function(p){return p.nome;}).filter(Boolean));(data.formandos||[]).forEach(function(f){if(f.vendedor)s.add(f.vendedor);});return [...s].filter(Boolean).filter(function(n){return !estaArquivado(n);}).sort(function(a,b){return a.localeCompare(b);});}
+function todosColaboradores(){var s=new Set((data.perfis||[]).map(function(p){return p.nome;}).filter(Boolean));(data.formandos||[]).forEach(function(f){if(f.vendedor)s.add(f.vendedor);});return [...s].filter(Boolean).filter(function(n){return n!=="Gestão";}).filter(function(n){return !estaArquivado(n);}).sort(function(a,b){return a.localeCompare(b);});}
 function renomearVendedor(de){if(role!=="admin"){toast("Só a gestão");return;}var sug=(data.perfis||[]).map(function(p){return p.nome;}).filter(Boolean);var para=prompt("Unificar o vendedor \""+de+"\" para que nome? (usa o nome exacto do perfil)\n\nPerfis: "+sug.join(" · "),de);if(para===null)return;para=para.trim();if(!para||para===de)return;var n=0;(data.formandos||[]).forEach(function(f){if((f.vendedor||"")===de){f.vendedor=para;n++;}});persist();toast(n+" venda(s) passada(s) de \""+de+"\" para \""+para+"\"");render();}
 function saveMetas(){data.metas=data.metas||{};data.metas.chamadasDia=+val("mt_chamadas")||20;data.metas.horaLimite=val("mt_hora")||"10:00";persist();toast("Metas actualizadas");render();}
 function addChamada(){const nome=val("c_nome");if(!nome){toast("Escolhe ou escreve quem foi contactado");return}
@@ -2368,13 +2369,16 @@ function confirmarInscricaoModalHTML(){if(inscConfirmModal===null||!Array.isArra
  <div style="margin-top:10px"><label style="display:block;font-weight:700;font-size:12px;color:var(--azul);text-transform:uppercase;margin-bottom:5px">Edição/turma</label>
  <select id="conf_turma" ${dup?"disabled":""}>${ativas.length?ativas.map(function(t){return '<option value="'+esc(t.cod)+'" '+(t.cod===autoCod?"selected":"")+'>'+esc(t.ed)+'ª — '+esc(t.curso||"")+'</option>';}).join(""):'<option value="">Sem edição activa para este curso</option>'}</select>
  <div class="muted" style="margin-top:4px">Só aparecem edições ainda a decorrer ou por começar — edições já concluídas não são opção.</div></div>
+ <div style="margin-top:10px"><label style="display:block;font-weight:700;font-size:12px;color:var(--azul);text-transform:uppercase;margin-bottom:5px">Responsável pela venda</label>
+ <select id="conf_resp"><option value="">— Gestão (sem comissão a ninguém) —</option>${todosColaboradores().map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+'</option>';}).join("")}</select>
+ <div class="muted" style="margin-top:4px">Se ninguém for indicado, a venda fica atribuída à Gestão — não gera comissão para ninguém.</div></div>
  <div class="row-actions" style="margin-top:14px"><button class="btn-p" ${dup?"disabled":""} onclick="finalizarInscricao(${i})">Confirmar inscrição</button></div>
  </div></div>`;}
 function finalizarInscricao(i){const r=Array.isArray(INSCR)&&INSCR[i];if(!r)return;
  if(formandoDuplicado(r.tel,r.nome)){toast("Duplicado — este contacto já está registado.");return;}
  const n=data.formandos.reduce((m,f)=>{const x=parseInt((f.cod||"").replace(/\D/g,""))||0;return x>m?x:m},0)+1;const cod="KA-"+String(n).padStart(3,"0");
  const turma=val("conf_turma")||"";
- data.formandos.push({cod,nome:r.nome||"",tel:r.tel||"",email:r.email||"",curso:r.curso||"",turma,periodo:r.periodo||"",horario:r.horario||"",modalidade:r.modalidade||"",canal:"Landing",fonte:r.fonte||"",data:new Date().toISOString().slice(0,10),criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role,estado:"Activo",vendedor:(currentUser&&currentUser.nome)||""});
+ data.formandos.push({cod,nome:r.nome||"",tel:r.tel||"",email:r.email||"",curso:r.curso||"",turma,periodo:r.periodo||"",horario:r.horario||"",modalidade:r.modalidade||"",canal:"Landing",fonte:r.fonte||"",data:new Date().toISOString().slice(0,10),criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role,estado:"Activo",vendedor:val("conf_resp")||"Gestão"});
  const total=precoDe(r.curso)||0;const pago=+r.valorPago||0;
  data.pagamentos.push({cod,plano:(pago>=total&&total>0)?"A pronto":"Prestações",total:total,pago:pago,comprovativo:r.comprovativo?"Sim":"Não",dataPrometida:"",prestacoes:pago>0?[{valor:pago,data:new Date().toISOString().slice(0,10),comprovativo:r.comprovativo?"Sim":"Não",comprovativoImg:r.comprovativo||""}]:[],criadoEm:new Date().toISOString()});
  persist();inscConfirmModal=null;toast("Inscrito como formando"+(turma?" na turma":"")); fFicha=cod; show("formandos");}
@@ -2403,10 +2407,10 @@ function arquivados(){if(!Array.isArray(data.arquivados))data.arquivados=[];retu
 function estaArquivado(n){return arquivados().indexOf(n)>=0;}
 function arquivarPessoa(nome){if(role!=="admin"){toast("Só a gestão");return;}if(!nome)return;if(!confirm("Arquivar "+nome+"? Deixa de aparecer nas listas do sistema (recuperável em RH → Arquivados)."))return;var a=arquivados();if(a.indexOf(nome)<0)a.push(nome);persist();toast(nome+" arquivado");render();}
 function desarquivarPessoa(nome){var a=arquivados();var k=a.indexOf(nome);if(k>=0)a.splice(k,1);persist();toast(nome+" reposto");render();}
-function pessoasKA(){const s=new Set(Object.keys(data.salarios||{}));data.formandos.forEach(f=>{if(f.vendedor)s.add(f.vendedor)});data.turmas.forEach(t=>{if(t.resp)s.add(t.resp);if(t.assistente)s.add(t.assistente)});data.online.forEach(o=>{if(o.formador)s.add(o.formador)});return[...s].filter(Boolean).filter(n=>!estaArquivado(n))}
+function pessoasKA(){const s=new Set(Object.keys(data.salarios||{}));data.formandos.forEach(f=>{if(f.vendedor)s.add(f.vendedor)});data.turmas.forEach(t=>{if(t.resp)s.add(t.resp);if(t.assistente)s.add(t.assistente)});data.online.forEach(o=>{if(o.formador)s.add(o.formador)});return[...s].filter(Boolean).filter(n=>n!=="Gestão").filter(n=>!estaArquivado(n))}
 /* Campo "Responsável": vem pré-preenchido com quem está em login, mas continua editável (datalist com todos os perfis, para atribuir a outra pessoa se for preciso). */
 function respInputHTML(id,valorAtual,placeholder){const v=(valorAtual!==undefined&&valorAtual!==null&&valorAtual!=="")?valorAtual:((currentUser&&currentUser.nome)||"");const pessoas=[...new Set([...(data.perfis||[]).map(p=>p.nome),...pessoasKA()])].filter(Boolean).filter(n=>!estaArquivado(n));return `<input id="${id}" list="${id}_dl" value="${esc(v)}" placeholder="${esc(placeholder||"Nome do responsável")}"><datalist id="${id}_dl">${pessoas.map(n=>`<option value="${esc(n)}">`).join("")}</datalist>`;}
-function comissaoPessoa(nome){return data.formandos.filter(f=>f.vendedor===nome).reduce((s,f)=>s+comissaoDe(f.cod),0)}
+function comissaoPessoa(nome){if(!nome||nome==="Gestão")return 0;return data.formandos.filter(f=>f.vendedor===nome).reduce((s,f)=>s+comissaoDe(f.cod),0)}
 /* L20-2: detalhe de quem justifica a comissão de cada pessoa — nome, telefone, modalidade e
    edição de cada aluno que já pagou totalmente (única fonte de comissão), para a gestão poder
    confirmar o valor sem ter de ir procurar aluno a aluno. */
@@ -2523,7 +2527,7 @@ function comFeito(i){var c=(data.comunicados||[])[i];if(!c)return;c.feito=true;p
 function delComunicado(i){data.comunicados.splice(i,1);persist();render()}
 
 /* FICHA DO FORMANDO */
-let fFicha="";
+let fFicha="";try{fFicha=sessionStorage.getItem("ka_fficha")||"";}catch(e){}
 /* PDS para formandos presenciais (mais simples que o online: sem recorrência/parceiro) */
 let pdsEditF=null;let pdsEditFIdx=null;
 function ensurePdsF(f){if(!Array.isArray(f.pds))f.pds=[];return f;}
@@ -2783,7 +2787,7 @@ function vDefs(){const _im=indicadoresMarketing(mesTrafego||null);const _fontes=
    <div class="kpi money"><div class="lab">LTV — Valor médio por aluno</div><div class="val">${kz(Math.round(_im.ltv))}</div></div>
   </div>
   <div class="muted" style="margin-top:8px">${_im.leads} lead(s) captado(s) · ${_im.convertidos} tornaram-se alunos pagantes.</div></div>
- ${permModalHTML()}<div class="sec"><h2>Cursos e preços (só gestão)</h2><div class="muted">Os cursos definidos aqui aparecem em todo o sistema (inscrições, vendas, landing e catálogo). O preço preenche o valor no Registo de Venda; as vendas já registadas mantêm o valor que tinham.</div>
+ ${permModalHTML()}${fundirModalHTML()}<div class="sec"><h2>Cursos e preços (só gestão)</h2><div class="muted">Os cursos definidos aqui aparecem em todo o sistema (inscrições, vendas, landing e catálogo). O preço preenche o valor no Registo de Venda; as vendas já registadas mantêm o valor que tinham.</div>
   <div class="formgrid">${cursosLista().map((c,i)=>`<div><label>${esc(c)} (Kz) ${CURSOS_BASE.indexOf(c)<0?`<a href="#" onclick="ocultarCurso('${esc(c)}');return false" style="color:#C0392B;font-size:11px;text-decoration:underline">ocultar</a>`:""}</label><input id="preco_${i}" type="number" value="${precoDe(c)}"></div>`).join("")}</div>
   <div class="row-actions"><button class="btn-p" onclick="savePrecos()">Guardar preços</button></div>
   <div style="border-top:1px solid var(--linha);margin-top:14px;padding-top:12px"><b style="color:var(--azul)">➕ Nova formação</b><div class="formgrid" style="margin-top:6px"><div><label>Nome do curso</label><input id="nc_nome" placeholder="ex.: Word Profissional"></div><div><label>Preço (Kz)</label><input id="nc_preco" type="number" placeholder="0"></div><div style="align-self:end"><button class="btn-p" onclick="addCurso()">Criar curso</button></div></div>
@@ -2839,7 +2843,7 @@ function vDefs(){const _im=indicadoresMarketing(mesTrafego||null);const _fontes=
   <div class="row-actions"><button class="btn-p" onclick="addPerfil()">Adicionar perfil</button></div>
   <div class="muted" style="margin-top:6px">Cada pessoa entra com o seu <b>ID</b> e <b>PIN</b> (não aparece a lista de nomes no ecrã de entrada).</div>
   <table style="margin-top:12px"><thead><tr><th>Foto</th><th>Nome</th><th>ID</th><th>Função</th><th>E-mail</th><th>PIN</th><th>Depto / Área</th><th></th></tr></thead><tbody>
-  ${data.perfis.map((p,i)=>`<tr><td style="text-align:center">${p.foto?`<img src="${p.foto}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid var(--linha)">`:`<div style="width:40px;height:40px;border-radius:50%;background:#eef1f7;display:grid;place-items:center;color:#9aa7bf;font-weight:700;margin:0 auto">${esc((p.nome||"?").slice(0,1).toUpperCase())}</div>`}<br><label style="font-size:11px;color:var(--azul2);cursor:pointer;text-decoration:underline">${p.foto?"trocar":"foto"}<input type="file" accept="image/*" style="display:none" onchange="onPerfilFoto(${i},this)"></label></td><td>${esc(p.nome)}</td><td><b>${esc(p.id||"—")}</b></td><td>${esc(p.funcao)}${p.categorias?'<br><span class="muted">'+esc(p.categorias)+'</span>':''}</td><td>${esc(p.email||"")}</td><td><b>${esc(p.pass||"")}</b> <button class="btn-o" style="padding:2px 8px" onclick="resetPerfilPass(${i})">novo</button></td><td>${esc(p.departamento||"—")}${p.area?'<br><span class="muted">'+esc(p.area)+'</span>':''} <button class="btn-o" style="padding:2px 8px" title="Editar depto/área" onclick="editPerfilDep(${i})">✎</button></td><td class="flex" style="gap:6px"><button class="btn-o" style="padding:4px 8px" onclick="editarPerfil(${i})">Editar</button><button class="btn-o" style="padding:4px 8px" onclick="editPerms(${i})">Permissões</button><button class="btn-o" style="padding:4px 10px" onclick="delPerfil(${i})">✕</button></td></tr>`).join("")||`<tr><td colspan="8" class="muted">Sem perfis.</td></tr>`}
+  ${data.perfis.map((p,i)=>`<tr><td style="text-align:center">${p.foto?`<img src="${p.foto}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid var(--linha)">`:`<div style="width:40px;height:40px;border-radius:50%;background:#eef1f7;display:grid;place-items:center;color:#9aa7bf;font-weight:700;margin:0 auto">${esc((p.nome||"?").slice(0,1).toUpperCase())}</div>`}<br><label style="font-size:11px;color:var(--azul2);cursor:pointer;text-decoration:underline">${p.foto?"trocar":"foto"}<input type="file" accept="image/*" style="display:none" onchange="onPerfilFoto(${i},this)"></label></td><td>${esc(p.nome)}</td><td><b>${esc(p.id||"—")}</b></td><td>${esc(p.funcao)}${p.categorias?'<br><span class="muted">'+esc(p.categorias)+'</span>':''}</td><td>${esc(p.email||"")}</td><td><b>${esc(p.pass||"")}</b> <button class="btn-o" style="padding:2px 8px" onclick="resetPerfilPass(${i})">novo</button></td><td>${esc(p.departamento||"—")}${p.area?'<br><span class="muted">'+esc(p.area)+'</span>':''} <button class="btn-o" style="padding:2px 8px" title="Editar depto/área" onclick="editPerfilDep(${i})">✎</button></td><td class="flex" style="gap:6px"><button class="btn-o" style="padding:4px 8px" onclick="editarPerfil(${i})">Editar</button><button class="btn-o" style="padding:4px 8px" onclick="editPerms(${i})">Permissões</button><button class="btn-o" style="padding:4px 8px" title="Fundir com outro perfil (duplicados)" onclick="abrirFundir(${i})">Fundir</button><button class="btn-o" style="padding:4px 10px" onclick="delPerfil(${i})">✕</button></td></tr>`).join("")||`<tr><td colspan="8" class="muted">Sem perfis.</td></tr>`}
   </tbody></table></div>
  <div class="sec"><h2>Mudar senha de gestão</h2>
   <div class="formgrid"><div><label>Nova senha</label><input id="np" type="password"></div></div>
@@ -2897,6 +2901,48 @@ function permModalHTML(){if(permEdit===null)return"";const p=data.perfis[permEdi
   <div class="row-actions"><button class="btn-p" onclick="savePerms()">Guardar permissões</button></div></div></div>`;}
 function editarPerfil(i){if(role!=="admin"){toast("Só a gestão");return;}var p=data.perfis[i];if(!p)return;var nome=prompt("Nome:",p.nome||"");if(nome===null)return;var email=prompt("E-mail:",p.email||"");if(email===null)return;var id=prompt("ID de entrada:",p.id||"");if(id===null)return;var func=prompt("Função (Assistente / Formador / Gestora de Formação / Gestor):",p.funcao||"");if(func===null)return;var cats=prompt("Categorias que acumula (por vírgula):",p.categorias||"");if(cats===null)return;p.nome=nome.trim();p.email=email.trim();p.id=id.trim();p.funcao=func.trim();p.categorias=cats.trim();persist();syncAutorizados();toast("Perfil actualizado");render();}
 function delPerfil(i){if(role!=="admin"){toast("Só a gestão");return;}var p=data.perfis[i];if(!p)return;if(!confirm("Remover o perfil de "+(p.nome||"")+"? (pessoa deixa de entrar no sistema)"))return;if(p.nome&&confirm("Arquivar também "+p.nome+" para sair das listas de todas as abas?")){var a=arquivados();if(a.indexOf(p.nome)<0)a.push(p.nome);}data.perfis.splice(i,1);persist();syncAutorizados();toast("Perfil removido");render()}
+/* L29-2: Fundir perfis duplicados (ex.: dois perfis com o mesmo nome, criados por engano).
+   Ao contrário de delPerfil (que só remove), fundirHistorico() reatribui a quem fica todo o
+   histórico que estava em nome do duplicado — vendas/comissão, turmas, chamadas, leads, salário —
+   para não perder nada nem ficar com registos "órfãos" apontando para um perfil já apagado. */
+let fundirOrigem=null;
+function abrirFundir(i){if(role!=="admin"){toast("Só a gestão");return;}if(data.perfis.length<2){toast("Precisas de pelo menos 2 perfis para fundir");return;}fundirOrigem=i;render();}
+function fecharFundir(){fundirOrigem=null;render();}
+function fundirModalHTML(){
+ if(fundirOrigem===null)return"";
+ const p=data.perfis[fundirOrigem];if(!p)return"";
+ const outros=data.perfis.map((x,idx)=>({x:x,idx:idx})).filter(o=>o.idx!==fundirOrigem);
+ if(!outros.length)return"";
+ return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.55);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharFundir()"><div class="card" style="padding:20px;max-width:440px">
+ <h2 style="color:var(--azul)">Fundir "${esc(p.nome)}"</h2>
+ <div class="muted" style="margin:6px 0 12px">Todo o histórico de "${esc(p.nome)}" (vendas/comissão, turmas, chamadas, leads e salário) passa para o perfil que escolheres a seguir. "${esc(p.nome)}" é apagado no fim — esta acção não se pode desfazer.</div>
+ <label>Fundir em:</label>
+ <select id="fundir_destino">${outros.map(o=>`<option value="${o.idx}">${esc(o.x.nome)}</option>`).join("")}</select>
+ <div class="row-actions" style="margin-top:14px"><button class="btn-p" onclick="confirmarFundir()">Fundir</button><button class="btn-o" onclick="fecharFundir()">Cancelar</button></div>
+ </div></div>`;
+}
+function fundirHistorico(nomeOrigem,nomeDestino){
+ if(!nomeOrigem||!nomeDestino||nomeOrigem===nomeDestino)return;
+ (data.formandos||[]).forEach(function(f){if(f.vendedor===nomeOrigem)f.vendedor=nomeDestino;if(f.formador===nomeOrigem)f.formador=nomeDestino;if(f.gestora===nomeOrigem)f.gestora=nomeDestino;if(f.criadoPor===nomeOrigem)f.criadoPor=nomeDestino;});
+ (data.turmas||[]).forEach(function(t){if(t.resp===nomeOrigem)t.resp=nomeDestino;if(t.assistente===nomeOrigem)t.assistente=nomeDestino;if(t.gestora===nomeOrigem)t.gestora=nomeDestino;if(Array.isArray(t.turnos))t.turnos.forEach(function(tn){if(tn.gestora===nomeOrigem)tn.gestora=nomeDestino;if(tn.formador===nomeOrigem)tn.formador=nomeDestino;});});
+ (data.online||[]).forEach(function(o){if(o.formador===nomeOrigem)o.formador=nomeDestino;if(o.criadoPor===nomeOrigem)o.criadoPor=nomeDestino;});
+ (data.chamadas||[]).forEach(function(c){if(c.resp===nomeOrigem)c.resp=nomeDestino;});
+ (data.leads||[]).forEach(function(l){if(l.resp===nomeOrigem)l.resp=nomeDestino;});
+ if(data.salarios&&data.salarios[nomeOrigem]!=null){if(!data.salarios[nomeDestino])data.salarios[nomeDestino]=data.salarios[nomeOrigem];delete data.salarios[nomeOrigem];}
+ if(data.salariosPagos){Object.keys(data.salariosPagos).forEach(function(m){var P=data.salariosPagos[m];if(P&&P[nomeOrigem]){if(!P[nomeDestino])P[nomeDestino]=P[nomeOrigem];delete P[nomeOrigem];}});}
+ if(Array.isArray(data.colaboradores)){var co=data.colaboradores.find(function(c){return c.nome===nomeOrigem;});var cd=data.colaboradores.find(function(c){return c.nome===nomeDestino;});if(co){if(cd){["categoria","iban","tel","nasc"].forEach(function(k){if(!cd[k]&&co[k])cd[k]=co[k];});}data.colaboradores=data.colaboradores.filter(function(c){return c.nome!==nomeOrigem;});}}
+}
+function confirmarFundir(){
+ if(role!=="admin"){toast("Só a gestão");return;}
+ const iOrig=fundirOrigem;if(iOrig===null)return;
+ const p=data.perfis[iOrig];if(!p)return;
+ const iDest=+val("fundir_destino");const d=data.perfis[iDest];
+ if(!d||iDest===iOrig){toast("Escolhe um perfil de destino diferente");return;}
+ if(!confirm('Fundir "'+p.nome+'" em "'+d.nome+'"? O histórico passa todo para "'+d.nome+'" e "'+p.nome+'" é apagado. Não se pode desfazer.'))return;
+ fundirHistorico(p.nome,d.nome);
+ data.perfis.splice(iOrig,1);
+ persist();fundirOrigem=null;syncAutorizados();toast("Perfis fundidos");render();
+}
 function resetPerfilPass(i){const p=data.perfis[i];if(!p)return;const np=prompt("Novo PIN para "+p.nome+" (deixa vazio para só entrar por e-mail Google):",p.pass||"");if(np===null)return;p.pass=np;p.permitePin=!!np;persist();toast(np?"PIN definido — pode entrar por PIN":"Sem PIN — entra só por e-mail");render()}
 function changePass(){const p=val("np");if(!p){toast("Escreve a nova senha");return}data.pass=p;persist();toast("Senha actualizada")}
 function resetAll(){var c=prompt("Isto apaga TUDO e repõe os exemplos. Escreve o código de segurança para confirmar:");if(c===null)return;if((c||"").trim()!=="199612"){toast("Código de segurança errado — reposição cancelada");return;}data=seed();persist();toast("Dados repostos");render();}
