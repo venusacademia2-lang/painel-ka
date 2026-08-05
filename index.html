@@ -672,7 +672,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v27.4";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v27.5";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -831,6 +831,11 @@ function salvarEditGasto(){if(!_editGastoI)return;const F=fin();const g=F.gastos
  persist();toast("Gasto actualizado e registado no histórico");_editGastoI=null;render();}
 function setMetaNeg(campo,el){const F=fin();if(!F.metasNegocio)F.metasNegocio={};F.metasNegocio[campo]=+el.value||0;persist();}
 function setDespPessoais(el){const F=fin();const m=new Date().toISOString().slice(0,7);if(!F.despPessoais)F.despPessoais={};F.despPessoais[m]=+el.value||0;persist();render();}
+/* L45 — Dízimo e Oferta, só dentro do Pró-labore: percentagens sobre o pró-labore BRUTO (confirmado pelo Ventura),
+   editáveis mas com 10%/1% por omissão. Não entram no relatório PDF nem na repartição da receita. */
+function prolaboreExtra(){var F=fin();if(!F.prolaboreExtra)F.prolaboreExtra={dizimo:10,oferta:1};return F.prolaboreExtra;}
+function setDizimoPct(el){if(role!=="admin")return;prolaboreExtra().dizimo=+el.value||0;persist();render();}
+function setOfertaPct(el){if(role!=="admin")return;prolaboreExtra().oferta=+el.value||0;persist();render();}
 let finPer="mes",finMes="";
 function setFinPer(v){finPer=v;render();}
 function setContaDestino(key,campo,el){var F=fin();if(!F.contasDestino)F.contasDestino={};if(!F.contasDestino[key])F.contasDestino[key]={};
@@ -1105,7 +1110,7 @@ function vFinancas(){const F=fin();const admin=role==="admin";const mes=finMes||
  const receitaMes=data.pagamentos.reduce((s,p)=>s+((p.prestacoes||[]).filter(x=>(x.data||"").slice(0,7)===mes).reduce((a,x)=>a+(+x.valor||0),0)),0);
  const receitaOnlineMes=data.pagamentos.filter(p=>/^ONL-/.test(p.cod||"")||p.plano==="Turma Online").reduce((s,p)=>s+((p.prestacoes||[]).filter(x=>(x.data||"").slice(0,7)===mes).reduce((a,x)=>a+(+x.valor||0),0)),0);const receitaPresMes=Math.max(0,receitaMes-receitaOnlineMes);
  let gastosMes=F.gastos.filter(g=>(g.dataCompra||g.data||"").slice(0,7)===mes);if(!admin){const _me=(currentUser&&currentUser.nome)||role;gastosMes=gastosMes.filter(g=>g.criadoPor===_me);}
- var despPessoaisMes=gastosMes.filter(g=>g.categoria==="Despesas pessoais").reduce((s,g)=>s+(+g.valor||0),0);gastosMes=gastosMes.filter(g=>g.categoria!=="Despesas pessoais");
+ var despPessoaisLista=gastosMes.filter(g=>g.categoria==="Despesas pessoais");var despPessoaisMes=despPessoaisLista.reduce((s,g)=>s+(+g.valor||0),0);gastosMes=gastosMes.filter(g=>g.categoria!=="Despesas pessoais");
  const totalGastoMes=gastosMes.reduce((s,g)=>s+(+g.valor||0),0);const margem=Math.max(0,receitaMes-totalGastoMes);
  var anoP=String(new Date().getFullYear());var receitaYTD=data.pagamentos.reduce((s,p)=>s+((p.prestacoes||[]).filter(x=>(x.data||"").slice(0,4)===anoP).reduce((a,x)=>a+(+x.valor||0),0)),0);var gastoYTD=(F.gastos||[]).filter(g=>(g.dataCompra||g.data||"").slice(0,4)===anoP&&g.categoria!=="Despesas pessoais").reduce((a,g)=>a+(+g.valor||0),0);var margemYTD=Math.max(0,receitaYTD-gastoYTD);
  var receitaOnlineYTD=data.pagamentos.filter(p=>/^ONL-/.test(p.cod||"")||p.plano==="Turma Online").reduce((s,p)=>s+((p.prestacoes||[]).filter(x=>(x.data||"").slice(0,4)===anoP).reduce((a,x)=>a+(+x.valor||0),0)),0);var receitaPresYTD=Math.max(0,receitaYTD-receitaOnlineYTD);
@@ -1217,7 +1222,18 @@ function vFinancas(){const F=fin();const admin=role==="admin";const mes=finMes||
    +'<table><thead><tr><th>Destino / %</th><th>A depositar ('+lab+')</th><th>Conta</th><th>Saldo actual</th><th>Desvio</th><th></th></tr></thead><tbody>'+linhas
    +'<tr style="font-weight:700;border-top:2px solid var(--linha)"><td>Total</td><td>'+kz(totalDep)+'</td><td>—</td><td>'+kz(totalSaldo)+'</td><td style="color:'+((totalSaldo-totalDep)<0?"#C0392B":"#1E7B45")+'">'+kz(totalSaldo-totalDep)+'</td><td></td></tr>'
    +'</tbody></table>'
-   +'<div class="note" style="margin-top:10px;background:#eef3fb;border-color:#c7d6f0;color:#1F3864"><b>Pró-labore do mês:</b> '+kz(Math.round(receitaMes*(+sp.proLabore||0)/100))+' − despesas pessoais '+kz(despPessoaisMes)+' = <b>'+kz(Math.round(receitaMes*(+sp.proLabore||0)/100)-despPessoaisMes)+'</b> líquido a receber.</div>'
+   +(function(){var PE=prolaboreExtra();var bruto=Math.round(receitaMes*(+sp.proLabore||0)/100);var dizimo=Math.round(bruto*(+PE.dizimo||0)/100);var oferta=Math.round(bruto*(+PE.oferta||0)/100);var guardar=dizimo+oferta;var liquido=bruto-dizimo-oferta-despPessoaisMes;
+    return '<div class="note" style="margin-top:10px;background:#eef3fb;border-color:#c7d6f0;color:#1F3864">'
+     +'<b>Pró-labore do mês</b> — o que vais transferir e o que sai logo dali.'
+     +'<table style="margin-top:8px;background:transparent"><tbody>'
+     +'<tr><td>Pró-labore bruto ('+(+sp.proLabore||0)+'% da receita '+lab+')</td><td style="text-align:right"><b>'+kz(bruto)+'</b></td></tr>'
+     +'<tr><td>Dízimo ('+(role==="admin"?'<input type="number" value="'+(+PE.dizimo||0)+'" style="width:50px;padding:1px 4px" onchange="setDizimoPct(this)">':esc(String(PE.dizimo||0)))+'% do bruto)</td><td style="text-align:right">'+kz(dizimo)+'</td></tr>'
+     +'<tr><td>Oferta ('+(role==="admin"?'<input type="number" value="'+(+PE.oferta||0)+'" style="width:50px;padding:1px 4px" onchange="setOfertaPct(this)">':esc(String(PE.oferta||0)))+'% do bruto)</td><td style="text-align:right">'+kz(oferta)+'</td></tr>'
+     +'<tr style="font-weight:700"><td>Dízimo + Oferta — a guardar de uma vez</td><td style="text-align:right">'+kz(guardar)+'</td></tr>'
+     +'<tr><td>Despesas pessoais já gastas este mês</td><td style="text-align:right">− '+kz(despPessoaisMes)+'</td></tr>'
+     +(despPessoaisLista.length?'<tr><td colspan="2" style="padding-top:0"><div style="font-size:12px;margin-top:2px">'+despPessoaisLista.map(function(g){return esc(g.dataCompra||g.data||"")+' — '+esc(g.descricao||"(sem descrição)")+': '+kz(+g.valor||0);}).join('<br>')+'</div></td></tr>':'')
+     +'<tr style="font-weight:700;border-top:1px solid #c7d6f0"><td>Líquido a receber</td><td style="text-align:right"><b>'+kz(liquido)+'</b></td></tr>'
+     +'</tbody></table></div>';})()
    +'<div class="muted" style="margin-top:14px;font-weight:600;color:var(--azul)">Minhas contas (bancárias)</div>'
    +'<div class="muted" style="font-size:12px">Cada conta aqui deve corresponder a uma conta bancária real — preenche o banco e o número/IBAN para ficar identificável.</div>'
    +'<table style="margin-top:4px"><thead><tr><th>Nome</th><th>Banco</th><th>Nº / IBAN</th><th>Saldo actual</th><th></th></tr></thead><tbody>'
