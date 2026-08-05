@@ -535,7 +535,11 @@ function _turnoPorPalavra(turnos,texto){var t=(texto||"").toLowerCase();
  if(/tarde/.test(t))return turnos.find(function(tn){return tn.tipo==="sabTarde"||/tarde/i.test(tn.horario||"");})||null;
  if(/semana/.test(t))return turnos.find(function(tn){return tn.tipo==="semana"||/semana/i.test(tn.horario||"");})||null;
  return null;}
-function _turnoGuessHorario(t,r){if(!t||!Array.isArray(t.turnos)||t.turnos.length<2)return (r&&r.horario)||"";var g=_turnoPorPalavra(t.turnos,((r&&r.horario)||"")+" "+((r&&r.periodo)||""));return (g&&g.horario)||t.turnos[0].horario;}
+/* L42 — corrigido: antes, quando o texto da landing não tinha palavra-chave nenhuma (manhã/tarde/semana),
+   o palpite caía sempre para o PRIMEIRO turno da turma (normalmente "Sábado - manhã"), sem avisar ninguém —
+   por isso apareciam alunos de tarde a serem gravados como manhã. Agora, sem palavra-chave, devolve "" (sem
+   palpite) para obrigar quem confirma a escolher manualmente, em vez de aceitar um palpite errado sem dar por isso. */
+function _turnoGuessHorario(t,r){if(!t||!Array.isArray(t.turnos)||t.turnos.length<2)return (r&&r.horario)||"";var g=_turnoPorPalavra(t.turnos,((r&&r.horario)||"")+" "+((r&&r.periodo)||""));return (g&&g.horario)||"";}
 /* Corrige retroactivamente formandos cujo f.horario não corresponde a nenhum turno da sua edição (normalmente vindos da landing com texto livre) — reatribui por palavra-chave quando possível. */
 function migrarHorariosFormandos(){(data.formandos||[]).forEach(function(f){
  if(!f.turma)return;var t=turmaByCod(f.turma);if(!t||!Array.isArray(t.turnos)||t.turnos.length<2)return;
@@ -668,7 +672,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v27.1";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v27.3";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -748,7 +752,7 @@ function _reaplicarAccdetAbertos(){var views=document.getElementById("views");if
    lendo directamente o DOM antes de o destruir. Sem isto, editar um campo dentro de uma secção podia fechá-la
    de volta ao estado por omissão, porque o registo dependia só do evento toggle (que às vezes falha/atrasa). */
 function _capturarAccdetAbertos(){var views=document.getElementById("views");if(!views)return;[...views.querySelectorAll("details.accdet")].forEach(function(d){var txt=_accdetTxt(d);if(txt)_accdetOpen[txt]=d.open;});}
-function render(){_capturarAccdetAbertos();try{sessionStorage.setItem("ka_fficha",fFicha||"");sessionStorage.setItem("ka_fsearch",fSearch||"");}catch(e){}document.getElementById("views").innerHTML=rowEditModalHTML()+cropModalHTML()+feedbackModalHTML()+({painel:vPainel,notificacoes:vNotificacoes,financas:vFinancas,gastos:vGastos,analytics:vAnalytics,paginas:vPaginas,quiz:vQuizPainel,quizleads:vQuizLeads,formandos:vFormandos,turmas:vTurmas,calendario:vCalendario,online:vOnline,pagamentos:vPagamentos,comprovativo:vComprovativo,leads:vLeads,carteira:vCarteira,b2b:vB2B,emailmkt:vEmailMkt,inscricoes:vInscricoes,chamadas:vChamadas,presencas:vPresencas,avaliacoes:vAvaliacoes,certificados:vCertificados,formador:vFormador,presencial:vPresencial,comunicados:vComunicados,notas:vNotas,chat:vChat,melhorias:vMelhorias,actividade:vActividade,rh:vRH,desempenho:vDesempenho,dados:vDados,exportar:vExportar,defs:vDefs,conteudos:vConteudos}[current]||(()=>""))();_reaplicarAccdetAbertos();if(typeof _initOrdenar==="function")_initOrdenar();if(current==="painel"){drawChart();drawPerfChart();}if(typeof atualizarAlertaGlobal==="function")atualizarAlertaGlobal();if(_refocus){const e=document.getElementById(_refocus);if(e){e.focus();const v=e.value||"";try{e.setSelectionRange(v.length,v.length)}catch(_){}}_refocus=null;}}
+function render(){_capturarAccdetAbertos();try{sessionStorage.setItem("ka_fficha",fFicha||"");sessionStorage.setItem("ka_fsearch",fSearch||"");}catch(e){}document.getElementById("views").innerHTML=rowEditModalHTML()+editGastoModalHTML()+cropModalHTML()+feedbackModalHTML()+({painel:vPainel,notificacoes:vNotificacoes,financas:vFinancas,gastos:vGastos,analytics:vAnalytics,paginas:vPaginas,quiz:vQuizPainel,quizleads:vQuizLeads,formandos:vFormandos,turmas:vTurmas,calendario:vCalendario,online:vOnline,pagamentos:vPagamentos,comprovativo:vComprovativo,leads:vLeads,carteira:vCarteira,b2b:vB2B,emailmkt:vEmailMkt,inscricoes:vInscricoes,chamadas:vChamadas,presencas:vPresencas,avaliacoes:vAvaliacoes,certificados:vCertificados,formador:vFormador,presencial:vPresencial,comunicados:vComunicados,notas:vNotas,chat:vChat,melhorias:vMelhorias,actividade:vActividade,rh:vRH,desempenho:vDesempenho,dados:vDados,exportar:vExportar,defs:vDefs,conteudos:vConteudos}[current]||(()=>""))();_reaplicarAccdetAbertos();if(typeof _initOrdenar==="function")_initOrdenar();if(current==="painel"){drawChart();drawPerfChart();}if(typeof atualizarAlertaGlobal==="function")atualizarAlertaGlobal();if(_refocus){const e=document.getElementById(_refocus);if(e){e.focus();const v=e.value||"";try{e.setSelectionRange(v.length,v.length)}catch(_){}}_refocus=null;}}
 
 function fin(){if(!data.financas)data.financas={saldoBanco:0,saldoData:"",gastos:[],metas:{Marketing:0,Renda:0,"Comunicação":0,Outras:0},split:{proLabore:30,operacao:40,reserva:15,investimento:10,marketing:5}};return data.financas;}
 const GASTO_CATS=["Marketing","Renda","Comunicação","Água","Detergentes","Consumíveis","Deslocação","Serviços de limpeza","Outras"];
@@ -785,11 +789,46 @@ function vGastos(){const F=fin();const admin=role==="admin";const mes=(typeof fi
   </div><div class="row-actions"><button class="btn-p" onclick="addGasto()">Gravar gasto</button></div></div>`;
  html+=`<div class="sec"><h2>${admin?'Gastos':'As minhas despesas'} de ${mes} <span class="pill p-cinza">${kz(totalGastoMes)}</span></h2>
   <table><thead><tr><th>Compra</th><th>Categoria</th><th>Descrição</th><th>Valor (Kz)</th><th>Moeda</th><th>Registado por</th><th>Reemb.</th><th>Comp.</th>${admin?'<th></th>':''}</tr></thead><tbody>
-  ${gastosMes.map(g=>{const i=F.gastos.indexOf(g);const mo=(g.moeda&&g.moeda!=="Kz")?`${esc(g.moeda)} ${(+g.valorOrig||0).toLocaleString('pt-PT')} · câmbio ${g.cambio||'—'}`:'Kz';return `<tr><td>${esc(g.dataCompra||g.data||"")}</td><td>${esc(g.categoria||"")}</td><td>${esc(g.descricao||"")}</td><td>${kz(+g.valor||0)}</td><td>${mo}</td><td>${esc(g.criadoPor||"—")}</td><td>${g.reembolsar?'<span class="pill p-dour">reembolsar</span>':'—'}</td><td>${g.comprovativo?`<button class="btn-o" style="padding:3px 8px" onclick="verGastoComp(${i})">Ver</button>`:'—'}</td>${admin?`<td><button class="btn-o" style="padding:3px 8px" onclick="delGasto(${i})">✕</button></td>`:''}</tr>`}).join("")||`<tr><td colspan="${admin?9:8}" class="muted">Sem gastos este mês.</td></tr>`}
+  ${gastosMes.map(g=>{const i=F.gastos.indexOf(g);const mo=(g.moeda&&g.moeda!=="Kz")?`${esc(g.moeda)} ${(+g.valorOrig||0).toLocaleString('pt-PT')} · câmbio ${g.cambio||'—'}`:'Kz';return `<tr><td>${esc(g.dataCompra||g.data||"")}</td><td>${esc(g.categoria||"")}</td><td>${esc(g.descricao||"")}</td><td>${kz(+g.valor||0)}</td><td>${mo}</td><td>${esc(g.criadoPor||"—")}</td><td>${g.reembolsar?'<span class="pill p-dour">reembolsar</span>':'—'}</td><td>${g.comprovativo?`<button class="btn-o" style="padding:3px 8px" onclick="verGastoComp(${i})">Ver</button>`:'—'}</td>${admin?`<td class="flex" style="gap:5px"><button class="btn-o" style="padding:3px 8px" title="Reclassificar/editar (pede código + motivo)" onclick="abrirEditarGasto(${i})">✎</button><button class="btn-o" style="padding:3px 8px" onclick="delGasto(${i})">✕</button></td>`:''}</tr>`}).join("")||`<tr><td colspan="${admin?9:8}" class="muted">Sem gastos este mês.</td></tr>`}
   </tbody></table></div>`;
+ if(admin){const LOG=(F.gastosLog||[]).slice(0,100);html+=`<details class="sec accdet"><summary>🕓 Histórico de reclassificações/edições de gastos</summary><div class="muted">Cada edição a um gasto já registado fica aqui — valores antes/depois, motivo, quem e quando.</div>
+  <table style="margin-top:8px"><thead><tr><th>Quando</th><th>Quem</th><th>Motivo</th><th>Categoria</th><th>Descrição</th><th>Valor</th></tr></thead><tbody>
+  ${LOG.length?LOG.map(function(l){const a=l.antes||{},d=l.depois||{};const catMud=a.categoria!==d.categoria,descMud=a.descricao!==d.descricao,valMud=(+a.valor||0)!==(+d.valor||0);return '<tr><td>'+esc((l.quando||"").slice(0,16).replace("T"," "))+'</td><td>'+esc(l.quem||"—")+'</td><td>'+esc(l.motivo||"—")+'</td><td>'+(catMud?'<span class="muted">'+esc(a.categoria||"")+'</span> → <b>'+esc(d.categoria||"")+'</b>':esc(d.categoria||""))+'</td><td>'+(descMud?'<span class="muted">'+esc(a.descricao||"")+'</span> → <b>'+esc(d.descricao||"")+'</b>':esc(d.descricao||""))+'</td><td>'+(valMud?'<span class="muted">'+kz(a.valor)+'</span> → <b>'+kz(d.valor)+'</b>':kz(d.valor))+'</td></tr>';}).join(""):'<tr><td colspan="6" class="muted">Sem alterações registadas ainda.</td></tr>'}
+  </tbody></table></details>`;}
  return html;}
 function addGasto(){const F=fin();var usd=+val("g_usd")||0;var taxa=+val("g_taxa")||(F.taxaUSD||1000);var moeda=val("g_moeda")||"Kz";var cambio=+val("g_cambio")||0;var base=usd>0?Math.round(usd*taxa):(+val("g_valor")||0);var v=(usd>0||moeda==="Kz"||!cambio)?base:Math.round(base*cambio);const cat=val("g_cat");if(!cat||!v){toast("Falta categoria e valor");return;}if(usd>0)F.taxaUSD=taxa;F.gastos.unshift({categoria:cat,descricao:val("g_desc"),valor:v,moeda:moeda,valorOrig:base,cambio:(moeda!=="Kz"?cambio:0),usd:usd||0,taxa:usd>0?taxa:0,canal:val("g_canal"),centroCusto:val("g_cc"),dataCompra:val("g_datacompra")||new Date().toISOString().slice(0,10),data:new Date().toISOString().slice(0,10),comprovativo:GASTO_COMP||"",reembolsar:val("g_reemb")==="Sim",criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role});GASTO_COMP="";persist();toast("Gasto registado");render();}
 function delGasto(i){const F=fin();if(!confirm("Remover este gasto?"))return;F.gastos.splice(i,1);persist();render();}
+/* L43 — reclassificar/editar um gasto já registado: exige código da Gestão + motivo, e fica tudo gravado no histórico (antes/depois, quem, quando, motivo). */
+let _editGastoI=null;
+function abrirEditarGasto(i){if(role!=="admin"){toast("Só a gestão pode reclassificar um gasto já registado");return;}
+ if(!_reauthGestor())return;
+ var motivo=prompt("Motivo da reclassificação/edição deste gasto (fica registado no histórico):");
+ if(motivo===null)return;
+ if(!(motivo||"").trim()){toast("O motivo é obrigatório");return;}
+ _editGastoI={i:i,motivo:motivo.trim()};render();}
+function fecharEditarGasto(){_editGastoI=null;render();}
+function editGastoModalHTML(){if(!_editGastoI)return"";const F=fin();const g=F.gastos&&F.gastos[_editGastoI.i];if(!g){_editGastoI=null;return"";}
+ return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.45);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharEditarGasto()"><div class="card" style="padding:22px;width:520px;max-width:94vw;max-height:90vh;overflow:auto">
+ <div class="flex"><h2 style="color:var(--azul)">Reclassificar / editar gasto</h2><div class="spacer"></div><button class="btn-o" style="padding:4px 10px" onclick="fecharEditarGasto()">Fechar ✕</button></div>
+ <div class="muted" style="margin:6px 0 12px">Motivo desta alteração: <b>${esc(_editGastoI.motivo)}</b> — fica no histórico junto com quem editou, quando, e os valores antes/depois.</div>
+ <div class="formgrid">
+  <div><label>Categoria</label><select id="eg_cat">${GASTO_CATS.map(function(c){return '<option '+(c===g.categoria?"selected":"")+'>'+c+'</option>';}).join("")}${role==="admin"?'<option '+(g.categoria==="Despesas pessoais"?"selected":"")+'>Despesas pessoais</option>':''}</select></div>
+  <div><label>O que comprou</label><input id="eg_desc" value="${esc(g.descricao||"")}"></div>
+  <div><label>Valor (Kz)</label><input id="eg_valor" type="number" value="${+g.valor||0}"></div>
+  <div><label>Data da compra/pagamento</label><input id="eg_datacompra" type="date" value="${esc(g.dataCompra||g.data||"")}"></div>
+  <div><label>Canal (se marketing)</label><select id="eg_canal"><option value="">—</option>${canaisDisponiveis().map(function(c){return '<option '+(c===g.canal?"selected":"")+'>'+esc(c)+'</option>';}).join("")}</select></div>
+  <div><label>Centro de custo (turma, opcional)</label><select id="eg_cc"><option value="">— geral —</option>${data.turmas.map(function(t){return '<option value="'+esc(t.cod)+'" '+(t.cod===g.centroCusto?"selected":"")+'>'+esc(t.ed)+'ª — '+esc(t.curso||"")+'</option>';}).join("")}</select></div>
+  <div><label>A reembolsar?</label><select id="eg_reemb"><option ${!g.reembolsar?"selected":""}>Não</option><option ${g.reembolsar?"selected":""}>Sim</option></select></div>
+ </div>
+ <div class="row-actions"><button class="btn-p" onclick="salvarEditGasto()">Guardar alterações</button></div>
+ </div></div>`;}
+function salvarEditGasto(){if(!_editGastoI)return;const F=fin();const g=F.gastos&&F.gastos[_editGastoI.i];if(!g){_editGastoI=null;render();return;}
+ const antes={categoria:g.categoria,descricao:g.descricao,valor:g.valor,dataCompra:g.dataCompra||g.data,canal:g.canal,centroCusto:g.centroCusto,reembolsar:g.reembolsar};
+ g.categoria=val("eg_cat");g.descricao=val("eg_desc");g.valor=+val("eg_valor")||0;g.dataCompra=val("eg_datacompra")||g.dataCompra;g.canal=val("eg_canal");g.centroCusto=val("eg_cc");g.reembolsar=val("eg_reemb")==="Sim";
+ const depois={categoria:g.categoria,descricao:g.descricao,valor:g.valor,dataCompra:g.dataCompra,canal:g.canal,centroCusto:g.centroCusto,reembolsar:g.reembolsar};
+ if(!Array.isArray(F.gastosLog))F.gastosLog=[];
+ F.gastosLog.unshift({quando:new Date().toISOString(),quem:(currentUser&&currentUser.nome)||role,motivo:_editGastoI.motivo,antes:antes,depois:depois});
+ persist();toast("Gasto actualizado e registado no histórico");_editGastoI=null;render();}
 function setMetaNeg(campo,el){const F=fin();if(!F.metasNegocio)F.metasNegocio={};F.metasNegocio[campo]=+el.value||0;persist();}
 function setDespPessoais(el){const F=fin();const m=new Date().toISOString().slice(0,7);if(!F.despPessoais)F.despPessoais={};F.despPessoais[m]=+el.value||0;persist();render();}
 let finPer="mes",finMes="";
@@ -1127,7 +1166,7 @@ function vFinancas(){const F=fin();const admin=role==="admin";const mes=finMes||
   <div class="muted" style="margin-top:6px;font-size:12px">Exporta esta página em Excel/PDF pelos botões no topo. Itens "Abatido" não contam nos totais.</div></details>`;}
  html+=`<div class="sec"><h2>${admin?'Gastos':'As minhas despesas'} de ${mes} <span class="pill p-cinza">${kz(totalGastoMes)}</span></h2>
   <table><thead><tr><th>Compra</th><th>Categoria</th><th>Descrição</th><th>Valor</th><th>Registado por</th><th>Reemb.</th><th>Comp.</th>${admin?'<th></th>':''}</tr></thead><tbody>
-  ${gastosMes.map(g=>{const i=F.gastos.indexOf(g);return `<tr><td>${esc(g.dataCompra||g.data||"")}</td><td>${esc(g.categoria||"")}</td><td>${esc(g.descricao||"")}</td><td>${kz(+g.valor||0)}</td><td>${esc(g.criadoPor||"—")}</td><td>${g.reembolsar?'<span class="pill p-dour">reembolsar</span>':'—'}</td><td>${g.comprovativo?`<button class="btn-o" style="padding:3px 8px" onclick="verGastoComp(${i})">Ver</button>`:'—'}</td>${admin?`<td><button class="btn-o" style="padding:3px 8px" onclick="delGasto(${i})">✕</button></td>`:''}</tr>`}).join("")||`<tr><td colspan="${admin?8:7}" class="muted">Sem gastos este mês.</td></tr>`}
+  ${gastosMes.map(g=>{const i=F.gastos.indexOf(g);return `<tr><td>${esc(g.dataCompra||g.data||"")}</td><td>${esc(g.categoria||"")}</td><td>${esc(g.descricao||"")}</td><td>${kz(+g.valor||0)}</td><td>${esc(g.criadoPor||"—")}</td><td>${g.reembolsar?'<span class="pill p-dour">reembolsar</span>':'—'}</td><td>${g.comprovativo?`<button class="btn-o" style="padding:3px 8px" onclick="verGastoComp(${i})">Ver</button>`:'—'}</td>${admin?`<td class="flex" style="gap:5px"><button class="btn-o" style="padding:3px 8px" title="Reclassificar/editar (pede código + motivo)" onclick="abrirEditarGasto(${i})">✎</button><button class="btn-o" style="padding:3px 8px" onclick="delGasto(${i})">✕</button></td>`:''}</tr>`}).join("")||`<tr><td colspan="${admin?8:7}" class="muted">Sem gastos este mês.</td></tr>`}
   </tbody></table></div>`;
  if(!admin)return html;
  {const reemb={};gastosMes.filter(g=>g.reembolsar).forEach(g=>{const n=g.criadoPor||"—";reemb[n]=(reemb[n]||0)+(+g.valor||0);});const R=reembMes();html+=`<div class="sec"><h2>Reembolsos do mês</h2>${Object.keys(reemb).length?`<table><thead><tr><th>Colaborador</th><th>Total a devolver</th><th>Estado</th></tr></thead><tbody>${Object.keys(reemb).map(n=>`<tr><td>${esc(n)}</td><td>${kz(reemb[n])}</td><td><button class="pill ${R[n]?'p-verde':'p-cinza'}" style="border:none;cursor:pointer" onclick="toggleReemb('${esc(n)}')">${R[n]?'Reembolsado ✓ '+esc(R[n].data):'Marcar reembolsado'}</button></td></tr>`).join("")}</tbody></table>`:'<div class="muted">Sem despesas a reembolsar este mês.</div>'}</div>`;}
@@ -2696,8 +2735,8 @@ function confirmarInscricaoModalHTML(){if(inscConfirmModal===null||!Array.isArra
  <select id="conf_turma" ${dup?"disabled":""} onchange="setConfTurma(this)">${ativas.length?ativas.map(function(t){return '<option value="'+esc(t.cod)+'" '+(t.cod===autoCod?"selected":"")+'>'+esc(t.ed)+'ª — '+esc(t.curso||"")+'</option>';}).join(""):'<option value="">Sem edição activa para este curso</option>'}</select>
  <div class="muted" style="margin-top:4px">Só aparecem edições ainda a decorrer ou por começar — edições já concluídas não são opção.</div></div>
  ${turnosSel?`<div style="margin-top:10px"><label style="display:block;font-weight:700;font-size:12px;color:var(--azul);text-transform:uppercase;margin-bottom:5px">Turno</label>
- <select id="conf_turno" ${dup?"disabled":""} onchange="setConfTurno(this)">${turnosSel.map(function(tn){return '<option value="'+esc(tn.horario)+'" '+(tn.horario===turnoGuess?"selected":"")+'>'+esc(tn.horario)+'</option>';}).join("")}</select>
- <div class="muted" style="margin-top:4px">Palpite automático a partir do que veio da landing — confirma ou corrige antes de gravar, para os números por turno baterem certo.</div></div>`:""}
+ <select id="conf_turno" ${dup?"disabled":""} onchange="setConfTurno(this)">${!turnoGuess?'<option value="">— escolhe o turno —</option>':""}${turnosSel.map(function(tn){return '<option value="'+esc(tn.horario)+'" '+(tn.horario===turnoGuess?"selected":"")+'>'+esc(tn.horario)+'</option>';}).join("")}</select>
+ <div class="muted" style="margin-top:4px">${turnoGuess?'Palpite automático a partir do que veio da landing — confirma ou corrige antes de gravar, para os números por turno baterem certo.':'<b style="color:#a3311f">O texto da landing não deu para adivinhar o turno — escolhe manualmente antes de confirmar.</b>'}</div></div>`:""}
  <div style="margin-top:10px"><label style="display:block;font-weight:700;font-size:12px;color:var(--azul);text-transform:uppercase;margin-bottom:5px">Responsável pela venda</label>
  <select id="conf_resp"><option value="">— Gestão (sem comissão a ninguém) —</option>${todosColaboradores().map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+'</option>';}).join("")}</select>
  <div class="muted" style="margin-top:4px">Se ninguém for indicado, a venda fica atribuída à Gestão — não gera comissão para ninguém.</div></div>
@@ -2706,10 +2745,11 @@ function confirmarInscricaoModalHTML(){if(inscConfirmModal===null||!Array.isArra
 function finalizarInscricao(i){const r=Array.isArray(INSCR)&&INSCR[i];if(!r)return;
  if(formandoDuplicado(r.tel,r.nome)){toast("Duplicado — este contacto já está registado.");return;}
  const cursoFinal=confCursoSel||r.curso||"";
- const n=data.formandos.reduce((m,f)=>{const x=parseInt((f.cod||"").replace(/\D/g,""))||0;return x>m?x:m},0)+1;const cod="KA-"+String(n).padStart(3,"0");
  const turma=val("conf_turma")||"";
  const turmaObj=turmaByCod(turma);
- const horarioFinal=(turmaObj&&Array.isArray(turmaObj.turnos)&&turmaObj.turnos.length>1)?(val("conf_turno")||_turnoGuessHorario(turmaObj,r)):(r.horario||"");
+ if(turmaObj&&Array.isArray(turmaObj.turnos)&&turmaObj.turnos.length>1&&!val("conf_turno")){toast("Escolhe o turno antes de confirmar — não havia palpite fiável a partir do que veio da landing.");return;}
+ const n=data.formandos.reduce((m,f)=>{const x=parseInt((f.cod||"").replace(/\D/g,""))||0;return x>m?x:m},0)+1;const cod="KA-"+String(n).padStart(3,"0");
+ const horarioFinal=(turmaObj&&Array.isArray(turmaObj.turnos)&&turmaObj.turnos.length>1)?val("conf_turno"):(r.horario||"");
  data.formandos.push({cod,nome:r.nome||"",tel:r.tel||"",email:r.email||"",curso:cursoFinal,turma,periodo:r.periodo||"",horario:horarioFinal,modalidade:r.modalidade||"",canal:"Landing",fonte:r.fonte||"",data:new Date().toISOString().slice(0,10),criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role,estado:"Activo",vendedor:val("conf_resp")||"Gestão"});
  const total=precoDe(cursoFinal)||0;const pago=+r.valorPago||0;
  data.pagamentos.push({cod,plano:(pago>=total&&total>0)?"A pronto":"Prestações",total:total,pago:pago,comprovativo:r.comprovativo?"Sim":"Não",dataPrometida:"",prestacoes:pago>0?[{valor:pago,data:new Date().toISOString().slice(0,10),comprovativo:r.comprovativo?"Sim":"Não",comprovativoImg:r.comprovativo||""}]:[],criadoEm:new Date().toISOString()});
