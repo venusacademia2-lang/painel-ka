@@ -672,7 +672,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v27.9";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v28.0";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -768,15 +768,25 @@ let gastoComp=null;
 function verGastoComp(i){gastoComp=i;render();}
 function fecharGastoComp(){gastoComp=null;render();}
 function gastoCompModalHTML(){const F=fin();if(gastoComp===null||!F.gastos[gastoComp]||!F.gastos[gastoComp].comprovativo)return"";const g=F.gastos[gastoComp];return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.55);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharGastoComp()"><div class="card" style="padding:16px;max-width:640px;max-height:90vh;overflow:auto"><div class="flex"><b style="color:var(--azul)">Comprovativo — ${esc(g.descricao||g.categoria||"")}${g.valor?" · "+kz(+g.valor):""}</b><div class="spacer"></div><button class="btn-o" style="padding:4px 10px" onclick="fecharGastoComp()">Fechar ✕</button></div><img src="${esc(g.comprovativo)}" style="width:100%;margin-top:10px;border:1px solid var(--linha);border-radius:8px"></div></div>`;}
-function reembMes(){const m=finMes||new Date().toISOString().slice(0,7);const F=fin();if(!F.reembolsosPagos)F.reembolsosPagos={};if(!F.reembolsosPagos[m])F.reembolsosPagos[m]={};return F.reembolsosPagos[m];}
+function reembMes(){const m=finMesAtivo();const F=fin();if(!F.reembolsosPagos)F.reembolsosPagos={};if(!F.reembolsosPagos[m])F.reembolsosPagos[m]={};return F.reembolsosPagos[m];}
 function toggleReemb(nome){const R=reembMes();if(R[nome])delete R[nome];else R[nome]={data:new Date().toISOString().slice(0,10)};persist();render();}
 function addEntrega(){const F=fin();if(!F.entregas)F.entregas=[];const v=+val("en_valor")||0;const quem=val("en_quem");if(!quem||!v){toast("Falta a quem e o valor");return;}F.entregas.unshift({quem,finalidade:val("en_fim"),valor:v,data:new Date().toISOString().slice(0,10),criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role,prestouContas:false});persist();toast("Entrega registada");render();}
 function delEntrega(i){const F=fin();if(!confirm("Remover esta entrega?"))return;(F.entregas||[]).splice(i,1);persist();render();}
 function toggleEntregaContas(i){const F=fin();const e=(F.entregas||[])[i];if(!e)return;e.prestouContas=!e.prestouContas;persist();render();}
 function usdToKz(){var u=+val("g_usd")||0;var t=+val("g_taxa")||1000;var e=document.getElementById("g_valor");if(e&&u>0)e.value=Math.round(u*t);}
 function gastoMoedaChg(){var m=val("g_moeda")||"Kz";var box=document.getElementById("g_cambiobox");var lab=document.getElementById("g_moedalab");var vl=document.getElementById("g_valorlab");if(box)box.style.display=(m==="Kz")?"none":"";if(lab)lab.textContent=m;if(vl)vl.textContent=(m==="Kz")?"Valor (Kz)":("Valor (em "+m+")");}
-function vGastos(){const F=fin();const admin=role==="admin";const mes=(typeof finMes!=="undefined"&&finMes)?finMes:new Date().toISOString().slice(0,7);const mesAte=(typeof finMesAte!=="undefined"&&finMesAte)?finMesAte:"";const gastosMes=(F.gastos||[]).filter(g=>{var gm=(g.dataCompra||g.data||"").slice(0,7);return mesAte?(gm>=mes&&gm<=mesAte):gm===mes;});const totalGastoMes=gastosMes.reduce((a,g)=>a+(+g.valor||0),0);let html=gastoCompModalHTML();
- html+=`<div class="sec"><div class="flex" style="flex-wrap:wrap;gap:8px;align-items:center"><b>Mês:</b> <input type="month" value="${mes}" onchange="finMes=this.value;render()" style="width:auto"> <span class="muted">até (opcional, para ver vários meses)</span> <input type="month" value="${mesAte}" onchange="finMesAte=this.value;render()" style="width:auto"> <button class="btn-o" style="padding:4px 10px" onclick="finMes='';finMesAte='';render()">Mês actual</button> <span class="pill p-cinza">Total ${kz(totalGastoMes)}</span></div></div>`;
+let gCatFiltro="",gBusca="";
+function vGastos(){const F=fin();const admin=role==="admin";const per=finRange();
+ let gastosMes=(F.gastos||[]).filter(g=>{var gd=g.dataCompra||g.data||"";return gd>=per.ini&&gd<=per.fim;});
+ if(gCatFiltro)gastosMes=gastosMes.filter(g=>g.categoria===gCatFiltro);
+ const _q=(gBusca||"").trim().toLowerCase();if(_q)gastosMes=gastosMes.filter(g=>(g.descricao||"").toLowerCase().indexOf(_q)>=0);
+ const totalGastoMes=gastosMes.reduce((a,g)=>a+(+g.valor||0),0);let html=gastoCompModalHTML();
+ html+=calendarioFinHTML();
+ html+=`<div class="sec"><div class="flex" style="flex-wrap:wrap;gap:10px;align-items:flex-end">
+  <div><label>Categoria</label><select onchange="gCatFiltro=this.value;render()"><option value="">— Todas —</option>${gastoCatsList().concat(admin?["Despesas pessoais"]:[]).map(c=>`<option ${c===gCatFiltro?"selected":""}>${esc(c)}</option>`).join("")}</select></div>
+  <div><label>Pesquisar</label><input value="${esc(gBusca||"")}" placeholder="descrição do gasto…" oninput="gBusca=this.value;render()"></div>
+  ${(gCatFiltro||gBusca)?'<div><button class="btn-o" onclick="gCatFiltro=\'\';gBusca=\'\';render()">Limpar filtros</button></div>':''}
+  <div class="spacer"></div><span class="pill p-cinza">Total ${kz(totalGastoMes)}</span></div></div>`;
  html+=`<div class="sec"><h2>Registar gasto</h2><div class="muted">A data de registo é automática. Se pagaste noutra moeda, escolhe a moeda e o câmbio — o valor é convertido para Kwanzas.</div>
   <div class="formgrid">
    <div><label>Categoria</label><select id="g_cat" onchange="gastoCatChg()">${gastoCatsList().map(c=>`<option>${c}</option>`).join("")}${admin?'<option>Despesas pessoais</option>':''}</select></div>
@@ -793,7 +803,7 @@ function vGastos(){const F=fin();const admin=role==="admin";const mes=(typeof fi
    <div><label>Comprovativo (foto, opcional)</label><input id="g_comp" type="file" accept="image/*" style="display:none" onchange="onGastoComp(this)"><div class="file" onclick="document.getElementById('g_comp').click()" id="g_complabel" style="border:1.5px dashed var(--linha);border-radius:9px;padding:9px;text-align:center;color:#7b869c;cursor:pointer;font-size:13px">📎 Carregar comprovativo</div></div>
    <div style="grid-column:1/-1" id="g_metabox">${gMetaBoxHTML()}</div>
   </div><div class="row-actions"><button class="btn-p" onclick="addGasto()">Gravar gasto</button></div></div>`;
- html+=`<div class="sec"><h2>${admin?'Gastos':'As minhas despesas'} de ${mesAte?(mes+" a "+mesAte):mes} <span class="pill p-cinza">${kz(totalGastoMes)}</span></h2>
+ html+=`<div class="sec"><h2>${admin?'Gastos':'As minhas despesas'} — ${per.ini===per.fim?per.ini:(per.ini+" a "+per.fim)}${gCatFiltro?(' · '+esc(gCatFiltro)):''} <span class="pill p-cinza">${kz(totalGastoMes)}</span></h2>
   <table><thead><tr><th>Compra</th><th>Categoria</th><th>Descrição</th><th>Valor (Kz)</th><th>Moeda</th><th>Registado por</th><th>Reemb.</th><th>Comp.</th>${admin?'<th></th>':''}</tr></thead><tbody>
   ${gastosMes.map(g=>{const i=F.gastos.indexOf(g);const mo=(g.moeda&&g.moeda!=="Kz")?`${esc(g.moeda)} ${(+g.valorOrig||0).toLocaleString('pt-PT')} · câmbio ${g.cambio||'—'}`:'Kz';return `<tr><td>${esc(g.dataCompra||g.data||"")}</td><td>${esc(g.categoria||"")}</td><td>${esc(g.descricao||"")}</td><td>${kz(+g.valor||0)}</td><td>${mo}</td><td>${esc(g.criadoPor||"—")}</td><td>${g.reembolsar?'<span class="pill p-dour">reembolsar</span>':'—'}</td><td>${g.comprovativo?`<button class="btn-o" style="padding:3px 8px" onclick="verGastoComp(${i})">Ver</button>`:'—'}</td>${admin?`<td class="flex" style="gap:5px"><button class="btn-o" style="padding:3px 8px" title="Reclassificar/editar (pede código + motivo)" onclick="abrirEditarGasto(${i})">✎</button><button class="btn-o" style="padding:3px 8px" onclick="delGasto(${i})">✕</button></td>`:''}</tr>`}).join("")||`<tr><td colspan="${admin?9:8}" class="muted">Sem gastos neste período.</td></tr>`}
   </tbody></table></div>`;
@@ -842,7 +852,39 @@ function setDespPessoais(el){const F=fin();const m=new Date().toISOString().slic
 function prolaboreExtra(){var F=fin();if(!F.prolaboreExtra)F.prolaboreExtra={dizimo:10,oferta:1};return F.prolaboreExtra;}
 function setDizimoPct(el){if(role!=="admin")return;prolaboreExtra().dizimo=+el.value||0;persist();render();}
 function setOfertaPct(el){if(role!=="admin")return;prolaboreExtra().oferta=+el.value||0;persist();render();}
-let finPer="mes",finMes="",finMesAte="";
+let finPer="mes";
+/* L50 — selector de datas em calendário (estilo Google) para Gastos e Finanças (Painel).
+   Estado: finDe/finAte (intervalo seleccionado, YYYY-MM-DD — vazio = mês actual por omissão),
+   finEscala (dia|semana|mes|ano — controla o que um clique selecciona e o passo de navegação),
+   finNav (mês em navegação no calendário, YYYY-MM — vazio = mês de hoje ou de finDe). */
+let finDe="",finAte="",finEscala="mes",finNav="";
+function _fimDoMes(m){var p=String(m||"").split("-");var y=+p[0],mm=+p[1];if(!y||!mm){var d0=new Date();y=d0.getFullYear();mm=d0.getMonth()+1;}var last=new Date(y,mm,0).getDate();return m+"-"+String(last).padStart(2,"0");}
+function finRange(){if(finDe&&finAte){var a=finDe<finAte?finDe:finAte,b=finDe<finAte?finAte:finDe;return{ini:a,fim:b};}var hoje=new Date().toISOString().slice(0,7);return{ini:hoje+"-01",fim:_fimDoMes(hoje)};}
+function finMesAtivo(){return finRange().ini.slice(0,7);}
+function _finNavMes(){if(finNav)return finNav;if(finDe)return finDe.slice(0,7);return new Date().toISOString().slice(0,7);}
+function finCalPrev(){var m=_finNavMes();var p=m.split("-");var y=+p[0],mm=+p[1];if(finEscala==="ano"){y--;}else{mm--;if(mm<1){mm=12;y--;}}finNav=y+"-"+String(mm).padStart(2,"0");render();}
+function finCalNext(){var m=_finNavMes();var p=m.split("-");var y=+p[0],mm=+p[1];if(finEscala==="ano"){y++;}else{mm++;if(mm>12){mm=1;y++;}}finNav=y+"-"+String(mm).padStart(2,"0");render();}
+function setFinEscala(e){finEscala=e;render();}
+function finCalLimpar(){finDe="";finAte="";finNav="";render();}
+/* Datas construídas e manipuladas sempre em UTC (Date.UTC/getUTCDay/setUTCDate) e só depois
+   convertidas com toISOString — misturar Date local com toISOString desloca o dia (bug visto em
+   testes, ex.: fuso de Angola UTC+1 fazia a grelha começar um dia antes do que devia). */
+function finCalClick(d){if(finEscala==="dia"){finDe=d;finAte=d;}else if(finEscala==="semana"){var seg=new Date(d+"T00:00:00Z");var wd=(seg.getUTCDay()+6)%7;seg.setUTCDate(seg.getUTCDate()-wd);var dom=new Date(seg);dom.setUTCDate(seg.getUTCDate()+6);finDe=seg.toISOString().slice(0,10);finAte=dom.toISOString().slice(0,10);}else if(finEscala==="ano"){var y=d.slice(0,4);finDe=y+"-01-01";finAte=y+"-12-31";}else{var m=d.slice(0,7);finDe=m+"-01";finAte=_fimDoMes(m);}finNav=d.slice(0,7);render();}
+function _gridDoMes(m){var p=m.split("-");var y=+p[0],mm=+p[1];var primeiro=new Date(Date.UTC(y,mm-1,1));var wd=(primeiro.getUTCDay()+6)%7;var inicio=new Date(primeiro);inicio.setUTCDate(primeiro.getUTCDate()-wd);var dias=[];for(var i=0;i<42;i++){var d=new Date(inicio);d.setUTCDate(inicio.getUTCDate()+i);dias.push({iso:d.toISOString().slice(0,10),inMes:d.getUTCMonth()===(mm-1)});}return dias;}
+const MESES_NOME_CAL=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+function calendarioFinHTML(){var nav=_finNavMes();var p=nav.split("-");var y=+p[0],mm=+p[1];var rng=finRange();var hoje=new Date().toISOString().slice(0,10);var dias=_gridDoMes(nav);var DOW=["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"];
+ var cab='<div class="flex" style="align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap"><button class="btn-o" style="padding:2px 10px" onclick="finCalPrev()">◀</button><b style="min-width:130px;text-align:center;display:inline-block">'+(finEscala==="ano"?String(y):esc(MESES_NOME_CAL[mm-1])+" "+y)+'</b><button class="btn-o" style="padding:2px 10px" onclick="finCalNext()">▶</button><div class="spacer"></div>'
+  +["dia","semana","mes","ano"].map(function(e){var lab={dia:"Dia",semana:"Semana",mes:"Mês",ano:"Ano"}[e];return '<button class="btn-'+(finEscala===e?"p":"o")+'" style="padding:3px 10px" onclick="setFinEscala(\''+e+'\')">'+lab+'</button>';}).join("")
+  +' <button class="btn-o" style="padding:3px 10px" onclick="finCalLimpar()">Hoje</button></div>';
+ var grid='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;max-width:340px">'
+  +DOW.map(function(w){return '<div style="text-align:center;font-size:11px;color:#7b869c;font-weight:700;padding:2px 0">'+w+'</div>';}).join("")
+  +dias.map(function(d){var sel=d.iso>=rng.ini&&d.iso<=rng.fim;var isHoje=d.iso===hoje;var style='text-align:center;padding:6px 0;border-radius:6px;cursor:pointer;font-size:12.5px;'+(d.inMes?'':'color:#c3cad9;')+(sel?'background:var(--azul);color:#fff;font-weight:700;':'')+(isHoje&&!sel?'border:1.5px solid var(--azul);':'');return '<div style="'+style+'" onclick="finCalClick(\''+d.iso+'\')">'+(+d.iso.slice(8,10))+'</div>';}).join("")
+  +'</div>';
+ var labelPeriodo=(rng.ini===rng.fim)?rng.ini:(rng.ini+" a "+rng.fim);
+ return '<div class="sec"><div class="flex" style="flex-wrap:wrap;gap:20px;align-items:flex-start">'
+  +'<div>'+cab+grid+'</div>'
+  +'<div style="padding-top:2px"><span class="muted">Período seleccionado:</span><br><b style="font-size:16px;color:var(--azul)">'+labelPeriodo+'</b></div>'
+  +'</div></div>';}
 function setFinPer(v){finPer=v;render();}
 function setContaDestino(key,campo,el){var F=fin();if(!F.contasDestino)F.contasDestino={};if(!F.contasDestino[key])F.contasDestino[key]={};
  if(campo==="saldo"){if(!_reauthGestor()){render();return;}}
@@ -973,7 +1015,7 @@ function atribuirTurmaOrfao(cod,sel){if(role!=="admin"){toast("Só a gestão");r
 function pnlDetModalHTML(){if(!pnlDet)return"";var itens=[],titulo="",ehOutros=false;if(pnlDet.tipo==="custo"){const F=fin();var t=turmaByCod(pnlDet.cod)||{};titulo="Custos — "+(t.ed||"")+"ª — "+(t.curso||"");(F.gastos||[]).filter(function(g){return g.centroCusto===pnlDet.cod;}).forEach(function(g){itens.push({nome:(g.categoria||"Gasto")+(g.descricao?" — "+g.descricao:""),val:+g.valor||0});});}else if(pnlDet.tipo==="turma"){var t=turmaByCod(pnlDet.cod)||{};titulo=(t.ed||"")+"ª — "+(t.curso||"");data.formandos.filter(function(f){return f.turma===pnlDet.cod;}).forEach(function(f){var p=payOf(f.cod);itens.push({nome:f.nome||f.cod,val:p?_recOfPag(p):0});});}else if(pnlDet.tipo==="online"){titulo="Formação Online";data.pagamentos.filter(function(p){return /^ONL-/.test(p.cod||"")||p.plano==="Turma Online";}).forEach(function(p){var o=(data.online||[]).find(function(x){return ensureOnlineCod(x)===p.cod;});itens.push({nome:(o&&o.nome)||p.cod,val:_recOfPag(p)});});}else{titulo="Sem turma (outros)";ehOutros=true;var tc={};data.turmas.forEach(function(t){data.formandos.filter(function(f){return f.turma===t.cod;}).forEach(function(f){tc[f.cod]=1;});});data.pagamentos.filter(function(p){var isOnl=/^ONL-/.test(p.cod||"")||p.plano==="Turma Online";return !isOnl&&!tc[p.cod];}).forEach(function(p){var f=data.formandos.find(function(x){return x.cod===p.cod;});itens.push({nome:(f&&f.nome)||p.cod,val:_recOfPag(p),cod:p.cod,ehFormando:!!f});});}var ehCusto=pnlDet.tipo==="custo";var tot=itens.reduce(function(a,x){return a+x.val;},0);
  var opcoesTurmas='<option value="">Atribuir turma…</option>'+data.turmas.slice().sort(function(a,b){return(+b.ed||0)-(+a.ed||0);}).map(function(t){return '<option value="'+esc(t.cod)+'">'+esc(t.ed)+'ª — '+esc(t.curso||"")+'</option>';}).join("");
  var rows=itens.map(function(x){return '<tr><td>'+esc(x.nome)+(ehOutros&&x.ehFormando&&role==="admin"?'<br><select style="margin-top:3px;font-size:12px" onchange="atribuirTurmaOrfao(\''+esc(x.cod)+'\',this)">'+opcoesTurmas+'</select>':(ehOutros&&!x.ehFormando?'<div class="muted" style="font-size:11px">sem formando associado (online ou apagado)</div>':""))+'</td><td style="text-align:right;vertical-align:top">'+kz(x.val)+'</td></tr>';}).join("")||'<tr><td colspan="2" class="muted">'+(ehCusto?"Sem gastos.":"Sem pagamentos.")+'</td></tr>';return '<div style="position:fixed;inset:0;background:rgba(20,30,60,.4);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharPnlDet()"><div class="card" style="padding:20px;width:480px;max-width:94vw;max-height:86vh;overflow:auto"><div class="flex"><h2 style="color:var(--azul)">Detalhe — '+esc(titulo)+'</h2><div class="spacer"></div><button class="btn-o" style="padding:4px 10px" onclick="fecharPnlDet()">Fechar ✕</button></div><div class="muted" style="margin-bottom:8px">'+(ehCusto?"Gastos que somam o custo desta linha.":(ehOutros?"Pagamentos sem turma associada — atribui a edição correcta para o P&L ficar completo.":"Pagamentos que somam o facturado desta linha."))+'</div><table><thead><tr><th>'+(ehCusto?"Gasto":"Aluno")+'</th><th style="text-align:right">'+(ehCusto?"Valor":"Recebido")+'</th></tr></thead><tbody>'+rows+'</tbody><tfoot><tr><td><b>Total</b></td><td style="text-align:right"><b>'+kz(tot)+'</b></td></tr></tfoot></table></div></div>';}
-function relatorioMensal(){const F=fin();const mes=finMes||new Date().toISOString().slice(0,7);
+function relatorioMensal(){const F=fin();const mes=finMesAtivo();
  const receita=data.pagamentos.reduce((s,p)=>s+((p.prestacoes||[]).filter(x=>(x.data||"").slice(0,7)===mes).reduce((a,x)=>a+(+x.valor||0),0)),0);
  const gasto=(F.gastos||[]).filter(g=>(g.dataCompra||g.data||"").slice(0,7)===mes).reduce((a,g)=>a+(+g.valor||0),0);
  const margem=receita-gasto;
@@ -1075,7 +1117,7 @@ function setMetaCat(cat,el){if(role!=="admin"){toast("Só a gestão define orça
 function ajustarOrcamentoCat(cat){if(role!=="admin"){toast("Só a gestão pode ajustar um orçamento já definido");return;}if(!_reauthGestor()){toast("Não autorizado");return;}const F=fin();if(!F.metas)F.metas={};const actual=+F.metas[cat]||0;const novo=prompt('Novo orçamento mensal para "'+cat+'" (Kz) — 0 para remover o limite:',actual);if(novo===null)return;const v=+String(novo).replace(/[^\d.-]/g,"")||0;F.metas[cat]=v;persist();toast('Orçamento de "'+cat+'" ajustado para '+kz(v));render();}
 function orcamentoCampoHTML(cat,meta){const m=+meta||0;const catEsc=esc(cat).replace(/'/g,"\\'");if(m>0)return kz(m)+(role==="admin"?' <button class="btn-o" style="padding:2px 8px;font-size:11px" onclick="ajustarOrcamentoCat(\''+catEsc+'\')">Ajustar orçamento</button>':'');if(role!=="admin")return '<span class="muted">— sem limite definido —</span>';return '<input type="number" placeholder="0 = sem limite definido" style="width:130px" onchange="setMetaCat(\''+catEsc+'\',this);atualizarGMetaBox()">';}
 /* L39-C2 — orçamento mensal por categoria, visível ao registar o gasto (não só numa secção escondida) */
-function gMetaBoxHTML(){var F=fin();var cat=val("g_cat")||gastoCatsList()[0];var mes=(typeof finMes!=="undefined"&&finMes)?finMes:new Date().toISOString().slice(0,7);
+function gMetaBoxHTML(){var F=fin();var cat=val("g_cat")||gastoCatsList()[0];var mes=finMesAtivo();
  var gastoCat=(F.gastos||[]).filter(function(g){return g.categoria===cat&&(g.dataCompra||g.data||"").slice(0,7)===mes;}).reduce(function(a,g){return a+(+g.valor||0);},0);
  var meta=+(F.metas&&F.metas[cat])||0;var over=meta>0&&gastoCat>meta;
  return '<label>Orçamento mensal — '+esc(cat)+' (Kz)</label>'+orcamentoCampoHTML(cat,meta)+'<div class="muted" style="font-size:12px;margin-top:4px">Gasto em '+esc(mes)+': <b>'+kz(gastoCat)+'</b>'+(meta>0?(' de '+kz(meta)+' '+(over?'<span class="pill p-verm">acima do orçamento</span>':'<span class="pill p-verde">dentro do orçamento</span>')):' · sem orçamento definido para esta categoria')+'</div>';}
@@ -1116,8 +1158,8 @@ function vAssinaturasHTML(){var L=assinaturasList();var hoje=new Date(new Date()
   +'<div class="formgrid" style="margin-top:10px"><div><label>Nome</label><input id="as_nome" placeholder="ex.: Internet, Microsoft 365"></div><div><label>Valor</label><input id="as_valor" type="number" placeholder="0"></div><div><label>Moeda</label><select id="as_moeda"><option>Kz</option><option>USD</option></select></div><div><label>Frequência</label><select id="as_freq">'+ASSIN_FREQ.map(function(f){return '<option>'+f+'</option>';}).join("")+'</select></div><div><label>Próximo vencimento</label><input id="as_venc" type="date"></div><div><label>Notas (opcional)</label><input id="as_notas" placeholder="ex.: nº de cliente, plano"></div></div>'
   +'<div class="row-actions"><button class="btn-p" onclick="addAssinatura()">Registar</button></div>'
   +'<table style="margin-top:10px"><thead><tr><th>Nome</th><th>Valor</th><th>Moeda</th><th>Frequência</th><th>Próximo vencimento</th><th>Último pagamento</th><th></th></tr></thead><tbody>'+linhas+'</tbody></table></details>';}
-function vFinancas(){const F=fin();const admin=role==="admin";const mes=finMes||new Date().toISOString().slice(0,7);const mesAte=finMesAte||"";
- function _noPeriodoFin(d){var dm=(d||"").slice(0,7);return mesAte?(dm>=mes&&dm<=mesAte):dm===mes;}
+function vFinancas(){const F=fin();const admin=role==="admin";const per=finRange();const mes=finMesAtivo();
+ function _noPeriodoFin(d){var dd=d||"";return dd>=per.ini&&dd<=per.fim;}
  const receitaMes=data.pagamentos.reduce((s,p)=>s+((p.prestacoes||[]).filter(x=>_noPeriodoFin(x.data)).reduce((a,x)=>a+(+x.valor||0),0)),0);
  const receitaOnlineMes=data.pagamentos.filter(p=>/^ONL-/.test(p.cod||"")||p.plano==="Turma Online").reduce((s,p)=>s+((p.prestacoes||[]).filter(x=>_noPeriodoFin(x.data)).reduce((a,x)=>a+(+x.valor||0),0)),0);const receitaPresMes=Math.max(0,receitaMes-receitaOnlineMes);
  let gastosMes=F.gastos.filter(g=>_noPeriodoFin(g.dataCompra||g.data));if(!admin){const _me=(currentUser&&currentUser.nome)||role;gastosMes=gastosMes.filter(g=>g.criadoPor===_me);}
@@ -1129,7 +1171,7 @@ function vFinancas(){const F=fin();const admin=role==="admin";const mes=finMes||
  const metasTotal=Object.values(F.metas||{}).reduce((a,v)=>a+(+v||0),0);
  const compromissos=salTotal+metasTotal;const disponivel=(+F.saldoBanco||0)-compromissos;
  const sp=F.split||{};const retorno=receitaMes-totalGastoMes;
- const verYTD=finPer==="ytd";const pReceita=verYTD?receitaYTD:receitaMes;const pOnline=verYTD?receitaOnlineYTD:receitaOnlineMes;const pPres=verYTD?receitaPresYTD:receitaPresMes;const pGasto=verYTD?gastoYTD:totalGastoMes;const pRetorno=pReceita-pGasto;const pMargem=verYTD?margemYTD:margem;const pLab=verYTD?("Ano "+anoP+" (YTD)"):(mesAte?(mes+" a "+mesAte):mes);
+ const verYTD=finPer==="ytd";const pReceita=verYTD?receitaYTD:receitaMes;const pOnline=verYTD?receitaOnlineYTD:receitaOnlineMes;const pPres=verYTD?receitaPresYTD:receitaPresMes;const pGasto=verYTD?gastoYTD:totalGastoMes;const pRetorno=pReceita-pGasto;const pMargem=verYTD?margemYTD:margem;const pLab=verYTD?("Ano "+anoP+" (YTD)"):(per.ini===per.fim?per.ini:(per.ini+" a "+per.fim));
  const painelHtml=`<div class="sec"><div class="flex" style="flex-wrap:wrap;gap:8px"><h2>Painel — ${pLab}</h2><div class="spacer"></div><button class="btn-${verYTD?'o':'p'}" style="padding:4px 10px" onclick="setFinPer('mes')">Mês</button><button class="btn-${verYTD?'p':'o'}" style="padding:4px 10px" onclick="setFinPer('ytd')">Ano (YTD)</button><button class="btn-o" onclick="relatorioMensal()">📄 Relatório mensal (PDF)</button><button class="btn-o" onclick="relatorioYTD()">📊 Relatório do ano (YTD)</button></div><div class="kpigrid">
    <div class="kpi"><div class="lab">Receita — ${pLab}</div><div class="val" style="font-size:20px">${kz(pReceita)}</div></div>
    <div class="kpi"><div class="lab">Online vs Presencial</div><div class="val" style="font-size:16px">💻 ${kz(pOnline)}<br>🏫 ${kz(pPres)}</div></div>
@@ -1137,7 +1179,7 @@ function vFinancas(){const F=fin();const admin=role==="admin";const mes=finMes||
    <div class="kpi ${pRetorno<0?'alert':''}"><div class="lab">Resultado (receita − gasto)</div><div class="val" style="font-size:20px">${kz(pRetorno)}</div></div>
    <div class="kpi"><div class="lab">Reserva — ${pLab} (da margem)</div><div class="val" style="font-size:20px">${kz(Math.round(pMargem*(+sp.reserva||0)/100))}</div></div>
    <div class="kpi"><div class="lab">Investimento — ${pLab} (da margem)</div><div class="val" style="font-size:20px">${kz(Math.round(pMargem*(+sp.investimento||0)/100))}</div></div>
-  </div></div>`;let html=pnlDetModalHTML()+gastoCompModalHTML()+extractoModalHTML()+'<div class="sec"><div class="flex" style="flex-wrap:wrap;gap:8px;align-items:center"><b>Mês:</b> <input type="month" value="'+mes+'" onchange="finMes=this.value;render()" style="width:auto"> <span class="muted">até (opcional, para juntar vários meses)</span> <input type="month" value="'+mesAte+'" onchange="finMesAte=this.value;render()" style="width:auto"> <button class="btn-o" style="padding:4px 10px" onclick="finMes=&#39;&#39;;finMesAte=&#39;&#39;;render()">Mês actual</button>'+(admin?' <button class="btn-o" style="padding:4px 10px" onclick="recalcularFin()" title="Recompõe os totais a partir das prestações reais">↻ Recalcular</button>':'')+'</div></div>'+(admin?dupHTML():"")+(admin?painelHtml:"")+`<details class="sec accdet" style="display:none"><summary>Registar gasto</summary><div class="muted">A data de registo é automática. Indica também a data da compra/pagamento.</div>
+  </div></div>`;let html=pnlDetModalHTML()+gastoCompModalHTML()+extractoModalHTML()+calendarioFinHTML()+(admin?'<div class="sec"><div class="flex" style="flex-wrap:wrap;gap:8px;align-items:center"><button class="btn-o" style="padding:4px 10px" onclick="recalcularFin()" title="Recompõe os totais a partir das prestações reais">↻ Recalcular</button></div></div>':'')+(admin?dupHTML():"")+(admin?painelHtml:"")+`<details class="sec accdet" style="display:none"><summary>Registar gasto</summary><div class="muted">A data de registo é automática. Indica também a data da compra/pagamento.</div>
   <div class="formgrid">
    <div><label>Categoria</label><select id="g_cat" onchange="gastoCatChg()">${gastoCatsList().map(c=>`<option>${c}</option>`).join("")}${admin?'<option>Despesas pessoais</option>':''}</select></div>
    <div><label>O que comprou</label><input id="g_desc" placeholder="ex.: 2 resmas de papel"></div>
