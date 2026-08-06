@@ -672,7 +672,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v27.7";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v27.8";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -1068,13 +1068,17 @@ function valorActual(a){var tot=(+a.valor||0)*(+a.qtd||1);var vida=+a.vida||0;if
 function depAnual(a){var tot=(+a.valor||0)*(+a.qtd||1);var vida=+a.vida||0;return vida?Math.round(tot/vida):0;}
 function totalInventario(){var b=0,at=0,da=0;inventario().forEach(function(a){if(a.estado==="Abatido")return;b+=(+a.valor||0)*(+a.qtd||1);at+=valorActual(a);da+=depAnual(a);});return {bruto:b,actual:at,depAno:da};}
 function setSaldoBanco(){const F=fin();F.saldoBanco=+val("fb_saldo")||0;F.saldoData=new Date().toISOString().slice(0,10);persist();toast("Saldo actualizado");render();}
-function setMetaCat(cat,el){const F=fin();if(!F.metas)F.metas={};F.metas[cat]=+el.value||0;persist();}
+function setMetaCat(cat,el){if(role!=="admin"){toast("Só a gestão define orçamentos");return;}const F=fin();if(!F.metas)F.metas={};F.metas[cat]=+el.value||0;persist();}
+/* L48-2 — uma vez definido (>0), o orçamento de uma categoria deixa de se poder mudar directamente;
+   só com "Ajustar orçamento", que pede a senha da gestão outra vez. Definir pela 1ª vez (estava a 0)
+   continua livre — o bloqueio é só para MUDAR o que já ficou definido. */
+function ajustarOrcamentoCat(cat){if(role!=="admin"){toast("Só a gestão pode ajustar um orçamento já definido");return;}if(!_reauthGestor()){toast("Não autorizado");return;}const F=fin();if(!F.metas)F.metas={};const actual=+F.metas[cat]||0;const novo=prompt('Novo orçamento mensal para "'+cat+'" (Kz) — 0 para remover o limite:',actual);if(novo===null)return;const v=+String(novo).replace(/[^\d.-]/g,"")||0;F.metas[cat]=v;persist();toast('Orçamento de "'+cat+'" ajustado para '+kz(v));render();}
+function orcamentoCampoHTML(cat,meta){const m=+meta||0;const catEsc=esc(cat).replace(/'/g,"\\'");if(m>0)return kz(m)+(role==="admin"?' <button class="btn-o" style="padding:2px 8px;font-size:11px" onclick="ajustarOrcamentoCat(\''+catEsc+'\')">Ajustar orçamento</button>':'');if(role!=="admin")return '<span class="muted">— sem limite definido —</span>';return '<input type="number" placeholder="0 = sem limite definido" style="width:130px" onchange="setMetaCat(\''+catEsc+'\',this);atualizarGMetaBox()">';}
 /* L39-C2 — orçamento mensal por categoria, visível ao registar o gasto (não só numa secção escondida) */
 function gMetaBoxHTML(){var F=fin();var cat=val("g_cat")||gastoCatsList()[0];var mes=(typeof finMes!=="undefined"&&finMes)?finMes:new Date().toISOString().slice(0,7);
  var gastoCat=(F.gastos||[]).filter(function(g){return g.categoria===cat&&(g.dataCompra||g.data||"").slice(0,7)===mes;}).reduce(function(a,g){return a+(+g.valor||0);},0);
  var meta=+(F.metas&&F.metas[cat])||0;var over=meta>0&&gastoCat>meta;
- var catEsc=esc(cat).replace(/'/g,"\\'");
- return '<label>Orçamento mensal — '+esc(cat)+' (Kz)</label><input type="number" value="'+(meta||"")+'" placeholder="0 = sem limite definido" onchange="setMetaCat(\''+catEsc+'\',this);atualizarGMetaBox()"><div class="muted" style="font-size:12px;margin-top:4px">Gasto em '+esc(mes)+': <b>'+kz(gastoCat)+'</b>'+(meta>0?(' de '+kz(meta)+' '+(over?'<span class="pill p-verm">acima do orçamento</span>':'<span class="pill p-verde">dentro do orçamento</span>')):' · sem orçamento definido para esta categoria')+'</div>';}
+ return '<label>Orçamento mensal — '+esc(cat)+' (Kz)</label>'+orcamentoCampoHTML(cat,meta)+'<div class="muted" style="font-size:12px;margin-top:4px">Gasto em '+esc(mes)+': <b>'+kz(gastoCat)+'</b>'+(meta>0?(' de '+kz(meta)+' '+(over?'<span class="pill p-verm">acima do orçamento</span>':'<span class="pill p-verde">dentro do orçamento</span>')):' · sem orçamento definido para esta categoria')+'</div>';}
 function atualizarGMetaBox(){var el=document.getElementById("g_metabox");if(el)el.innerHTML=gMetaBoxHTML();}
 /* L39-C3 — Orçamento: fixos vs variáveis, orçado vs gasto real, por categoria */
 function orcamentoResumo(mes,gastosMes){var F=fin();var P=pagosMes();var ppl=pessoasKA();
@@ -1193,7 +1197,7 @@ function vFinancas(){const F=fin();const admin=role==="admin";const mes=finMes||
   <div class="note" style="margin-top:10px;background:#eef3fb;border-color:#c7d6f0;color:#1F3864">O saldo já não se edita aqui directamente — desce automaticamente quando transferes para as outras contas em "Contas" (mais abaixo). <button class="btn-o" style="padding:3px 9px;margin-left:4px" onclick="verExtracto('PRINCIPAL')">Ver extracto</button></div></details>`;
  html+=`<details class="sec accdet"><summary>Metas mensais de despesa (todas as categorias)</summary><div class="muted">Define o limite por categoria — também podes ajustar isto directamente ao registar um gasto, na aba Gastos.</div>
   <table><thead><tr><th>Categoria</th><th>Meta (Kz)</th><th>Gasto ${mes}</th><th>Situação</th></tr></thead><tbody>
-  ${GASTO_CATS.map(c=>{const g=gastosMes.filter(x=>x.categoria===c).reduce((a,x)=>a+(+x.valor||0),0);const m=+(F.metas&&F.metas[c])||0;const over=m>0&&g>m;return `<tr><td>${c}</td><td><input type="number" value="${m||''}" style="width:120px" onchange="setMetaCat('${c}',this)"></td><td>${kz(g)}</td><td>${m>0?(over?'<span class="pill p-verm">acima</span>':'<span class="pill p-verde">dentro</span>'):'<span class="muted">—</span>'}</td></tr>`}).join("")}
+  ${gastoCatsList().map(c=>{const g=gastosMes.filter(x=>x.categoria===c).reduce((a,x)=>a+(+x.valor||0),0);const m=+(F.metas&&F.metas[c])||0;const over=m>0&&g>m;return `<tr><td>${c}</td><td>${orcamentoCampoHTML(c,m)}</td><td>${kz(g)}</td><td>${m>0?(over?'<span class="pill p-verm">acima</span>':'<span class="pill p-verde">dentro</span>'):'<span class="muted">—</span>'}</td></tr>`}).join("")}
   </tbody></table></details>`;
  html+=orcamentoHTML(mes,gastosMes);
  html+=`<details class="sec accdet"><summary>P&L por turma (centro de custo)</summary><div class="muted">Facturação (pagamentos dos alunos de cada turma) vs custos com centro de custo nessa turma.</div>
@@ -3266,6 +3270,9 @@ function vDefs(){const _im=indicadoresMarketing(mesTrafego||null);const _fontes=
   <div style="border-top:1px solid var(--linha);margin-top:14px;padding-top:12px"><b style="color:var(--azul)">➕ Nova formação</b><div class="formgrid" style="margin-top:6px"><div><label>Nome do curso</label><input id="nc_nome" placeholder="ex.: Word Profissional"></div><div><label>Preço (Kz)</label><input id="nc_preco" type="number" placeholder="0"></div><div style="align-self:end"><button class="btn-p" onclick="addCurso()">Criar curso</button></div></div>
   <div class="muted" style="margin-top:4px">Depois de criar, aparece nas listas do painel e da landing. Para o catálogo, define o preço em Páginas públicas e clica Publicar catálogo.</div></div>
   ${(data.cursosLog&&data.cursosLog.length)?`<details class="accdet" style="margin-top:10px"><summary style="cursor:pointer;font-weight:600;color:var(--azul)">📜 Histórico de alterações de cursos (${data.cursosLog.length})</summary><table style="margin-top:6px"><thead><tr><th>Quando</th><th>Quem</th><th>Acção</th><th>Curso</th><th>Motivo</th></tr></thead><tbody>${data.cursosLog.slice(0,20).map(x=>`<tr><td>${esc((x.quando||"").slice(0,16).replace("T"," "))}</td><td>${esc(x.quem||"")}</td><td>${esc(x.acao||"")}</td><td>${esc(x.curso||"")}</td><td>${esc(x.motivo||"—")}</td></tr>`).join("")}</tbody></table></details>`:""}</div>
+ ${role==="admin"?`<div class="sec"><h2>Categorias de gasto</h2><div class="muted">As categorias abaixo aparecem em Gastos e no Orçamento. As fixas (${GASTO_CATS.join(", ")}) não se podem remover; podes acrescentar outras (ex.: "Compra de equipamento").</div>
+  <div class="flex" style="gap:8px;margin:10px 0;flex-wrap:wrap"><input id="gc_nome" placeholder="Nova categoria (ex.: Compra de equipamento)" style="max-width:280px"><button class="btn-p" onclick="addGastoCat()">Adicionar categoria</button></div>
+  <div class="flex" style="gap:6px;flex-wrap:wrap">${(data.gastoCatsExtra||[]).length?(data.gastoCatsExtra||[]).map(c=>`<span class="pill p-azul" style="display:inline-flex;align-items:center;gap:6px">${esc(c)} <a href="#" onclick="delGastoCat('${esc(c).replace(/'/g,"\\'")}');return false" style="color:#fff;text-decoration:none;font-weight:700" title="Remover">✕</a></span>`).join(""):'<span class="muted">Ainda sem categorias adicionadas.</span>'}</div></div>`:""}
  <div class="sec"><h2>Configuração do Comprovativo</h2><div class="muted">Estes dados aparecem no comprovativo de inscrição. As datas e o horário vêm da turma; o nome vem do formando.</div>
   <div class="formgrid">
    <div><label>Signatário</label><input id="cf_director" value="${esc(data.comp.director)}"></div>
