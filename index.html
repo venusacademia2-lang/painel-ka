@@ -627,10 +627,29 @@ function rowEditModalHTML(){if(!_rowEdit)return"";const o=(data[_rowEdit.arr]||[
  const campos=keys.map(function(k){
   if(isForm&&k==="turma")return '<div style="margin-bottom:8px"><label>'+esc(EDIT_LABELS[k]||k)+'</label><select class="re_f" data-k="turma" id="re_turma" onchange="reOnTurmaChange()"><option value="">— sem turma —</option>'+data.turmas.map(function(t){return '<option value="'+esc(t.cod)+'" '+(t.cod===o.turma?"selected":"")+'>'+esc(t.ed)+'ª Ed. — '+esc(t.curso||"")+'</option>';}).join("")+'</select></div>';
   if(isForm&&k==="horario")return '<div style="margin-bottom:8px"><label>'+esc(EDIT_LABELS[k]||k)+' (turno)</label><select class="re_f" data-k="horario" id="re_horario" onchange="reOnHorarioChange()">'+turnosDropdownOptions(o.turma,o.horario)+'</select></div>';
+  if(isForm&&k==="vendedor"){
+   if(role==="admin")return '<div style="margin-bottom:8px"><label>'+esc(EDIT_LABELS[k]||k)+'</label><input class="re_f" data-k="vendedor" value="'+esc(String(o.vendedor||""))+'"><div class="muted" style="margin-top:3px;font-size:11px">Alterar pede a password de gestão + motivo — fica registado no histórico.</div></div>';
+   return '<div style="margin-bottom:8px"><label>'+esc(EDIT_LABELS[k]||k)+'</label><div>'+esc(o.vendedor||"—")+'</div><div class="muted" style="margin-top:3px;font-size:11px">Só a gestão pode alterar o responsável pela venda.</div></div>';
+  }
   return `<div style="margin-bottom:8px"><label>${esc(EDIT_LABELS[k]||k)}</label><input class="re_f" data-k="${esc(k)}" data-num="${typeof o[k]==="number"?1:0}" value="${esc(String(o[k]==null?"":o[k]))}"></div>`;
  }).join("")||'<div class="muted">Sem campos editáveis.</div>';
  return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharRowEdit()"><div class="card" style="padding:22px;width:460px;max-width:94vw;max-height:88vh;overflow:auto"><div class="flex"><h2 style="color:var(--azul)">Editar registo</h2><div class="spacer"></div><button class="btn-o" style="padding:4px 10px" onclick="fecharRowEdit()">Fechar ✕</button></div><div class="muted" style="margin:2px 0 12px">Edita os campos e grava. Fica guardado para toda a equipa.${isForm?' Ao mudar a turma/turno, período/gestora/formador actualizam-se sozinhos.':''}</div>${campos}<div class="row-actions"><button class="btn-p" onclick="saveRowEdit()">Guardar alterações</button></div></div></div>`;}
+/* L52 — alterar o "Responsável pela venda" de um aluno já registado (via Editar registo) exige gestão +
+   password + motivo, e fica gravado num histórico próprio — mesmo padrão usado para apagar uma venda. */
+function vendedorLog(){if(!Array.isArray(data.vendedorLog))data.vendedorLog=[];return data.vendedorLog;}
 function saveRowEdit(){if(!_rowEdit)return;const arrNome=_rowEdit.arr;const o=(data[_rowEdit.arr]||[])[_rowEdit.i];if(!o){_rowEdit=null;render();return;}
+ if(arrNome==="formandos"){
+  var vendInp=document.querySelector('.re_f[data-k="vendedor"]');
+  if(vendInp&&vendInp.value!==(o.vendedor||"")){
+   if(role!=="admin"){toast("Só a gestão pode alterar o responsável pela venda");return;}
+   var pin=prompt("Password de Gestão para confirmar a alteração do responsável pela venda de "+(o.nome||"")+":");
+   if(pin===null)return;
+   if(pin!==(data.pass||DEFAULT_PASS)){toast("Password incorrecta — nada foi alterado");return;}
+   var motivo=prompt("Motivo da alteração do responsável pela venda (fica registado):");
+   if(motivo===null||!(motivo||"").trim()){toast("É preciso indicar um motivo");return;}
+   vendedorLog().unshift({quando:new Date().toISOString(),quem:(currentUser&&currentUser.nome)||role,cod:o.cod,aluno:o.nome||"",antes:o.vendedor||"—",depois:vendInp.value||"—",motivo:motivo.trim()});
+  }
+ }
  document.querySelectorAll('.re_f').forEach(function(inp){const k=inp.getAttribute('data-k');const num=inp.getAttribute('data-num')==="1";o[k]=num?(+inp.value||0):inp.value;});
  if(arrNome==="formandos")o.turno=o.horario||o.turno;
  if(arrNome==="online")syncPagOnline(o);
@@ -672,7 +691,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v29.0";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v29.1";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -3044,6 +3063,7 @@ function vRH(){const ppl=pessoasKA();const mes=rhMes||new Date().toISOString().s
    +(mostrar.length?mostrar.map(function(x){return '<tr><td>'+esc(x.data||"")+'</td><td>'+esc(x.hora||"—")+'</td><td>'+esc(x.nome||"")+'</td><td>'+kz(x.valor||0)+'</td><td><span class="pill '+(x.acao==="Pago"?"p-verde":"p-verm")+'">'+esc(x.acao||"")+'</span></td><td>'+esc(x.quem||"—")+'</td></tr>';}).join(""):'<tr><td colspan="6" class="muted">Sem registos ainda.</td></tr>')
    +'</tbody></table></details>';})()}
  ${role==="admin"?(function(){var LOG=descontosLog().slice(0,100);return '<details class="sec accdet"><summary>➖ Histórico de descontos</summary><div class="muted">Cada desconto (e remoção) fica registado com motivo, quem aplicou e quando.</div><table style="margin-top:8px"><thead><tr><th>Mês</th><th>Pessoa</th><th>Valor</th><th>Motivo</th><th>Quem</th></tr></thead><tbody>'+(LOG.length?LOG.map(function(x){return '<tr><td>'+esc(x.mes||"")+'</td><td>'+esc(x.nome||"")+'</td><td>'+(x.valor>0?'−'+kz(x.valor):'<span class="muted">removido</span>')+'</td><td>'+esc(x.motivo||"—")+'</td><td>'+esc(x.quem||"—")+'</td></tr>';}).join(""):'<tr><td colspan="5" class="muted">Sem descontos registados.</td></tr>')+'</tbody></table></details>';})():""}
+ ${role==="admin"?(function(){var LOG=vendedorLog().slice(0,100);return '<details class="sec accdet"><summary>🔁 Histórico de alterações do Responsável pela venda</summary><div class="muted">Cada alteração feita em "Editar registo" fica aqui, com quem alterou, quando e o motivo indicado.</div><table style="margin-top:8px"><thead><tr><th>Quando</th><th>Aluno</th><th>Antes</th><th>Depois</th><th>Motivo</th><th>Quem</th></tr></thead><tbody>'+(LOG.length?LOG.map(function(x){return '<tr><td>'+esc((x.quando||"").slice(0,16).replace("T"," "))+'</td><td>'+esc(x.aluno||"")+'</td><td>'+esc(x.antes||"—")+'</td><td>'+esc(x.depois||"—")+'</td><td>'+esc(x.motivo||"—")+'</td><td>'+esc(x.quem||"—")+'</td></tr>';}).join(""):'<tr><td colspan="6" class="muted">Sem alterações registadas.</td></tr>')+'</tbody></table></details>';})():""}
  ${role==="admin"&&arquivados().length?`<div class="sec"><h2>Arquivados <span class="pill p-cinza">${arquivados().length}</span></h2><div class="muted">Pessoas que já não aparecem nas listas. Podes repor.</div><table><tbody>${arquivados().map(n=>`<tr><td>${esc(n)}</td><td style="text-align:right"><button class="btn-o" style="padding:3px 9px" onclick="desarquivarPessoa('${esc(n)}')">Repor</button></td></tr>`).join("")}</tbody></table></div>`:""}
  <div class="sec"><h2>Aniversários (próximos 30 dias)</h2>
   ${anivs.length?'<table><thead><tr><th>Nome</th><th>Tipo</th><th>Quando</th><th>Faltam</th></tr></thead><tbody>'+anivs.map(a=>`<tr><td>${esc(a.nome)}</td><td>${esc(a.tipo)}</td><td>${esc(a.quando)}</td><td>${a.dias===0?'<span class="pill p-dour">hoje 🎉</span>':a.dias+' dia(s)'}</td></tr>`).join("")+'</tbody></table>':'<div class="muted">Sem aniversários próximos (define a data de nascimento nos registos).</div>'}
