@@ -691,7 +691,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v29.1";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v31.0";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -917,7 +917,33 @@ function contaPor(id){return contasArr().find(function(c){return c.id===id;})||n
 function contaNome(id){var c=contaPor(id);return c?c.nome:(id||"—");}
 function contaSaldo(id){var c=contaPor(id);if(!c)return 0;var soma=movimentosArr().filter(function(m){return m.contaId===id;}).reduce(function(a,m){return a+(+m.valor||0);},0);return (+c.saldoInicial||0)+soma;}
 function contaSaldoSocios(id){return movimentosArr().filter(function(m){return m.contaId===id&&m.tipo==="socio";}).reduce(function(a,m){return a+(+m.valor||0);},0);}
-function addMovimento(contaId,valor,descricao,dataMov,tipo){movimentosArr().unshift({id:"M"+Date.now()+Math.floor(Math.random()*1000),contaId:contaId,valor:+valor||0,descricao:descricao||"",data:dataMov||new Date().toISOString().slice(0,10),tipo:tipo||"transferencia",criadoPor:(currentUser&&currentUser.nome)||role,criadoEm:new Date().toISOString()});}
+function addMovimento(contaId,valor,descricao,dataMov,tipo,fundoCod){movimentosArr().unshift({id:"M"+Date.now()+Math.floor(Math.random()*1000),contaId:contaId,valor:+valor||0,descricao:descricao||"",data:dataMov||new Date().toISOString().slice(0,10),tipo:tipo||"transferencia",fundoCod:fundoCod||"",criadoPor:(currentUser&&currentUser.nome)||role,criadoEm:new Date().toISOString()});}
+/* L53-2 — Fundos com propósito: ao depositar numa conta, escolhes/crias uma descrição (ex.: "Equipamento novo")
+   e o sistema gera um código (F001, F002...) que passa a representar esse propósito. Da próxima vez, basta
+   escrever o código e a descrição vem sozinha. O total do fundo é sempre a SOMA de todos os depósitos com aquele
+   código, em qualquer conta — não desconta gastos (decisão confirmada pelo Ventura: só soma). */
+function fundosMap(){var F=fin();if(!F.fundos)F.fundos={};return F.fundos;}
+function _proximoFundoCod(){var M=fundosMap();var n=1;while(M["F"+String(n).padStart(3,"0")])n++;return "F"+String(n).padStart(3,"0");}
+function garantirFundo(desc){var d=(desc||"").trim();if(!d)return "";var M=fundosMap();
+ var existente=Object.keys(M).find(function(c){return (M[c].desc||"").toLowerCase()===d.toLowerCase();});
+ if(existente)return existente;
+ var cod=_proximoFundoCod();M[cod]={desc:d,criadoEm:new Date().toISOString()};persist();return cod;}
+function totalFundo(cod){return movimentosArr().filter(function(m){return m.fundoCod===cod&&(+m.valor||0)>0;}).reduce(function(a,m){return a+(+m.valor||0);},0);}
+function fundosOrdenados(){var M=fundosMap();return Object.keys(M).map(function(cod){return {cod:cod,desc:M[cod].desc,total:totalFundo(cod)};}).sort(function(a,b){return b.total-a.total;});}
+function onDepCod(){var codEl=document.getElementById("dep_cod"),descEl=document.getElementById("dep_desc");if(!codEl||!descEl)return;
+ var cod=(codEl.value||"").trim().toUpperCase();var M=fundosMap();
+ if(cod&&M[cod]){descEl.value=M[cod].desc;descEl.setAttribute("readonly","readonly");}else descEl.removeAttribute("readonly");}
+function addDeposito(){if(role!=="admin"){toast("Só a gestão pode registar depósitos");return;}
+ var contaId=val("dep_conta"),valor=+val("dep_valor")||0,dt=val("dep_data")||new Date().toISOString().slice(0,10);
+ var codIn=(val("dep_cod")||"").trim().toUpperCase(),descIn=(val("dep_desc")||"").trim();
+ if(!contaId||!valor){toast("Falta a conta e o valor");return;}
+ var M=fundosMap(),cod=codIn;
+ if(cod&&!M[cod]){toast("Código de fundo desconhecido — deixa o código em branco para criar um novo com a descrição que escreveres.");return;}
+ if(!cod){if(!descIn){toast("Sem código, é preciso indicar a descrição do fundo para o sistema gerar o código");return;}cod=garantirFundo(descIn);}
+ var desc=(M[cod]&&M[cod].desc)||descIn||"Depósito";
+ addMovimento(contaId,Math.abs(valor),desc,dt,"deposito",cod);
+ persist();toast("Depósito registado — fundo "+cod+" ("+desc+") · total acumulado: "+kz(totalFundo(cod)));
+ limparCampos(["dep_valor","dep_cod","dep_desc"]);render();}
 function migrarContasBanco(){var F=fin();if(!Array.isArray(F.contas))F.contas=[];if(!Array.isArray(F.movimentos))F.movimentos=[];
  if(!F.contas.some(function(c){return c.id==="PRINCIPAL";}))F.contas.unshift({id:"PRINCIPAL",nome:"Conta Principal",banco:"",numero:"",saldoInicial:+F.saldoBanco||0,fixa:true,criadoEm:new Date().toISOString()});
  if(!F._contasDestinoLimpo&&F.contasDestino&&typeof F.contasDestino==="object"){if(!F.destinoConta)F.destinoConta={};
@@ -958,7 +984,7 @@ function extractoModalHTML(){if(!extractoConta)return"";var c=contaPor(extractoC
  <div class="flex"><b style="color:var(--azul)">Extracto — ${esc(c.nome)}</b><div class="spacer"></div><button class="btn-o" style="padding:4px 10px" onclick="fecharExtracto()">Fechar ✕</button></div>
  <div class="muted" style="margin:6px 0">Saldo inicial ${kz(c.saldoInicial||0)} · Saldo actual <b>${kz(saldo)}</b>${deSocios?' · dos quais <b>'+kz(deSocios)+'</b> de sócios':''}</div>
  <table style="margin-top:6px"><thead><tr><th>Data</th><th>Descrição</th><th>Valor</th></tr></thead><tbody>
- ${movs.map(function(m){return '<tr><td>'+esc(m.data||"")+'</td><td>'+esc(m.descricao||"")+'</td><td style="color:'+((+m.valor||0)<0?"#C0392B":"#1E7B45")+'"><b>'+((+m.valor||0)>=0?"+":"")+kz(m.valor)+'</b></td></tr>';}).join("")||'<tr><td colspan="3" class="muted">Sem movimentos ainda.</td></tr>'}
+ ${movs.map(function(m){return '<tr><td>'+esc(m.data||"")+'</td><td>'+esc(m.descricao||"")+(m.fundoCod?' <span class="pill p-azul" style="font-size:10px" title="Fundo">'+esc(m.fundoCod)+'</span>':'')+'</td><td style="color:'+((+m.valor||0)<0?"#C0392B":"#1E7B45")+'"><b>'+((+m.valor||0)>=0?"+":"")+kz(m.valor)+'</b></td></tr>';}).join("")||'<tr><td colspan="3" class="muted">Sem movimentos ainda.</td></tr>'}
  </tbody></table></div></div>`;}
 function conversaoAcumulada(){var pagos={};data.formandos.forEach(function(f){var p=payOf(f.cod);if(p&&((+p.pago||0)>0||(p.prestacoes||[]).reduce(function(a,x){return a+(+x.valor||0);},0)>0)){var k=normTel(f.tel);if(k)pagos[k]=1;}});(data.online||[]).forEach(function(o){if((+o.valorPago||0)>0){var k=normTel(o.contacto);if(k)pagos[k]=1;}});var totLeads=(data.leads||[]).length;var pagantes=(data.leads||[]).filter(function(l){return pagos[normTel(l.tel)];}).length;return {totLeads:totLeads,pagantes:pagantes,conv:totLeads?Math.round(pagantes/totLeads*100):0};}
 let pnlDet=null;
@@ -1313,6 +1339,9 @@ function vFinancas(){const F=fin();const admin=role==="admin";const per=finRange
    +'</tbody></table>'
    +(role==="admin"?'<div class="formgrid" style="margin-top:10px"><div><label>Nome da conta</label><input id="cta_nome" placeholder="ex.: Poupança BAI"></div><div><label>Banco</label><input id="cta_banco" placeholder="ex.: BAI"></div><div><label>Número/IBAN</label><input id="cta_num"></div><div><label>Saldo inicial (Kz)</label><input id="cta_saldoini" type="number" placeholder="0"></div></div><div class="row-actions"><button class="btn-p" onclick="novaConta()">Criar conta</button></div>':"")
    +(role==="admin"?'<div class="muted" style="margin-top:14px;font-weight:600;color:var(--azul)">Transferência manual entre contas</div><div class="formgrid" style="margin-top:4px"><div><label>De</label><select id="tx_origem">'+contasArr().map(function(c){return '<option value="'+esc(c.id)+'">'+esc(c.nome)+'</option>';}).join("")+'</select></div><div><label>Para</label><select id="tx_destino">'+contasArr().map(function(c){return '<option value="'+esc(c.id)+'">'+esc(c.nome)+'</option>';}).join("")+'</select></div><div><label>Valor (Kz)</label><input id="tx_valor" type="number" placeholder="0"></div><div><label>Data</label><input id="tx_data" type="date"></div><div style="grid-column:1/-1"><label>Descrição</label><input id="tx_desc" placeholder="ex.: reforço pontual"></div></div><div class="row-actions"><button class="btn-p" onclick="addTransferenciaManual()">Registar transferência</button></div>':"")
+   +(role==="admin"?('<div class="muted" style="margin-top:14px;font-weight:600;color:var(--azul)">Depósito com propósito (Fundo)</div><div class="muted" style="font-size:12px">Ao depositar, dá um código a esse dinheiro (ex.: "F001 — Equipamento novo"). Da próxima vez, escreve só o código e a descrição vem sozinha — o total do fundo soma todos os depósitos com esse código.</div>'
+    +'<div class="formgrid" style="margin-top:4px"><div><label>Conta</label><select id="dep_conta">'+contasArr().map(function(c){return '<option value="'+esc(c.id)+'">'+esc(c.nome)+'</option>';}).join("")+'</select></div><div><label>Valor (Kz)</label><input id="dep_valor" type="number" placeholder="0"></div><div><label>Data</label><input id="dep_data" type="date"></div><div><label>Código do fundo (se já existir)</label><input id="dep_cod" list="dep_cod_dl" placeholder="ex.: F001" oninput="onDepCod()" onchange="onDepCod()"><datalist id="dep_cod_dl">'+fundosOrdenados().map(function(f){return '<option value="'+esc(f.cod)+'">'+esc(f.desc)+'</option>';}).join("")+'</datalist></div><div style="grid-column:1/-1"><label>Descrição / propósito (só se for um fundo novo)</label><input id="dep_desc" placeholder="ex.: Equipamento novo"></div></div><div class="row-actions"><button class="btn-p" onclick="addDeposito()">Registar depósito</button></div>'
+    +(fundosOrdenados().length?('<table style="margin-top:12px"><thead><tr><th>Código</th><th>Propósito</th><th>Total acumulado</th></tr></thead><tbody>'+fundosOrdenados().map(function(f){return '<tr><td><b>'+esc(f.cod)+'</b></td><td>'+esc(f.desc)+'</td><td><b>'+kz(f.total)+'</b></td></tr>';}).join("")+'</tbody></table>'):'<div class="muted" style="margin-top:8px">Ainda sem fundos criados.</div>')):"")
    +'</details>';
  })();
  html+=vAssinaturasHTML();
@@ -1639,9 +1668,12 @@ function vFormandos(){
  const _semEmailTot=fTurmaF?data.formandos.filter(f=>f.turma===fTurmaF&&f.estado!=="Transferido p/ Online"&&!f.email).length:0;
  const lds=data.leads.filter(l=>{const inF=l.tel&&data.formandos.some(f=>(f.tel||"").replace(/\D/g,"")===(l.tel||"").replace(/\D/g,""));if(inF)return false;return !q||(l.nome||"").toLowerCase().includes(q)||(dq&&(l.tel||"").replace(/\D/g,"").includes(dq))});
  const _tFiltrada=fTurmaF?turmaByCod(fTurmaF):null;
- return `${fFicha?fichaCard(fFicha):""}<div class="sec"><h2>Pesquisar formando</h2><div class="muted">Pesquisa pelo número de telefone ou pelo nome. Clica em "Ficha" para o histórico completo. O registo de novas vendas está agora em Marketing &amp; Vendas.</div>
+ if(q&&INSCR===null)carregarInscricoes();
+ const _inscPend=q?inscricoesPendentesParaBusca(q,dq):[];
+ return `${fFicha?fichaCard(fFicha):""}${confirmarInscricaoModalHTML()}<div class="sec"><h2>Pesquisar formando</h2><div class="muted">Pesquisa pelo número de telefone ou pelo nome. Clica em "Ficha" para o histórico completo. O registo de novas vendas está agora em Marketing &amp; Vendas.</div>
   <input id="q_form" class="search" placeholder="Número de telefone ou nome…" value="${esc(fSearch)}" oninput="fSearch=this.value;refocusSearch('q_form');render()">
   <div class="flex" style="gap:8px;margin:8px 0;flex-wrap:wrap"><select onchange="fTurmaF=this.value;render()" style="width:auto"><option value="">Todas as turmas</option>${data.turmas.slice().sort((a,b)=>(+b.ed||0)-(+a.ed||0)).map(t=>`<option value="${esc(t.cod)}" ${fTurmaF===t.cod?"selected":""}>${esc(t.ed)}ª — ${esc(t.curso||"")}</option>`).join("")}</select><select onchange="fTurno=this.value;render()" style="width:auto">${turnoOptsHTML(fTurno,fTurmaF)}</select><select onchange="fSort=this.value;render()" style="width:auto"><option value="nome" ${fSort==="nome"?"selected":""}>Ordenar: Nome</option><option value="turma" ${fSort==="turma"?"selected":""}>Ordenar: Turma</option><option value="data" ${fSort==="data"?"selected":""}>Ordenar: Data</option></select><label style="display:flex;align-items:center;gap:5px;font-weight:600;font-size:13px;margin:0"><input type="checkbox" ${fSemEmail?"checked":""} onchange="fSemEmail=this.checked;render()"> Só sem e-mail${_semEmailTot?' <span class="pill p-verm">'+_semEmailTot+'</span>':''}</label></div>
+  ${_inscPend.map(function(x){var r=x.r;return '<div class="note" style="background:#eef3fb;border-color:#c7d6f0;color:#1F3864;margin-bottom:8px">📝 <b>'+esc(r.nome||"")+'</b> já se inscreveu pela landing'+(r.curso?' — <b>'+esc(r.curso)+'</b>':'')+(r.edicao?' ('+esc(r.edicao)+'ª ed.)':'')+', ainda por confirmar numa turma. <button class="btn-p" style="padding:4px 10px;margin-left:6px" onclick="abrirConfirmarInscricao('+x.i+')">Confirmar inscrição</button></div>';}).join("")}
   ${_tFiltrada?`<div class="muted" style="margin-bottom:8px">Vagas livres (pagas): <b>${(function(){var v=vagasLivres(_tFiltrada);return v==null?"sem limite":v;})()}</b> · Computadores: <b>${pcOcupados(_tFiltrada.cod)}/${computadoresDe(_tFiltrada)}</b> ocupados${_semEmailTot?' · <span style="color:#a3311f">'+_semEmailTot+' sem e-mail</span>':''}</div>`:""}
   <table><thead><tr>${fHead('nome','Nome')}<th>Telefone</th><th>E-mail</th><th>Curso</th>${fHead('turma','Turma')}<th>Estado</th>${fHead('divida','Em dívida')}<th></th></tr></thead><tbody>
   ${fs.map(f=>{const i=data.formandos.indexOf(f);const p=payOf(f.cod);const d=p?divida(p):0;const t=turmaByCod(f.turma);return `<tr><td>${esc(f.nome)}</td><td>${esc(f.tel||"")}</td><td>${f.email?esc(f.email):'<span class="pill p-verm">sem e-mail</span>'}</td><td>${esc(f.curso||"")}</td><td>${t?esc(t.ed)+'ª':esc(f.turma||'—')}</td><td><span class="pill p-verde">Formando</span></td><td>${d>0?'<span class="pill p-verm">'+kz(d)+'</span>':'<span class="pill p-verde">0 Kz</span>'}</td><td class="flex" style="gap:6px"><button class="btn-o" style="padding:4px 10px" onclick="fFicha='${esc(f.cod)}';render()">Ficha</button>${(d>0&&podeEditar())?`<button class="btn-o" style="padding:4px 10px" onclick="irPagar('${esc(f.cod)}')">Pagar</button>`:""}<button class="btn-g" style="padding:4px 10px" onclick="setChamada('${esc(f.nome)}','${esc(f.tel||'')}','Formando')">☎</button>${rowActs('formandos',i)}</td></tr>`}).join("")}
@@ -1896,28 +1928,52 @@ function addDespesaOrcamento(cod){const t=turmaByCod(cod);if(!t)return;const val
 /* L27-3: transferir passou de uma janela prompt() com lista numerada para um dropdown normal —
    mesma lógica de taxa de 30% de sempre, só muda a forma de escolher a turma de destino. */
 let transferAlunoCod=null;
+/* L55-2 — por omissão só se pode transferir um aluno para a MESMA edição (novo horário/turno) ou para uma
+   edição SEGUINTE do mesmo curso — nunca para uma edição anterior do mesmo curso, a não ser que a gestão
+   destranque com a password (transferAlunoAnterioresOK). Cursos diferentes não têm uma ordem natural, por
+   isso continuam sem esta restrição. */
+let transferAlunoAnterioresOK=false;
+function _turmasDestinoPara(f){const t0=turmaByCod(f.turma);const curso=(t0&&t0.curso)||f.curso||"";const ed0=t0?(+t0.ed||0):0;
+ const mesmoCursoSeguintes=data.turmas.filter(function(t){return (t.curso||"")===curso&&(+t.ed||0)>=ed0;}).sort(function(a,b){return (+a.ed||0)-(+b.ed||0);});
+ const mesmoCursoAnteriores=data.turmas.filter(function(t){return (t.curso||"")===curso&&(+t.ed||0)<ed0;}).sort(function(a,b){return (+b.ed||0)-(+a.ed||0);});
+ const outrosCursos=data.turmas.filter(function(t){return (t.curso||"")!==curso;});
+ return {mesmoCursoSeguintes:mesmoCursoSeguintes,mesmoCursoAnteriores:mesmoCursoAnteriores,outrosCursos:outrosCursos};}
 function transferAluno(cod){const f=data.formandos.find(x=>x.cod===cod);if(!f)return;if(!(role==="admin"||podeEditar())){toast("Sem permissão. Peça autorização à gestão.");return;}
- const opts=data.turmas.filter(t=>t.cod!==f.turma);
- if(!opts.length){var d0=prompt("Ainda não existe outra edição para transferir "+(f.nome||"")+".\n\nIndica a data de seguimento (AAAA-MM-DD) para lembrarmos quando a turma abrir:",new Date(Date.now()+7*86400000).toISOString().slice(0,10));if(d0===null)return;d0=(d0||"").trim();if(!/^\d{4}-\d{2}-\d{2}$/.test(d0)){toast("Data inválida");return;}if(!data.notas)data.notas=[];data.notas.unshift({texto:"Transferir "+(f.nome||"")+" ("+(f.cod||"")+") para nova turma — turma ainda não criada",data:new Date().toISOString().slice(0,10),prazoData:d0,para:(currentUser&&currentUser.nome)||"Gestão",pedidoPor:(currentUser&&currentUser.nome)||role,tel:f.tel||"",feito:false});persist();toast("Sem turma disponível — seguimento agendado para "+d0);render();return;}
- transferAlunoCod=cod;render();}
-function fecharTransferAluno(){transferAlunoCod=null;render();}
+ const g=_turmasDestinoPara(f);
+ if(!g.mesmoCursoSeguintes.length&&!g.mesmoCursoAnteriores.length&&!g.outrosCursos.length){var d0=prompt("Ainda não existe outra edição para transferir "+(f.nome||"")+".\n\nIndica a data de seguimento (AAAA-MM-DD) para lembrarmos quando a turma abrir:",new Date(Date.now()+7*86400000).toISOString().slice(0,10));if(d0===null)return;d0=(d0||"").trim();if(!/^\d{4}-\d{2}-\d{2}$/.test(d0)){toast("Data inválida");return;}if(!data.notas)data.notas=[];data.notas.unshift({texto:"Transferir "+(f.nome||"")+" ("+(f.cod||"")+") para nova turma — turma ainda não criada",data:new Date().toISOString().slice(0,10),prazoData:d0,para:(currentUser&&currentUser.nome)||"Gestão",pedidoPor:(currentUser&&currentUser.nome)||role,tel:f.tel||"",feito:false});persist();toast("Sem turma disponível — seguimento agendado para "+d0);render();return;}
+ transferAlunoAnterioresOK=false;transferAlunoCod=cod;render();}
+function fecharTransferAluno(){transferAlunoCod=null;transferAlunoAnterioresOK=false;render();}
+function toggleTransferAnteriores(){if(transferAlunoAnterioresOK){transferAlunoAnterioresOK=false;render();return;}
+ var pin=prompt("Password de Gestão para mostrar também edições anteriores deste curso:");if(pin===null)return;
+ if(pin!==(data.pass||DEFAULT_PASS)){toast("Password incorrecta");return;}
+ transferAlunoAnterioresOK=true;render();}
+function taOnTurmaChange(){var selT=document.getElementById('ta_turma');var selH=document.getElementById('ta_turno');if(!selT||!selH)return;
+ var f=data.formandos.find(function(x){return x.cod===transferAlunoCod;});selH.innerHTML=turnosDropdownOptions(selT.value,selT.value===(f&&f.turma)?(f.horario||f.turno||""):"");}
 function transferAlunoModalHTML(){if(!transferAlunoCod)return"";const f=data.formandos.find(x=>x.cod===transferAlunoCod);if(!f)return"";
- const opts=data.turmas.filter(t=>t.cod!==f.turma);
- const optsHTML=opts.map(function(t){const vlbl=vagasLivresLabel(t);return '<option value="'+esc(t.cod)+'">'+esc(t.ed)+'ª — '+esc(t.curso||"")+(vlbl?" · vagas: "+vlbl:"")+'</option>';}).join("");
- return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.4);display:grid;place-items:center;z-index:101;padding:16px" onclick="if(event.target===this)fecharTransferAluno()"><div class="card" style="padding:22px;width:440px;max-width:94vw"><h3 style="color:var(--azul);margin-bottom:2px">Transferir ${esc(f.nome)}</h3><div class="muted" style="margin-bottom:12px">Escolhe a turma de destino. Se o aluno ainda não decidiu, escolhe a que fizer mais sentido — pode voltar a transferir-se depois.</div>
-  <label>Turma de destino</label><select id="ta_turma"><option value="">— escolhe —</option>${optsHTML}</select>
+ const g=_turmasDestinoPara(f);
+ const optHTML=function(t,tagMesma){const vlbl=vagasLivresLabel(t);return '<option value="'+esc(t.cod)+'">'+esc(t.ed)+'ª — '+esc(t.curso||"")+(tagMesma?" (edição actual)":"")+(vlbl?" · vagas: "+vlbl:"")+'</option>';};
+ let optsHTML=g.mesmoCursoSeguintes.map(function(t){return optHTML(t,t.cod===f.turma);}).join("");
+ if(transferAlunoAnterioresOK)optsHTML+=g.mesmoCursoAnteriores.map(function(t){return optHTML(t,false);}).join("");
+ optsHTML+=g.outrosCursos.map(function(t){return optHTML(t,false);}).join("");
+ return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.4);display:grid;place-items:center;z-index:101;padding:16px" onclick="if(event.target===this)fecharTransferAluno()"><div class="card" style="padding:22px;width:440px;max-width:94vw"><h3 style="color:var(--azul);margin-bottom:2px">Transferir ${esc(f.nome)}</h3><div class="muted" style="margin-bottom:12px">Podes manter o aluno na mesma edição (só muda o horário) ou passar para uma edição seguinte do mesmo curso. Edições anteriores deste curso ou outros cursos aparecem à parte.</div>
+  <label>Turma de destino</label><select id="ta_turma" onchange="taOnTurmaChange()"><option value="">— escolhe —</option>${optsHTML}</select>
+  ${g.mesmoCursoAnteriores.length?`<div style="margin-top:6px">${transferAlunoAnterioresOK?'<span class="pill p-verde">✓ Edições anteriores visíveis</span>':`<button class="btn-o" style="padding:3px 9px;font-size:12px" onclick="toggleTransferAnteriores()">Mostrar edições anteriores deste curso (pede senha da gestão)</button>`}</div>`:""}
+  <label style="margin-top:8px">Horário/turno de destino</label><select id="ta_turno"><option value="">— escolhe a turma primeiro —</option></select>
   <label style="margin-top:8px">Comentário (opcional)</label><input id="ta_nota" placeholder="motivo da transferência">
   <div class="row-actions" style="margin-top:14px"><button class="btn-p" onclick="confirmarTransferAluno()">Confirmar transferência</button><button class="btn-o" onclick="fecharTransferAluno()">Cancelar</button></div></div></div>`;}
 function confirmarTransferAluno(){const cod=transferAlunoCod;const f=data.formandos.find(x=>x.cod===cod);if(!f){transferAlunoCod=null;render();return;}
  const destCod=val("ta_turma");if(!destCod){toast("Escolhe a turma de destino");return;}
  const t=turmaByCod(destCod);if(!t){toast("Turma inválida");return;}
- const p=payOf(cod);const pago=p?(+p.pago||0):0;const taxa=Math.round(pago*0.30);let taxaAplicada=0;
+ const novoHorario=val("ta_turno")||"";
+ const mesmaEdicao=destCod===f.turma;
+ if(!mesmaEdicao){const g=_turmasDestinoPara(f);const ehAnteriorMesmoCurso=g.mesmoCursoAnteriores.some(function(x){return x.cod===destCod;});if(ehAnteriorMesmoCurso&&!transferAlunoAnterioresOK){toast("Edição anterior do mesmo curso — pede a senha da gestão primeiro");return;}}
+ const p=payOf(cod);const pago=p?(+p.pago||0):0;const taxa=mesmaEdicao?0:Math.round(pago*0.30);let taxaAplicada=0;
  if(taxa>0){if(role==="admin"){const z=confirm("Taxa de transferência (30% do recebido) = "+taxa.toLocaleString("de-DE")+" Kz.\n\nOK = cobrar a taxa.\nCancelar = libertar SEM custo (autorização da gestão).");taxaAplicada=z?taxa:0;}else{if(!confirm("Taxa de transferência = "+taxa.toLocaleString("de-DE")+" Kz. Confirmas que já foi PAGA? (sem pagamento, o sistema não transfere)")){toast("Transferência bloqueada: taxa por pagar.");return;}taxaAplicada=taxa;}}
  const nota=val("ta_nota")||"";
- const de=f.turma;f.turma=t.cod;
+ const de=f.turma;f.turma=t.cod;if(novoHorario){f.horario=novoHorario;f.turno=novoHorario;}
  if(!Array.isArray(data.transferencias))data.transferencias=[];
- data.transferencias.unshift({cod:cod,nome:f.nome,de:de,para:t.cod,taxa:taxaAplicada,custoZero:(taxa>0&&taxaAplicada===0),nota:nota,por:(currentUser&&currentUser.nome)||role,quando:new Date().toISOString().slice(0,16).replace("T"," ")});
- transferAlunoCod=null;persist();toast("Transferido para "+t.ed+"ª"+(taxaAplicada?" · taxa "+taxaAplicada.toLocaleString("de-DE")+" Kz":""));render();}
+ data.transferencias.unshift({cod:cod,nome:f.nome,de:de,para:t.cod,mesmaEdicao:mesmaEdicao,taxa:taxaAplicada,custoZero:(taxa>0&&taxaAplicada===0),nota:nota,por:(currentUser&&currentUser.nome)||role,quando:new Date().toISOString().slice(0,16).replace("T"," ")});
+ transferAlunoCod=null;transferAlunoAnterioresOK=false;persist();toast((mesmaEdicao?"Horário actualizado na "+t.ed+"ª":"Transferido para "+t.ed+"ª")+(taxaAplicada?" · taxa "+taxaAplicada.toLocaleString("de-DE")+" Kz":""));render();}
 function exportTurma(cod,turno){const t=turmaByCod(cod);let alunos=data.formandos.filter(f=>f.turma===cod);if(turno)alunos=alunos.filter(f=>(f.horario||f.turno||"")===turno);if(!alunos.length){toast("Turma sem formandos"+(turno?" neste turno":""));return;}const admin=role==="admin";const keys=["Nome","Telefone","E-mail","Curso","Turno"].concat(admin?["Em dívida (Kz)"]:[]);
  const linhas=alunos.map(f=>{const p=payOf(f.cod);const arr=[f.nome,f.tel,f.email,f.curso,f.turno||""];if(admin)arr.push(p?divida(p):0);return arr;});
  const csv=[keys.join(",")].concat(linhas.map(r=>r.map(x=>`"${String(x==null?"":x).replace(/"/g,'""')}"`).join(","))).join("\n");
@@ -2625,10 +2681,14 @@ function feedbackModalHTML(){if(!feedbackAlvo)return"";var t=turmaByCod(feedback
 let presQ="",presEd="",presTurno="";
 function vPresencial(){var q=presQ.toLowerCase(),qd=q.replace(/\D/g,"");
  var turmasP=turmasVisiveis().filter(function(t){return (t.modalidade||"Presencial")!=="Online"&&(!presEd||t.cod===presEd);}).slice().sort(function(a,b){return (+b.ed||0)-(+a.ed||0);});
- var blocos=turmasP.map(function(t){var als=data.formandos.filter(function(f){return f.turma===t.cod&&f.estado!=="Transferido p/ Online";});if(presTurno)als=als.filter(function(f){return (f.horario||f.turno||"")===presTurno;});if(q)als=als.filter(function(f){return (f.nome||"").toLowerCase().includes(q)||(qd&&(f.tel||"").replace(/\D/g,"").includes(qd));});return {t:t,als:als};}).filter(function(x){return (!q&&!presTurno)||x.als.length;});
+ /* L53-1: o total "X aluno(s) no total" no cabeçalho tem de ser sempre a MESMA contagem-base usada na tabela
+    "Inscritos" logo abaixo (turnoOcupacaoHTML → inscritosDe), senão os dois números divergem sempre que houver
+    pesquisa/filtro de turno activo (a tabela de alunos fica mais curta, mas a ocupação real da turma não muda).
+    Por isso guardamos aqui o total REAL (sem filtro) à parte da lista filtrada que aparece na tabela. */
+ var blocos=turmasP.map(function(t){var alsTotal=data.formandos.filter(function(f){return f.turma===t.cod&&f.estado!=="Transferido p/ Online";});var als=alsTotal;if(presTurno)als=als.filter(function(f){return (f.horario||f.turno||"")===presTurno;});if(q)als=als.filter(function(f){return (f.nome||"").toLowerCase().includes(q)||(qd&&(f.tel||"").replace(/\D/g,"").includes(qd));});return {t:t,als:als,totalReal:alsTotal.length};}).filter(function(x){return (!q&&!presTurno)||x.als.length;});
  return `${pdsPickerFHTML()}${transferParaOnlineModalHTML()}${transferAlunoModalHTML()}<div class="sec"><h2>Turmas presenciais</h2><div class="muted">Pesquisa por nome ou número e gera os cards da turma.</div>
   <div class="flex" style="gap:8px;flex-wrap:wrap"><input id="q_pres" class="search" style="margin:0" placeholder="Procurar por nome ou nº…" value="${esc(presQ)}" oninput="presQ=this.value;refocusSearch('q_pres');render()"><select onchange="presEd=this.value;render()" style="width:auto"><option value="">Todas as turmas</option>${turmasVisiveis().filter(function(t){return (t.modalidade||"Presencial")!=="Online";}).slice().sort(function(a,b){return (+b.ed||0)-(+a.ed||0);}).map(function(t){return '<option value="'+esc(t.cod)+'" '+(presEd===t.cod?"selected":"")+'>'+esc(t.ed)+'ª — '+esc(t.curso||"")+'</option>';}).join("")}</select><select onchange="presTurno=this.value;render()" style="width:auto">${turnoOptsHTML(presTurno,presEd)}</select></div></div>
-  ${blocos.map(function(x){var t=x.t;return '<div class="sec"><div class="flex" style="flex-wrap:wrap;gap:8px"><div><h2 style="margin:0">'+esc(t.ed)+'ª Edição — '+esc(t.curso||"")+'</h2><div class="muted">Formador: '+esc(t.resp||"—")+' · '+x.als.length+' aluno(s) no total</div></div><div class="spacer"></div><button class="btn-o" onclick="gerarCards(\''+esc(t.cod)+'\')" title="Só quem já pagou">🖨 Cards</button><button class="btn-o" onclick="gerarCardsTodos(\''+esc(t.cod)+'\')" title="Inclui também quem ainda não pagou — pede código da Gestão">🖨 Cards (todos)</button>'+(podeExportar()?'<button class="btn-o" onclick="exportTurma(\''+esc(t.cod)+'\')">Exportar</button>':'')+'</div>'+turnoOcupacaoHTML(t)+'<table style="margin-top:8px"><thead><tr><th>Nome</th><th>Telefone</th><th>Turno</th><th>Pagamento</th><th></th></tr></thead><tbody>'+x.als.map(function(f){var p=payOf(f.cod);var d=p?divida(p):0;return '<tr><td>'+esc(f.nome)+'</td><td>'+esc(f.tel||"")+'</td><td>'+esc(f.horario||f.turno||"—")+'</td><td>'+(d>0?'<span class="pill p-verm">Deve '+kz(d)+'</span>':'<span class="pill p-verde">Pago</span>')+'</td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:3px 9px" onclick="fFicha=\''+esc(f.cod)+'\';show(\'formandos\')">Ficha</button>'+((role==="admin"||podeEditar())?'<button class="btn-o" style="padding:3px 9px" onclick="transferAluno(\''+esc(f.cod)+'\')">Transferir</button><button class="btn-o" style="padding:3px 9px" onclick="agendarPdsF(\''+esc(f.cod)+'\')">Marcar PDS</button><button class="btn-o" style="padding:3px 9px" onclick="abrirTransferParaOnline(\''+esc(f.cod)+'\')">→ Online</button>':'')+((d>0&&podeEditar())?'<button class="btn-o" style="padding:3px 9px" onclick="irPagar(\''+esc(f.cod)+'\')">Pagar</button>':'')+'<button class="btn-g" style="padding:3px 9px" onclick="setChamada(\''+esc(f.nome)+'\',\''+esc(f.tel||"")+'\',\'Formando\')">☎</button>'+rowActs('formandos',data.formandos.indexOf(f))+'</td></tr>';}).join("")+'</tbody></table></div>';}).join("")||'<div class="sec"><div class="muted">Sem turmas presenciais'+(q?' com esse nome/nº':'')+'.</div></div>'}`;}
+  ${blocos.map(function(x){var t=x.t;return '<div class="sec"><div class="flex" style="flex-wrap:wrap;gap:8px"><div><h2 style="margin:0">'+esc(t.ed)+'ª Edição — '+esc(t.curso||"")+'</h2><div class="muted">Formador: '+esc(t.resp||"—")+' · '+x.totalReal+' aluno(s) no total'+(x.als.length!==x.totalReal?' <span class="pill p-cinza" title="Pesquisa ou filtro de turno activo — a lista abaixo não mostra todos">(a mostrar '+x.als.length+')</span>':'')+'</div></div><div class="spacer"></div><button class="btn-o" onclick="gerarCards(\''+esc(t.cod)+'\')" title="Só quem já pagou">🖨 Cards</button><button class="btn-o" onclick="gerarCardsTodos(\''+esc(t.cod)+'\')" title="Inclui também quem ainda não pagou — pede código da Gestão">🖨 Cards (todos)</button>'+(podeExportar()?'<button class="btn-o" onclick="exportTurma(\''+esc(t.cod)+'\')">Exportar</button>':'')+'</div>'+turnoOcupacaoHTML(t)+'<table style="margin-top:8px"><thead><tr><th>Nome</th><th>Telefone</th><th>Turno</th><th>Pagamento</th><th></th></tr></thead><tbody>'+x.als.map(function(f){var p=payOf(f.cod);var d=p?divida(p):0;return '<tr><td>'+esc(f.nome)+'</td><td>'+esc(f.tel||"")+'</td><td>'+esc(f.horario||f.turno||"—")+'</td><td>'+(d>0?'<span class="pill p-verm">Deve '+kz(d)+'</span>':'<span class="pill p-verde">Pago</span>')+'</td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:3px 9px" onclick="fFicha=\''+esc(f.cod)+'\';show(\'formandos\')">Ficha</button>'+((role==="admin"||podeEditar())?'<button class="btn-o" style="padding:3px 9px" onclick="transferAluno(\''+esc(f.cod)+'\')">Transferir</button><button class="btn-o" style="padding:3px 9px" onclick="agendarPdsF(\''+esc(f.cod)+'\')">Marcar PDS</button><button class="btn-o" style="padding:3px 9px" onclick="abrirTransferParaOnline(\''+esc(f.cod)+'\')">→ Online</button>':'')+((d>0&&podeEditar())?'<button class="btn-o" style="padding:3px 9px" onclick="irPagar(\''+esc(f.cod)+'\')">Pagar</button>':'')+'<button class="btn-g" style="padding:3px 9px" onclick="setChamada(\''+esc(f.nome)+'\',\''+esc(f.tel||"")+'\',\'Formando\')">☎</button>'+rowActs('formandos',data.formandos.indexOf(f))+'</td></tr>';}).join("")+'</tbody></table></div>';}).join("")||'<div class="sec"><div class="muted">Sem turmas presenciais'+(q?' com esse nome/nº':'')+'.</div></div>'}`;}
 /* COMPROVATIVO */
 function vComprovativo(){return `<div class="sec noprint"><h2>Comprovativo de inscrição</h2><div class="muted">Pesquisa o formando por nome ou telefone, confirma os dados e exporta em PDF. O texto de WhatsApp já vem pronto (o PDF anexas tu na partilha).</div>
   <div class="formgrid">
@@ -2749,9 +2809,26 @@ function _fbInscRef(){return (typeof firebase!=="undefined"&&_fbRef)?firebase.da
 let INSCR=null;let _inscModal=null;
 let _inscWatching=false;
 function carregarInscricoes(){INSCR="load";var ref=_fbInscRef();if(!ref){INSCR=[];return;}
- function apply(s){var v=s.val()||{};INSCR=Object.keys(v).map(function(k){var o=Object.assign({},v[k]);o._key=k;return o;}).sort(function(a,b){return(b.quando||"").localeCompare(a.quando||"")});autoSeguimentoInscricoes();if(current==="inscricoes"||current==="quizleads"){var ae=document.activeElement;if(!(ae&&/^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName||"")))render();}}
+ function apply(s){var v=s.val()||{};INSCR=Object.keys(v).map(function(k){var o=Object.assign({},v[k]);o._key=k;return o;}).sort(function(a,b){return(b.quando||"").localeCompare(a.quando||"")});autoSeguimentoInscricoes();if(current==="inscricoes"||current==="quizleads"||current==="formandos"){var ae=document.activeElement;if(!(ae&&/^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName||"")))render();}}
  ref.once("value").then(apply).catch(function(){INSCR=[];render();});
  if(!_inscWatching){_inscWatching=true;try{ref.on("value",apply);}catch(e){}}}
+/* L54-1 — ao pesquisar em Formandos, avisar quando a pessoa já preencheu a ficha na landing mas ainda não foi
+   confirmada numa turma. Cruza por TELEFONE (mesma chave usada em todo o sistema para detectar duplicados),
+   nunca por nome, para não dar falsos positivos com homónimos. Uma inscrição só desaparece do aviso quando
+   passa a existir um formando com esse telefone (ou seja, assim que for confirmada). */
+function inscricoesPendentesParaBusca(q,dq){
+ if(!Array.isArray(INSCR)||!INSCR.length)return[];
+ var vistos={};
+ return INSCR.map(function(r,i){return {r:r,i:i};}).filter(function(x){
+  var r=x.r;if(!r.tel)return false;
+  var bate=(!q)||((r.nome||"").toLowerCase().includes(q))||(dq&&(r.tel||"").replace(/\D/g,"").includes(dq));
+  if(!bate)return false;
+  var nt=normTel(r.tel);if(!nt)return false;
+  if((data.formandos||[]).some(function(f){return normTel(f.tel)===nt;}))return false;
+  return true;
+ }).sort(function(a,b){return (b.r.quando||"").localeCompare(a.r.quando||"");})
+  .filter(function(x){var nt=normTel(x.r.tel);if(vistos[nt])return false;vistos[nt]=true;return true;});
+}
 /* HVCO/seguimento automático: assim que chega uma inscrição do Quiz (ou da landing), entra logo como lead —
    sem esperar por um clique manual — para ninguém ficar esquecido no funil (ex.: 7 dias sem resposta). */
 function autoSeguimentoInscricoes(){if(!Array.isArray(INSCR))return;if(!Array.isArray(data.autoLeadVistos))data.autoLeadVistos=[];var novo=false;
@@ -3010,17 +3087,41 @@ function aniversariosProximos(dias){const out=[];const hoje=new Date();hoje.setH
 let rhLogQ="";function setRhLogQ(v){rhLogQ=v;render();}
 /* L51-1 — comparar "quem registou" com "responsável pela venda" por turma, para confirmar se a comissão
    está a ir para a pessoa certa (só a gestão vê isto). */
-let rhTurmaSel="";
-function inscritosTurmaLista(cod){if(!cod)return[];return data.formandos.filter(function(f){return f.turma===cod;}).map(function(f){var p=payOf(f.cod);return{cod:f.cod,nome:f.nome||f.cod,criadoPor:f.criadoPor||"—",vendedor:f.vendedor||"—",pago:p?(+p.pago||0):0,divergente:(f.criadoPor||"")!==(f.vendedor||"")};}).sort(function(a,b){return (a.nome||"").localeCompare(b.nome||"");});}
-function exportarInscritosTurma(){var cod=rhTurmaSel;if(!cod){toast("Escolhe uma edição primeiro");return;}if(typeof XLSX==="undefined"){toast("Biblioteca Excel ainda a carregar — tenta daqui a instantes");return;}var t=turmaByCod(cod);var rows=inscritosTurmaLista(cod).map(function(x){return{Aluno:x.nome,"Registado por":x.criadoPor,"Responsável da venda":x.vendedor,"Valor pago (Kz)":x.pago};});if(!rows.length){toast("Sem inscritos nesta edição");return;}var wb=XLSX.utils.book_new();var ws=XLSX.utils.json_to_sheet(rows);XLSX.utils.book_append_sheet(wb,ws,"Inscritos");XLSX.writeFile(wb,"Inscritos-"+(t?(t.ed+"a-"+(t.curso||"")):cod)+".xlsx");toast("Excel exportado");}
-function vInscritosTurmaHTML(){if(role!=="admin")return"";var turmas=data.turmas.slice().sort(function(a,b){return (+b.ed||0)-(+a.ed||0);});var lst=inscritosTurmaLista(rhTurmaSel);var divs=lst.filter(function(x){return x.divergente;}).length;
+/* L55-1 — multi-edição + filtro por colaborador (Responsável da venda, o campo que gera comissão) na vista
+   "Inscritos por turma", com totais de bónus/comissão e exportação em Excel + PDF. */
+let rhTurmasSel=[];let rhColabSel="";
+function toggleRhTurma(cod){var i=rhTurmasSel.indexOf(cod);if(i>=0)rhTurmasSel.splice(i,1);else rhTurmasSel.push(cod);render();}
+function inscritosTurmaLista(cods,colab){if(!cods||!cods.length)return[];var set={};cods.forEach(function(c){set[c]=1;});
+ return data.formandos.filter(function(f){return set[f.turma];}).filter(function(f){return !colab||f.vendedor===colab;}).map(function(f){var p=payOf(f.cod);var t=turmaByCod(f.turma);return{cod:f.cod,nome:f.nome||f.cod,criadoPor:f.criadoPor||"—",vendedor:f.vendedor||"—",pago:p?(+p.pago||0):0,com:comissaoDe(f.cod),turmaLabel:t?(t.ed+"ª — "+(t.curso||"")):(f.turma||"—"),divergente:(f.criadoPor||"")!==(f.vendedor||"")};}).sort(function(a,b){return (a.nome||"").localeCompare(b.nome||"");});}
+function exportarInscritosTurma(){if(!rhTurmasSel.length){toast("Escolhe pelo menos uma edição primeiro");return;}if(typeof XLSX==="undefined"){toast("Biblioteca Excel ainda a carregar — tenta daqui a instantes");return;}
+ var lst=inscritosTurmaLista(rhTurmasSel,rhColabSel);if(!lst.length){toast("Sem inscritos");return;}
+ var rows=lst.map(function(x){var o={Aluno:x.nome,Edição:x.turmaLabel,"Registado por":x.criadoPor,"Responsável da venda":x.vendedor,"Valor pago (Kz)":x.pago};if(rhColabSel)o["Comissão (Kz)"]=x.com;return o;});
+ var wb=XLSX.utils.book_new();var ws=XLSX.utils.json_to_sheet(rows);XLSX.utils.book_append_sheet(wb,ws,"Inscritos");XLSX.writeFile(wb,"Inscritos"+(rhColabSel?"-"+rhColabSel:"")+".xlsx");toast("Excel exportado");}
+function exportarInscritosTurmaPDF(){if(!rhTurmasSel.length){toast("Escolhe pelo menos uma edição primeiro");return;}
+ var lst=inscritosTurmaLista(rhTurmasSel,rhColabSel);if(!lst.length){toast("Sem inscritos para exportar");return;}
+ var totalPago=lst.reduce(function(a,x){return a+x.pago;},0);var totalCom=lst.reduce(function(a,x){return a+x.com;},0);
+ var titEd=rhTurmasSel.map(function(c){var t=turmaByCod(c);return t?(t.ed+"ª"):c;}).join(", ");
+ var w=window.open("","_blank");if(!w){toast("Permite pop-ups para gerar o PDF");return;}
+ w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Inscritos — '+esc(titEd)+'</title><style>@page{size:A4;margin:14mm}body{font-family:Segoe UI,Arial,sans-serif;color:#1a2233;margin:0}h1{color:#1F3864;font-size:18px;margin:0 0 2px}.sub{color:#777;font-size:12px;margin-bottom:14px}table{width:100%;border-collapse:collapse;font-size:12.5px}th,td{text-align:left;padding:6px;border-bottom:1px solid #eef1f6}th{color:#667;font-size:10.5px;text-transform:uppercase}.tot{margin-top:10px;font-size:13px}</style></head><body>'
+  +_relLogo()+'<h1>Inscritos por turma — '+esc(titEd)+'</h1><div class="sub">'+(rhColabSel?"Colaborador: "+esc(rhColabSel)+" · ":"")+"Gerado em "+new Date().toLocaleDateString("pt-PT")+'</div>'
+  +'<table><thead><tr><th>Aluno</th><th>Edição</th><th>Registado por</th><th>Responsável da venda</th><th>Valor pago</th>'+(rhColabSel?'<th>Comissão</th>':'')+'</tr></thead><tbody>'
+  +lst.map(function(x){return '<tr><td>'+esc(x.nome)+'</td><td>'+esc(x.turmaLabel)+'</td><td>'+esc(x.criadoPor)+'</td><td>'+esc(x.vendedor)+'</td><td>'+kz(x.pago)+'</td>'+(rhColabSel?'<td>'+kz(x.com)+'</td>':'')+'</tr>';}).join("")
+  +'</tbody></table><div class="tot">Total pago pelos alunos: <b>'+kz(totalPago)+'</b>'+(rhColabSel?' · Bónus/comissão de '+esc(rhColabSel)+': <b>'+kz(totalCom)+'</b>':'')+'</div>'
+  +'<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},300);}</scr'+'ipt></body></html>');
+ w.document.close();toast("PDF gerado — usa Guardar como PDF");}
+function vInscritosTurmaHTML(){if(role!=="admin")return"";var turmas=data.turmas.slice().sort(function(a,b){return (+b.ed||0)-(+a.ed||0);});var lst=inscritosTurmaLista(rhTurmasSel,rhColabSel);var divs=lst.filter(function(x){return x.divergente;}).length;
+ var totalPago=lst.reduce(function(a,x){return a+x.pago;},0);var totalCom=lst.reduce(function(a,x){return a+x.com;},0);
  return '<details class="sec accdet"><summary>🔍 Inscritos por turma — Registado por vs. Responsável da venda</summary>'
   +'<div class="muted">Confirma se quem registou o aluno é a mesma pessoa que aparece como responsável pela venda — é este campo que conta para a comissão. Linhas destacadas têm nomes diferentes.</div>'
-  +'<div class="formgrid" style="margin-top:8px"><div><label>Edição</label><select onchange="rhTurmaSel=this.value;render()"><option value="">— escolher —</option>'+turmas.map(function(t){return '<option value="'+esc(t.cod)+'" '+(t.cod===rhTurmaSel?"selected":"")+'>'+esc(t.ed)+'ª — '+esc(t.curso||"")+'</option>';}).join("")+'</select></div></div>'
-  +(rhTurmaSel?('<div class="flex" style="gap:8px;align-items:center;margin:8px 0"><span class="pill '+(divs?'p-verm':'p-verde')+'">'+(divs?divs+' divergência(s)':'sem divergências')+'</span><div class="spacer"></div><button class="btn-o" style="padding:4px 10px" onclick="exportarInscritosTurma()">Exportar Excel</button></div>'
-  +'<table><thead><tr><th>Aluno</th><th>Registado por</th><th>Responsável da venda</th><th style="text-align:right">Valor pago</th></tr></thead><tbody>'
-  +(lst.map(function(x){return '<tr'+(x.divergente?' style="background:#fff7e6"':'')+'><td>'+esc(x.nome)+'</td><td>'+esc(x.criadoPor)+'</td><td>'+esc(x.vendedor)+(x.divergente?' <span class="pill p-dour" title="Diferente de quem registou">⚠ diferente</span>':'')+'</td><td style="text-align:right">'+kz(x.pago)+'</td></tr>';}).join("")||'<tr><td colspan="4" class="muted">Sem inscritos nesta edição.</td></tr>')
-  +'</tbody></table>'):'<div class="muted" style="margin-top:8px">Escolhe uma edição para ver a lista.</div>')
+  +'<div class="muted" style="font-weight:600;margin-top:10px">Edições (escolhe uma ou mais)</div>'
+  +'<div class="flex" style="gap:6px;flex-wrap:wrap;margin:4px 0 8px">'+turmas.map(function(t){var on=rhTurmasSel.indexOf(t.cod)>=0;return '<button class="btn-'+(on?"p":"o")+'" style="padding:4px 10px;font-size:12.5px" onclick="toggleRhTurma(\''+t.cod+'\')">'+esc(t.ed)+'ª — '+esc(t.curso||"")+'</button>';}).join("")+'</div>'
+  +'<div class="formgrid"><div><label>Colaborador (Responsável da venda)</label><select onchange="rhColabSel=this.value;render()"><option value="">— Todos —</option>'+todosColaboradores().map(function(n){return '<option '+(n===rhColabSel?"selected":"")+'>'+esc(n)+'</option>';}).join("")+'</select></div></div>'
+  +(rhTurmasSel.length?('<div class="flex" style="gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap"><span class="pill '+(divs?'p-verm':'p-verde')+'">'+(divs?divs+' divergência(s)':'sem divergências')+'</span>'
+   +(rhColabSel?('<span class="pill p-azul">Bónus/comissão de '+esc(rhColabSel)+': '+kz(totalCom)+'</span><span class="pill p-cinza">Total pago pelos alunos: '+kz(totalPago)+'</span>'):'')
+   +'<div class="spacer"></div><button class="btn-o" style="padding:4px 10px" onclick="exportarInscritosTurma()">Exportar Excel</button><button class="btn-o" style="padding:4px 10px" onclick="exportarInscritosTurmaPDF()">Exportar PDF</button></div>'
+  +'<table><thead><tr><th>Aluno</th>'+(rhTurmasSel.length>1?'<th>Edição</th>':'')+'<th>Registado por</th><th>Responsável da venda</th><th style="text-align:right">Valor pago</th>'+(rhColabSel?'<th style="text-align:right">Comissão</th>':'')+'</tr></thead><tbody>'
+  +(lst.map(function(x){return '<tr'+(x.divergente?' style="background:#fff7e6"':'')+'><td>'+esc(x.nome)+'</td>'+(rhTurmasSel.length>1?'<td>'+esc(x.turmaLabel)+'</td>':'')+'<td>'+esc(x.criadoPor)+'</td><td>'+esc(x.vendedor)+(x.divergente?' <span class="pill p-dour" title="Diferente de quem registou">⚠ diferente</span>':'')+'</td><td style="text-align:right">'+kz(x.pago)+'</td>'+(rhColabSel?'<td style="text-align:right">'+kz(x.com)+'</td>':'')+'</tr>';}).join("")||'<tr><td colspan="6" class="muted">Sem inscritos.</td></tr>')
+  +'</tbody></table>'):'<div class="muted" style="margin-top:8px">Escolhe pelo menos uma edição para ver a lista.</div>')
   +'</details>';}
 let rhMes="";
 function vRH(){const ppl=pessoasKA();const mes=rhMes||new Date().toISOString().slice(0,7);const P=pagosMes(mes);const hojeDia=new Date().getDate();const autorizado=rhAutorizado(mes);const mesRefCom=comissaoMesRef(mes);let tSal=0,tCom=0,tSub=0,tDesc=0,tPago=0;
