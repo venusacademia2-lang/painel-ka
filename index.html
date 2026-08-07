@@ -691,7 +691,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v31.3";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v31.4";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -2210,7 +2210,7 @@ function vB2B(){
 
 /* CHAMADAS */
 let cSearch="";let chamadaAlvo=null;let chamFiltroColab="";let chamHistColab="";let mesTrafego="";
-function normTel(t){return (t||"").replace(/\D/g,"");}
+function normTel(t){var d=(t||"").replace(/\D/g,"");if(d.length===12&&d.slice(0,3)==="244")d=d.slice(3);return d;}
 function chamadasDoLead(l){var nt=normTel(l.tel);return data.chamadas.filter(function(c){return nt?normTel(c.tel)===nt:(c.nome||"")===(l.nome||"");}).sort(function(a,b){return (b.data||"").localeCompare(a.data||"");});}
 let carteiraGestora="";
 function cartCard(l,i){const hist=chamadasDoLead(l);return `<div class="leadcard"><b>${esc(l.nome)}</b> ${esc(l.tel||"")} · ${esc(l.canal||"")}${l.fonte?' · <span class="pill p-azul" title="Fonte de tráfego">'+esc(l.fonte)+'</span>':''}<br>${esc(l.curso||"")}
@@ -2992,7 +2992,12 @@ function arquivarPessoa(nome){if(role!=="admin"){toast("Só a gestão");return;}
 function desarquivarPessoa(nome){var a=arquivados();var k=a.indexOf(nome);if(k>=0)a.splice(k,1);persist();toast(nome+" reposto");render();}
 function pessoasKA(){const s=new Set(Object.keys(data.salarios||{}));data.formandos.forEach(f=>{if(f.vendedor)s.add(f.vendedor)});data.turmas.forEach(t=>{if(t.resp)s.add(t.resp);if(t.assistente)s.add(t.assistente)});data.online.forEach(o=>{if(o.formador)s.add(o.formador)});return[...s].filter(Boolean).filter(n=>n!=="Gestão").filter(n=>!estaArquivado(n))}
 /* Campo "Responsável": vem pré-preenchido com quem está em login, mas continua editável (datalist com todos os perfis, para atribuir a outra pessoa se for preciso). */
-function respInputHTML(id,valorAtual,placeholder){const v=(valorAtual!==undefined&&valorAtual!==null&&valorAtual!=="")?valorAtual:((currentUser&&currentUser.nome)||"");const pessoas=[...new Set([...(data.perfis||[]).map(p=>p.nome),...pessoasKA()])].filter(Boolean).filter(n=>!estaArquivado(n));return `<input id="${id}" list="${id}_dl" value="${esc(v)}" placeholder="${esc(placeholder||"Nome do responsável")}"><datalist id="${id}_dl">${pessoas.map(n=>`<option value="${esc(n)}">`).join("")}</datalist>`;}
+function respInputHTML(id,valorAtual,placeholder){const v=(valorAtual!==undefined&&valorAtual!==null&&valorAtual!=="")?valorAtual:((currentUser&&currentUser.nome)||"");const pessoas=[...new Set([...(data.perfis||[]).map(p=>p.nome),...pessoasKA()])].filter(Boolean).filter(n=>!estaArquivado(n));
+ /* L59-2: deixa de ser texto livre (dava para escrever nomes parecidos mas errados — o mesmo problema do L46-2).
+    Passa a <select> só com quem já existe no sistema. Se o valor actual (dados antigos) não estiver na lista
+    — ex.: pessoa entretanto arquivada/renomeada — mantém-se como opção para não apagar dados existentes. */
+ var opts=pessoas.slice();if(v&&opts.indexOf(v)<0)opts.unshift(v);
+ return `<select id="${id}">${!v?'<option value="">'+esc(placeholder||"— escolher —")+'</option>':''}${opts.map(n=>`<option value="${esc(n)}" ${n===v?"selected":""}>${esc(n)}</option>`).join("")}</select>`;}
 function comissaoPessoa(nome){if(!nome||nome==="Gestão")return 0;return data.formandos.filter(f=>f.vendedor===nome).reduce((s,f)=>s+comissaoDe(f.cod),0)}
 /* L20-2: detalhe de quem justifica a comissão de cada pessoa — nome, telefone, modalidade e
    edição de cada aluno que já pagou totalmente (única fonte de comissão), para a gestão poder
