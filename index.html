@@ -691,7 +691,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v31.2";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v31.3";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -2027,7 +2027,7 @@ function vPagamentos(){
  return `<details class="sec accdet" ${payPre?"open":""}><summary>Registar pagamento em prestações</summary><div class="muted">Esta secção é para os alunos que pagam a PRESTAÇÕES. Escolhe o formando pelo número de telefone (o nome ajuda a confirmar), lança o valor recebido — soma ao já pago — e marca se o comprovativo chegou (a imagem fica no WhatsApp).</div>
   <div class="formgrid">
    <div><label>Formando (por telefone)</label><select id="p_cod">${data.formandos.slice().sort((a,b)=>(a.tel||"").localeCompare(b.tel||"")).map(f=>`<option value="${esc(f.cod)}" ${payPre===f.cod?"selected":""}>${esc(f.tel||"sem nº")} — ${esc(f.nome)}</option>`).join("")}</select></div>
-   <div><label>Valor recebido (Kz)</label><input id="p_val" type="number" placeholder="25000"></div>
+   <div><label>Valor recebido (Kz)</label><input id="p_val" type="number"></div>
    <div><label>Data do pagamento</label><input id="p_data" type="date"></div>
    <div><label>Comprovativo recebido?</label><select id="p_comp"><option>Sim</option><option>Não</option></select></div>
    <div><label>Foto do comprovativo (opcional)</label><input id="p_compimg" type="file" accept="image/*" style="display:none" onchange="onPayComp(this)"><div class="file" onclick="document.getElementById('p_compimg').click()" id="p_complabel" style="border:1.5px dashed var(--linha);border-radius:9px;padding:9px;text-align:center;color:#7b869c;cursor:pointer;font-size:13px">📎 Carregar comprovativo</div></div>
