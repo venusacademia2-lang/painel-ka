@@ -634,6 +634,11 @@ function reOnHorarioChange(){const selT=document.getElementById('re_turma');cons
  ["periodo","gestora","formador"].forEach(function(k){const inp=document.querySelector('.re_f[data-k="'+k+'"]');if(inp)inp.value=info[k]||"";});}
 function rowEditModalHTML(){if(!_rowEdit)return"";const o=(data[_rowEdit.arr]||[])[_rowEdit.i];if(!o)return"";const isForm=_rowEdit.arr==="formandos";
  const keys=Object.keys(o).filter(k=>EDIT_SKIP.indexOf(k)<0&&(typeof o[k]==="string"||typeof o[k]==="number")&&!(isForm&&k==="turno"));
+ /* L66-1 — "vendedor" só aparecia se a propriedade já existisse no registo. Vendas online antigas
+    (criadas antes de o campo ser obrigatório) não têm essa chave de todo, por isso Object.keys(o)
+    nunca a listava e o dropdown de "Responsável" desaparecia por completo, em vez de aparecer vazio
+    a pedir para escolher — como aconteceu com a Neide Vieira. Força sempre a chave a entrar na lista. */
+ if((isForm||_rowEdit.arr==="online")&&keys.indexOf("vendedor")<0)keys.push("vendedor");
  const campos=keys.map(function(k){
   if(isForm&&k==="turma")return '<div style="margin-bottom:8px"><label>'+esc(EDIT_LABELS[k]||k)+'</label><select class="re_f" data-k="turma" id="re_turma" onchange="reOnTurmaChange()"><option value="">— sem turma —</option>'+data.turmas.map(function(t){return '<option value="'+esc(t.cod)+'" '+(t.cod===o.turma?"selected":"")+'>'+esc(t.ed)+'ª Ed. — '+esc(t.curso||"")+'</option>';}).join("")+'</select></div>';
   if(isForm&&k==="horario")return '<div style="margin-bottom:8px"><label>'+esc(EDIT_LABELS[k]||k)+' (turno)</label><select class="re_f" data-k="horario" id="re_horario" onchange="reOnHorarioChange()">'+turnosDropdownOptions(o.turma,o.horario)+'</select></div>';
@@ -702,7 +707,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v33.4";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v33.5";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
