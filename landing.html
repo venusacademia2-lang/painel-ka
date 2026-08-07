@@ -420,12 +420,33 @@ const pcEl=document.querySelector('input[name="i_pc"]:checked');
 const online=val("i_mod").toLowerCase().indexOf("online")>=0;
 const rec={quando:new Date().toISOString(),tipo:(COMP_B64?"Pagamento":"Interesse"),nome:nome,tel:tel,email:val("i_email"),bi:val("i_bi"),nascimento:val("i_nasc"),temComputador:pcEl?pcEl.value:"",curso:val("i_curso"),modalidade:val("i_mod"),periodo:(online?"Combinado com o formador(a)":val("i_periodo")),horario:(online?"":(/s[áa]bado/i.test(val("i_periodo"))?val("i_horario"):(/semana/i.test(val("i_periodo"))?"9h às 11h":""))),turma:(TURMA&&TURMA.cod)||"",edicao:(TURMA&&TURMA.ed)||"",valorPago:numVal("i_valor"),expectativas:val("i_exp"),comprovativo:COMP_B64||"",viaWhatsapp:!COMP_B64,estado:"Nova",fonte:(typeof FONTE_TRAFEGO!=="undefined"?FONTE_TRAFEGO:""),origem:"Landing-v2"};
 const btn=document.getElementById("i_btn");btn.textContent="A enviar…";btn.disabled=true;
-function done(){document.getElementById("formfields").style.display="none";const ok=document.getElementById("okbox");ok.style.display="block";
-var msgVentura="Nova inscrição — "+nome+" — "+(rec.curso||"")+" ("+(rec.modalidade||"")+"). Contacto: "+tel;
-var linkVentura=waLink(msgVentura);
+/* L60-1: sucesso e falha deixam de mostrar a mesma mensagem. Em falha, a mensagem de WhatsApp
+   passa a levar TODOS os dados da inscrição (não só nome/curso), para a equipa poder registar
+   à mão se a gravação continuar a falhar — ninguém pode ficar convencido que se inscreveu sem
+   o registo ter chegado ao painel. */
+function resumoWA(falhou){
+ var l=[(falhou?"⚠️ FALHA AO GRAVAR — registar à mão":"Nova inscrição")+" — "+nome];
+ l.push("Contacto: "+tel);
+ if(rec.email)l.push("E-mail: "+rec.email);
+ l.push("Formação: "+(rec.curso||"—")+" ("+(rec.modalidade||"—")+")");
+ if(rec.periodo)l.push("Período: "+rec.periodo+(rec.horario?" · "+rec.horario:""));
+ if(rec.bi)l.push("BI: "+rec.bi);
+ if(rec.nascimento)l.push("Nascimento: "+rec.nascimento);
+ if(rec.valorPago)l.push("Valor pago: "+rec.valorPago+" Kz");
+ if(rec.expectativas)l.push("Espera aprender: "+rec.expectativas);
+ if(rec.fonte)l.push("Fonte: "+rec.fonte);
+ return l.join("\n");
+}
+function doneOk(){document.getElementById("formfields").style.display="none";const ok=document.getElementById("okbox");ok.style.display="block";
+var linkVentura=waLink(resumoWA(false));
 try{window.open(linkVentura,"_blank");}catch(e){}
 ok.innerHTML='<div class="ok"><div style="font-size:34px">🎉</div><h3 style="color:#176b39;margin:6px 0">Inscrição concluída!</h3><p>Obrigado, '+esc(nome)+'. A nossa equipa entra em contacto contigo pelo WhatsApp para confirmar tudo.</p><a class="wa-btn" target="_blank" href="'+esc(linkVentura)+'">Notificar a nossa equipa pelo WhatsApp</a></div>';}
-if(_db){_db.ref("inscricoes").push(rec).then(done).catch(done);}else{done();}
+function doneErro(){btn.textContent="Tentar novamente";btn.disabled=false;
+var linkVentura=waLink(resumoWA(true));
+try{window.open(linkVentura,"_blank");}catch(e){}
+alert("Não conseguimos guardar a tua inscrição agora (falha de ligação). Já abrimos o WhatsApp com os teus dados para a nossa equipa registar à mão — ou tenta enviar de novo daqui a pouco.");
+}
+if(_db){_db.ref("inscricoes").push(rec).then(doneOk).catch(doneErro);}else{doneErro();}
 }
 
 function enviarDuvida(){

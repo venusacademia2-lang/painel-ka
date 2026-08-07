@@ -188,10 +188,14 @@ function submeter(){
  var p=pontos(),niv=nivelDe(p);
  var rec={quando:new Date().toISOString(),tipo:"Quiz Excel",nome:nome,tel:tel,email:email,nivel:niv,pontos:p,de20:Math.round(p/(maxPontos()||1)*20),estado:"Nova",origem:"Quiz",fonte:detectarFonte(),curso:"Excel (do básico ao avançado)"};
  var btn=document.getElementById("subbtn");btn.textContent="A calcular…";btn.disabled=true;
- function done(){mostrarResultado(nome,p,niv);}
- if(_db){_db.ref("inscricoes").push(rec).then(done).catch(done);}else{done();}
+ /* L60-2: o resultado é calculado no browser, por isso continua a aparecer mesmo se a gravação falhar —
+    mas já não fingimos que o lead ficou guardado. Se falhar, avisamos e abrimos logo o WhatsApp com os
+    dados (nome/contacto), para a equipa não perder a pessoa mesmo que o Firebase tenha falhado. */
+ function doneOk(){mostrarResultado(nome,tel,email,p,niv,false);}
+ function doneErro(){mostrarResultado(nome,tel,email,p,niv,true);}
+ if(_db){_db.ref("inscricoes").push(rec).then(doneOk).catch(doneErro);}else{doneErro();}
 }
-function mostrarResultado(nome,p,niv){
+function mostrarResultado(nome,tel,email,p,niv,falhouGravar){
  document.getElementById("formcard").classList.add("hide");
  var pct=Math.round(p/(maxPontos()||1)*100);
  var planos={
@@ -200,11 +204,13 @@ function mostrarResultado(nome,p,niv){
   "Avançado":{cor:"#1E7B45",txt:"Muito bom! Já tens uma base forte. O próximo nível é transformar isto em resultados que se veem — e num certificado que comprova.",lista:["Automatização e eficiência","Power BI para dados que decidem negócio","Certificado que abre portas"]}
  };
  var pl=planos[niv];
- var msg="Olá, sou "+nome+". Fiz o teste de Excel e o meu nível deu "+niv+" ("+p+"/"+maxPontos()+"). Quero saber mais sobre a formação.";
+ var msg="Olá, sou "+nome+". Fiz o teste de Excel e o meu nível deu "+niv+" ("+p+"/"+maxPontos()+"). Quero saber mais sobre a formação."+(falhouGravar?(" (Contacto: "+tel+(email?" · "+email:"")+")"):"");
  var wa="https://wa.me/"+WA+"?text="+encodeURIComponent(msg);
+ if(falhouGravar){try{window.open(wa,"_blank");}catch(e){}}
  var rc=document.getElementById("rescard");
  rc.classList.remove("hide");
- rc.innerHTML='<div class="badge">O teu resultado, '+esc(nome.split(" ")[0])+'</div>'+
+ rc.innerHTML=(falhouGravar?'<div style="background:#fdecea;border:1px solid #f0b8ad;border-left:3px solid #C0392B;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13.5px;color:#a3311f">⚠️ Não conseguimos guardar automaticamente agora — já abrimos o WhatsApp com os teus dados, confirma por lá para garantires o teu lugar.</div>':'')+
+  '<div class="badge">O teu resultado, '+esc(nome.split(" ")[0])+'</div>'+
   '<div class="res-lvl" style="color:'+pl.cor+'">Nível: '+niv+'</div>'+
   '<div class="muted">Pontuação: '+p+'/'+maxPontos()+'</div>'+
   '<div class="bar"><i style="width:'+pct+'%"></i></div>'+

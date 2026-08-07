@@ -628,7 +628,8 @@ function rowEditModalHTML(){if(!_rowEdit)return"";const o=(data[_rowEdit.arr]||[
   if(isForm&&k==="turma")return '<div style="margin-bottom:8px"><label>'+esc(EDIT_LABELS[k]||k)+'</label><select class="re_f" data-k="turma" id="re_turma" onchange="reOnTurmaChange()"><option value="">— sem turma —</option>'+data.turmas.map(function(t){return '<option value="'+esc(t.cod)+'" '+(t.cod===o.turma?"selected":"")+'>'+esc(t.ed)+'ª Ed. — '+esc(t.curso||"")+'</option>';}).join("")+'</select></div>';
   if(isForm&&k==="horario")return '<div style="margin-bottom:8px"><label>'+esc(EDIT_LABELS[k]||k)+' (turno)</label><select class="re_f" data-k="horario" id="re_horario" onchange="reOnHorarioChange()">'+turnosDropdownOptions(o.turma,o.horario)+'</select></div>';
   if(isForm&&k==="vendedor"){
-   if(role==="admin")return '<div style="margin-bottom:8px"><label>'+esc(EDIT_LABELS[k]||k)+'</label><input class="re_f" data-k="vendedor" value="'+esc(String(o.vendedor||""))+'"><div class="muted" style="margin-top:3px;font-size:11px">Alterar pede a password de gestão + motivo — fica registado no histórico.</div></div>';
+   if(role==="admin"){var _vopts=todosColaboradores();if(o.vendedor&&o.vendedor!=="Gestão"&&_vopts.indexOf(o.vendedor)<0)_vopts=[o.vendedor].concat(_vopts);
+    return '<div style="margin-bottom:8px"><label>'+esc(EDIT_LABELS[k]||k)+'</label><select class="re_f" data-k="vendedor">'+(!o.vendedor?'<option value="">— escolher —</option>':"")+_vopts.map(function(n){return '<option value="'+esc(n)+'" '+(n===o.vendedor?"selected":"")+'>'+esc(n)+'</option>';}).join("")+'<option value="Gestão" '+(o.vendedor==="Gestão"?"selected":"")+'>Gestão (sem comissão a ninguém)</option></select><div class="muted" style="margin-top:3px;font-size:11px">Alterar pede a password de gestão + motivo — fica registado no histórico.</div></div>';}
    return '<div style="margin-bottom:8px"><label>'+esc(EDIT_LABELS[k]||k)+'</label><div>'+esc(o.vendedor||"—")+'</div><div class="muted" style="margin-top:3px;font-size:11px">Só a gestão pode alterar o responsável pela venda.</div></div>';
   }
   return `<div style="margin-bottom:8px"><label>${esc(EDIT_LABELS[k]||k)}</label><input class="re_f" data-k="${esc(k)}" data-num="${typeof o[k]==="number"?1:0}" value="${esc(String(o[k]==null?"":o[k]))}"></div>`;
@@ -691,7 +692,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v31.4";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v31.7";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -1750,6 +1751,7 @@ function vRegistoForm(){return `<details class="sec accdet"><summary>Registo de 
    <div id="f_promwrap" style="display:none"><label>Data prometida pelo cliente p/ próxima prestação</label><input id="f_prom" type="date"></div>
    <div><label>Como chegou</label><select id="f_canal" autocomplete="off">${canaisDisponiveis().map(c=>`<option>${c}</option>`).join("")}</select></div>
    <div><label>Nota</label><input id="f_nota" placeholder="observação" autocomplete="off"></div>
+   <div><label>Responsável pela venda <span style="color:#C0392B">*</span></label>${respInputHTML("f_vend","","Quem acompanhou/vendeu — obrigatório")}</div>
   </div>
   <details class="subdet"><summary>Mais detalhes (opcional — pode preencher depois)</summary>
    <div class="formgrid" style="margin-top:10px">
@@ -1759,7 +1761,6 @@ function vRegistoForm(){return `<details class="sec accdet"><summary>Registo de 
     <div><label>Data de nascimento</label><input id="f_nasc" type="date"></div>
     <div><label>Nº secundário (opcional)</label><input id="f_tel2" placeholder="9XX XXX XXX" autocomplete="off"></div>
     <div><label>Próximo curso que pretende fazer</label><select id="f_prox"><option value="">—</option>${cursosLista().map(c=>`<option>${c}</option>`).join("")}</select></div>
-    <div><label>Responsável pela venda <span style="color:#C0392B">*</span></label>${respInputHTML("f_vend","","Quem acompanhou/vendeu — obrigatório")}</div>
     <div><label>Usa computador da academia?</label><select id="f_pc"><option>Não</option><option>Sim</option></select></div>
    </div>
   </details>
@@ -2835,9 +2836,12 @@ function waComp(){const f=data.formandos.find(x=>x.cod===val("cp_cod"))||{};cons
 function _fbInscRef(){return (typeof firebase!=="undefined"&&_fbRef)?firebase.database().ref("inscricoes"):null;}
 let INSCR=null;let _inscModal=null;
 let _inscWatching=false;
-function carregarInscricoes(){INSCR="load";var ref=_fbInscRef();if(!ref){INSCR=[];return;}
+let _inscListening=false;
+function carregarInscricoes(){var ref=_fbInscRef();if(!ref){INSCR=[];return;}
+ if(_inscListening){if(INSCR===null)INSCR="load";return;}
+ _inscListening=true;INSCR="load";
  function apply(s){var v=s.val()||{};INSCR=Object.keys(v).map(function(k){var o=Object.assign({},v[k]);o._key=k;return o;}).sort(function(a,b){return(b.quando||"").localeCompare(a.quando||"")});autoSeguimentoInscricoes();if(current==="inscricoes"||current==="quizleads"||current==="formandos"){var ae=document.activeElement;if(!(ae&&/^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName||"")))render();}}
- ref.once("value").then(apply).catch(function(){INSCR=[];render();});
+ ref.on("value",apply,function(){INSCR=[];render();});
  if(!_inscWatching){_inscWatching=true;try{ref.on("value",apply);}catch(e){}}}
 /* L54-1 — ao pesquisar em Formandos, avisar quando a pessoa já preencheu a ficha na landing mas ainda não foi
    confirmada numa turma. Cruza por TELEFONE (mesma chave usada em todo o sistema para detectar duplicados),
@@ -2881,7 +2885,7 @@ function vInscricoes(){
  if(inscDir==="desc")listaIns.reverse();
  return `${inscModalHTML()}${confirmarInscricaoModalHTML()}<div class="sec"><h2>Partilhar a nossa página</h2><div class="muted">Envia o link da landing aos interessados.</div>
   <div class="flex" style="margin-top:8px;gap:8px;flex-wrap:wrap"><input id="ins_url" value="${esc(landingUrl())}" style="max-width:340px" onchange="if(!data.comp)data.comp={};data.comp.landingUrl=this.value;persist();toast('Link actualizado')"><button class="btn-o" onclick="copiarLink()">Copiar landing</button><button class="btn-g" onclick="partilharWA('','')">WhatsApp landing</button><button class="btn-o" onclick="copiarCatalogo()">Copiar catálogo</button><button class="btn-g" onclick="partilharCatalogoWA('','')">WhatsApp catálogo</button><button class="btn-o" onclick="partilharEmail()">E-mail</button></div></div>
-  <div class="sec"><div class="flex"><div><h2>Captação pela Landing page</h2><div class="muted">Quem se inscreveu na página pública. Confirma o pagamento e converte em lead/formando.</div></div><div class="spacer"></div><button class="btn-o" onclick="INSCR=null;render()">↻ Actualizar</button></div>
+  <div class="sec"><div class="flex"><div><h2>Captação pela Landing page</h2><div class="muted">Quem se inscreveu na página pública. Confirma o pagamento e converte em lead/formando.</div></div><div class="spacer"></div><button class="btn-o" onclick="render()" title="Os dados já ficam sempre actualizados sozinhos — este botão só força a lista a redesenhar">↻ Actualizar</button></div>
   <input id="q_insc" class="search" placeholder="Pesquisar por nome ou contacto…" value="${esc(inscBusca)}" oninput="inscBusca=this.value;refocusSearch('q_insc');render()">
   <table style="margin-top:8px"><thead><tr>${inscHead()}<th>Nome</th><th>Contacto</th><th>Curso</th><th>Tipo</th><th>Fonte</th><th>Valor</th><th>Comprovativo</th><th></th></tr></thead><tbody>
   ${listaIns.map(function(r){const i=INSCR.indexOf(r);return `<tr><td>${esc((r.quando||"").slice(0,16).replace("T"," "))}</td><td>${esc(r.nome||"")}${r.edicao?'<br><span class="muted">'+esc(r.edicao)+'ª ed.</span>':''}</td><td>${esc(r.tel||"")}</td><td>${esc(r.curso||"")}${r.modalidade?'<br><span class="muted">'+esc(r.modalidade)+'</span>':''}</td><td><span class="pill ${r.tipo==='Pagamento'?'p-verde':'p-dour'}">${esc(r.tipo||"Interesse")}</span></td><td>${r.fonte?'<span class="pill p-azul">'+esc(r.fonte)+'</span>':'<span class="muted">—</span>'}</td><td>${r.valorPago?kz(r.valorPago):'—'}</td><td>${r.comprovativo?`<button class="btn-o" style="padding:3px 9px" onclick="verComp(${i})">Ver</button>`:(r.viaWhatsapp?'<span class="muted">via WhatsApp</span>':'—')}</td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:4px 8px" onclick="verFicha(${i})">Ver ficha</button><button class="btn-p" style="padding:4px 8px" onclick="abrirConfirmarInscricao(${i})">→ Inscrever na turma</button><button class="btn-g" style="padding:4px 8px" onclick="inscParaLead(${i})">→ Lead</button><button class="btn-o" style="padding:4px 8px" onclick="inscApagar(${i})">✕</button></td></tr>`;}).join("")||`<tr><td colspan="9" class="muted">${inscBusca?"Sem resultados para esta pesquisa.":"Sem inscrições pagas ainda. Quiz e interesse pelo catálogo aparecem em «Leads do Quiz e Catálogo»."}</td></tr>`}
