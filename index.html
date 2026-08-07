@@ -702,7 +702,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v33.0";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v33.3";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -785,7 +785,7 @@ function _capturarAccdetAbertos(){var views=document.getElementById("views");if(
 function render(){_capturarAccdetAbertos();try{sessionStorage.setItem("ka_fficha",fFicha||"");sessionStorage.setItem("ka_fsearch",fSearch||"");}catch(e){}document.getElementById("views").innerHTML=rowEditModalHTML()+editGastoModalHTML()+cropModalHTML()+feedbackModalHTML()+({painel:vPainel,notificacoes:vNotificacoes,financas:vFinancas,gastos:vGastos,analytics:vAnalytics,paginas:vPaginas,quiz:vQuizPainel,quizleads:vQuizLeads,formandos:vFormandos,turmas:vTurmas,calendario:vCalendario,online:vOnline,pagamentos:vPagamentos,comprovativo:vComprovativo,leads:vLeads,carteira:vCarteira,b2b:vB2B,emailmkt:vEmailMkt,inscricoes:vInscricoes,chamadas:vChamadas,presencas:vPresencas,avaliacoes:vAvaliacoes,certificados:vCertificados,formador:vFormador,presencial:vPresencial,comunicados:vComunicados,notas:vNotas,chat:vChat,melhorias:vMelhorias,actividade:vActividade,rh:vRH,desempenho:vDesempenho,dados:vDados,exportar:vExportar,defs:vDefs,conteudos:vConteudos}[current]||(()=>""))();_reaplicarAccdetAbertos();if(typeof _initOrdenar==="function")_initOrdenar();if(current==="painel"){drawChart();drawPerfChart();}if(typeof atualizarAlertaGlobal==="function")atualizarAlertaGlobal();if(_refocus){const e=document.getElementById(_refocus);if(e){e.focus();const v=e.value||"";try{e.setSelectionRange(v.length,v.length)}catch(_){}}_refocus=null;}}
 
 function fin(){if(!data.financas)data.financas={saldoBanco:0,saldoData:"",gastos:[],metas:{Marketing:0,Renda:0,"Comunicação":0,Outras:0},split:{proLabore:30,operacao:40,reserva:15,investimento:10,marketing:5}};return data.financas;}
-const GASTO_CATS=["Marketing","Renda","Comunicação","Água","Detergentes","Consumíveis","Deslocação","Serviços de limpeza","Outras"];
+const GASTO_CATS=["Salários","Marketing","Renda","Comunicação","Água","Detergentes","Consumíveis","Deslocação","Serviços de limpeza","Outras"];
 /* L48 — categorias de gasto configuráveis: as fixas (acima) continuam sempre disponíveis;
    a Gestão pode acrescentar outras nas Definições (ex.: "Compra de equipamento"), que passam a
    aparecer em Gastos, no orçamento e nos relatórios, tal como as fixas. */
@@ -1109,7 +1109,7 @@ function relatorioMensal(){const F=fin();const mes=finMesAtivo();
  const split=[["Pró-labore","proLabore"],["Operação","operacao"],["Reserva","reserva"],["Investimento","investimento"],["Marketing","marketing"]];
  const gastosMesRel=(F.gastos||[]).filter(g=>(g.dataCompra||g.data||"").slice(0,7)===mes&&g.categoria!=="Despesas pessoais");
  const ORC=orcamentoResumo(mes,gastosMesRel);
- const orcLinhas=[["Salários (equipa)",ORC.tSal,ORC.pagoSal],["Subsídio de transporte",ORC.tSub,ORC.pagoSub],["Assinaturas/recorrentes",ORC.assinM,ORC.assinPagoMes]].concat(gastoCatsList().map(function(c){var g=gastosMesRel.filter(function(x){return x.categoria===c;}).reduce(function(a,x){return a+(+x.valor||0);},0);var m=+(F.metas&&F.metas[c])||0;return [c,m,g];}));
+ const orcLinhas=[["Salários (equipa)",ORC.tSal,ORC.pagoSal],["Subsídio de transporte",ORC.tSub,ORC.pagoSub],["Assinaturas/recorrentes",ORC.assinM,ORC.assinPagoMes]].concat(gastoCatsList().filter(function(c){return c!=="Salários";}).map(function(c){var g=gastosMesRel.filter(function(x){return x.categoria===c;}).reduce(function(a,x){return a+(+x.valor||0);},0);var m=+(F.metas&&F.metas[c])||0;return [c,m,g];}));
  const contasRel=contasArr().map(function(c){return {nome:c.nome,saldo:contaSaldo(c.id)};});
  const _tsRel=totalSocios();
  const w=window.open("","_blank");if(!w){toast("Permite pop-ups para gerar o relatório");return;}
@@ -1216,7 +1216,7 @@ function orcamentoLinha(nome,tipo,orc,gasto){var temMeta=orc>0;var over=temMeta&
  return '<tr><td>'+esc(nome)+'</td><td><span class="pill p-cinza">'+tipo+'</span></td><td>'+(temMeta?kz(orc):'<span class="muted">variável</span>')+'</td><td>'+kz(gasto)+'</td><td>'+pill+'</td></tr>';}
 function orcamentoHTML(mes,gastosMes){var F=fin();var R=orcamentoResumo(mes,gastosMes);var totalOrcado=R.fixosOrcado+R.variaveisOrcado;var totalGasto=R.fixosGasto+R.variaveisGasto+R.tComVar;
  var linhas=orcamentoLinha("Salários (equipa)","Fixo",R.tSal,R.pagoSal)+orcamentoLinha("Subsídio de transporte","Fixo",R.tSub,R.pagoSub)+orcamentoLinha("Assinaturas/recorrentes","Fixo",R.assinM,R.assinPagoMes)+orcamentoLinha("Comissões","Variável",0,R.tComVar);
- linhas+=gastoCatsList().map(function(c){var g=(gastosMes||[]).filter(function(x){return x.categoria===c;}).reduce(function(a,x){return a+(+x.valor||0);},0);var m=+(F.metas&&F.metas[c])||0;return orcamentoLinha(c,"Variável",m,g);}).join("");
+ linhas+=gastoCatsList().filter(function(c){return c!=="Salários";}).map(function(c){var g=(gastosMes||[]).filter(function(x){return x.categoria===c;}).reduce(function(a,x){return a+(+x.valor||0);},0);var m=+(F.metas&&F.metas[c])||0;return orcamentoLinha(c,"Variável",m,g);}).join("");
  return '<details class="sec accdet" open><summary>📊 Orçamento — fixos vs variáveis (mês)</summary><div class="muted">Quanto está orçado por rubrica vs quanto foi mesmo gasto este mês. Salários/subsídios definem-se em RH, assinaturas na sua secção, e as categorias variáveis logo abaixo ou ao registar o gasto.</div>'
   +'<div class="kpigrid" style="margin-top:10px"><div class="kpi"><div class="lab">Custos fixos (orçado)</div><div class="val" style="font-size:18px">'+kz(R.fixosOrcado)+'</div></div><div class="kpi"><div class="lab">Custos variáveis (orçado)</div><div class="val" style="font-size:18px">'+kz(R.variaveisOrcado)+'</div></div><div class="kpi money"><div class="lab">Total gasto real (mês)</div><div class="val" style="font-size:18px">'+kz(totalGasto)+'</div></div><div class="kpi '+(totalGasto>totalOrcado&&totalOrcado>0?'alert':'')+'"><div class="lab">Orçado total vs gasto</div><div class="val" style="font-size:18px">'+kz(totalOrcado)+' vs '+kz(totalGasto)+'</div></div></div>'
   +'<table style="margin-top:10px"><thead><tr><th>Rubrica</th><th>Tipo</th><th>Orçado (mês)</th><th>Gasto real</th><th>Situação</th></tr></thead><tbody>'+linhas+'</tbody></table></details>';}
@@ -2930,7 +2930,7 @@ function vInscricoes(){
  if(INSCR===null){carregarInscricoes();return `<div class="sec"><div class="muted">A carregar inscrições…</div></div>`;}
  if(INSCR==="load")return `<div class="sec"><div class="muted">A carregar inscrições…</div></div>`;
  const q=(inscBusca||"").toLowerCase();const dq=q.replace(/\D/g,"");
- let listaIns=INSCR.filter(function(r){return r.tipo==="Pagamento";}).filter(function(r){return !q||(r.nome||"").toLowerCase().includes(q)||(dq&&(r.tel||"").replace(/\D/g,"").includes(dq));});
+ let listaIns=INSCR.filter(function(r){return r.tipo==="Pagamento";}).filter(function(r){return !formandoDuplicado(r.tel,r.nome);}).filter(function(r){return !q||(r.nome||"").toLowerCase().includes(q)||(dq&&(r.tel||"").replace(/\D/g,"").includes(dq));});
  listaIns=listaIns.slice().sort(function(a,b){return (a.quando||"").localeCompare(b.quando||"");});
  if(inscDir==="desc")listaIns.reverse();
  return `${inscModalHTML()}${confirmarInscricaoModalHTML()}<div class="sec"><h2>Partilhar a nossa página</h2><div class="muted">Envia o link da landing aos interessados.</div>
@@ -2986,25 +2986,25 @@ function confirmarInscricaoModalHTML(){if(inscConfirmModal===null||!Array.isArra
  const turnoGuess=turnosSel?(confTurnoSel||_turnoGuessHorario(turmaSel,r)):"";
  return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.55);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharConfirmarInscricao()"><div class="card" style="padding:16px;max-width:460px;width:100%;max-height:90vh;overflow:auto">
  <div class="flex"><b style="color:var(--azul)">Confirmar inscrição — ${esc(r.nome||"")}</b><div class="spacer"></div><button class="btn-o" style="padding:4px 10px" onclick="fecharConfirmarInscricao()">Fechar ✕</button></div>
- ${dup?`<div style="background:#fdecea;border:1px solid #f0b8ad;border-left:3px solid #C0392B;border-radius:8px;padding:10px 14px;margin-top:10px;font-size:13.5px;color:#a3311f"><b>⚠ Duplicado:</b> ${esc(dup.nome)} (${esc(dup.cod)}) já está registado como formando com este contacto. Não é possível inscrever de novo.</div>`:""}
+ ${dup?`<div style="background:#fff7e6;border:1px solid #f0d48a;border-left:3px solid #BF9000;border-radius:8px;padding:10px 14px;margin-top:10px;font-size:13.5px;color:#7a5c00"><b>⚠ Já existe:</b> ${esc(dup.nome)} (${esc(dup.cod)}) já está registado como formando com este contacto. Ao confirmar, os dados em falta são preenchidos e a turma/edição abaixo passa a ser a deste formando${dup.vendedor?"":" (e o responsável pela venda é atribuído, se escolhido)"} — não é criado um novo registo.</div>`:""}
  <div style="margin-top:10px;font-size:13.5px;line-height:1.7">
   <div><b>Modalidade:</b> ${esc(r.modalidade||"—")}</div>
   <div><b>Período/Horário (como veio da landing):</b> ${esc(r.periodo||"—")}${r.horario?" · "+esc(r.horario):""}</div>
   <div><b>Valor pago:</b> ${r.valorPago?kz(r.valorPago):"—"}</div>
  </div>
  <div style="margin-top:10px"><label style="display:block;font-weight:700;font-size:12px;color:var(--azul);text-transform:uppercase;margin-bottom:5px">Formação</label>
- <select id="conf_curso" ${dup?"disabled":""} onchange="setConfCurso(this)">${cursosLista().map(function(c){return '<option value="'+esc(c)+'" '+(c===cursoAtual?"selected":"")+'>'+esc(c)+'</option>';}).join("")}</select>
+ <select id="conf_curso" onchange="setConfCurso(this)">${cursosLista().map(function(c){return '<option value="'+esc(c)+'" '+(c===cursoAtual?"selected":"")+'>'+esc(c)+'</option>';}).join("")}</select>
  ${cursoAtual!==(r.curso||"")?`<div class="muted" style="margin-top:4px">Veio da landing como "${esc(r.curso||"—")}" — a corrigir para "${esc(cursoAtual)}".</div>`:""}</div>
  <div style="margin-top:10px"><label style="display:block;font-weight:700;font-size:12px;color:var(--azul);text-transform:uppercase;margin-bottom:5px">Edição/turma</label>
- <select id="conf_turma" ${dup?"disabled":""} onchange="setConfTurma(this)">${ativas.length?ativas.map(function(t){return '<option value="'+esc(t.cod)+'" '+(t.cod===autoCod?"selected":"")+'>'+esc(t.ed)+'ª — '+esc(t.curso||"")+'</option>';}).join(""):'<option value="">Sem edição activa para este curso</option>'}</select>
+ <select id="conf_turma" onchange="setConfTurma(this)">${ativas.length?ativas.map(function(t){return '<option value="'+esc(t.cod)+'" '+(t.cod===autoCod?"selected":"")+'>'+esc(t.ed)+'ª — '+esc(t.curso||"")+'</option>';}).join(""):'<option value="">Sem edição activa para este curso</option>'}</select>
  <div class="muted" style="margin-top:4px">Só aparecem edições ainda a decorrer ou por começar — edições já concluídas não são opção.</div></div>
  ${turnosSel?`<div style="margin-top:10px"><label style="display:block;font-weight:700;font-size:12px;color:var(--azul);text-transform:uppercase;margin-bottom:5px">Turno</label>
- <select id="conf_turno" ${dup?"disabled":""} onchange="setConfTurno(this)">${!turnoGuess?'<option value="">— escolhe o turno —</option>':""}${turnosSel.map(function(tn){return '<option value="'+esc(tn.horario)+'" '+(tn.horario===turnoGuess?"selected":"")+'>'+esc(tn.horario)+'</option>';}).join("")}</select>
+ <select id="conf_turno" onchange="setConfTurno(this)">${!turnoGuess?'<option value="">— escolhe o turno —</option>':""}${turnosSel.map(function(tn){return '<option value="'+esc(tn.horario)+'" '+(tn.horario===turnoGuess?"selected":"")+'>'+esc(tn.horario)+'</option>';}).join("")}</select>
  <div class="muted" style="margin-top:4px">${turnoGuess?'Palpite automático a partir do que veio da landing — confirma ou corrige antes de gravar, para os números por turno baterem certo.':'<b style="color:#a3311f">O texto da landing não deu para adivinhar o turno — escolhe manualmente antes de confirmar.</b>'}</div></div>`:""}
- <div style="margin-top:10px"><label style="display:block;font-weight:700;font-size:12px;color:var(--azul);text-transform:uppercase;margin-bottom:5px">Responsável pela venda <span style="color:#C0392B">*</span></label>
- <select id="conf_resp"><option value="">— escolher (obrigatório) —</option>${todosColaboradores().map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+'</option>';}).join("")}<option value="Gestão">Gestão (sem comissão a ninguém)</option></select>
- <div class="muted" style="margin-top:4px">Obrigatório indicar quem fez a venda, para a comissão ser atribuída correctamente. Escolhe "Gestão" só se, de facto, ninguém deve receber comissão por esta venda.</div></div>
- <div class="row-actions" style="margin-top:14px"><button class="btn-p" ${dup?"disabled":""} onclick="finalizarInscricao(${i})">Confirmar inscrição</button></div>
+ <div style="margin-top:10px"><label style="display:block;font-weight:700;font-size:12px;color:var(--azul);text-transform:uppercase;margin-bottom:5px">Responsável pela venda ${(dup&&dup.vendedor)?"":'<span style="color:#C0392B">*</span>'}</label>
+ <select id="conf_resp"><option value="">— escolher${(dup&&dup.vendedor)?"":" (obrigatório)"} —</option>${todosColaboradores().map(function(n){return '<option value="'+esc(n)+'" '+((dup&&dup.vendedor===n)?"selected":"")+'>'+esc(n)+'</option>';}).join("")}<option value="Gestão" ${(dup&&dup.vendedor==="Gestão")?"selected":""}>Gestão (sem comissão a ninguém)</option></select>
+ <div class="muted" style="margin-top:4px">${(dup&&dup.vendedor)?("Este formando já tem responsável ("+esc(dup.vendedor)+") — não é alterado ao fundir."):"Obrigatório indicar quem fez a venda, para a comissão ser atribuída correctamente. Escolhe \"Gestão\" só se, de facto, ninguém deve receber comissão por esta venda."}</div></div>
+ <div class="row-actions" style="margin-top:14px"><button class="btn-p" onclick="${dup?"finalizarFusaoInscricao":"finalizarInscricao"}(${i})">${dup?"Confirmar e fundir":"Confirmar inscrição"}</button></div>
  </div></div>`;}
 function finalizarInscricao(i){const r=Array.isArray(INSCR)&&INSCR[i];if(!r)return;
  if(formandoDuplicado(r.tel,r.nome)){toast("Duplicado — este contacto já está registado.");return;}
@@ -3019,6 +3019,33 @@ function finalizarInscricao(i){const r=Array.isArray(INSCR)&&INSCR[i];if(!r)retu
  const total=precoDe(cursoFinal)||0;const pago=+r.valorPago||0;
  data.pagamentos.push({cod,plano:(pago>=total&&total>0)?"A pronto":"Prestações",total:total,pago:pago,comprovativo:r.comprovativo?"Sim":"Não",dataPrometida:"",prestacoes:pago>0?[{valor:pago,data:new Date().toISOString().slice(0,10),comprovativo:r.comprovativo?"Sim":"Não",comprovativoImg:r.comprovativo||""}]:[],criadoEm:new Date().toISOString()});
  persist();inscConfirmModal=null;confCursoSel=null;toast("Inscrito como formando"+(turma?" na turma":"")); fFicha=cod; show("formandos");}
+/* L64 — quando a inscrição da landing já corresponde a um formando existente (mesmo telefone),
+   funde em vez de bloquear: preenche só o que estiver vazio, nunca apaga dados já certos. */
+function finalizarFusaoInscricao(i){const r=Array.isArray(INSCR)&&INSCR[i];if(!r)return;
+ const dup=formandoDuplicado(r.tel,r.nome);if(!dup){toast("Este formando já não está por fundir — usa Confirmar inscrição normal.");finalizarInscricao(i);return;}
+ if(!dup.vendedor&&!val("conf_resp")){toast("Escolhe o responsável pela venda antes de confirmar — é obrigatório.");var _cr=document.getElementById("conf_resp");if(_cr)_cr.focus();return;}
+ const cursoFinal=confCursoSel||r.curso||"";
+ const turma=val("conf_turma")||"";
+ const turmaObj=turmaByCod(turma);
+ if(turmaObj&&Array.isArray(turmaObj.turnos)&&turmaObj.turnos.length>1&&!val("conf_turno")){toast("Escolhe o turno antes de confirmar — não havia palpite fiável a partir do que veio da landing.");return;}
+ const horarioFinal=(turmaObj&&Array.isArray(turmaObj.turnos)&&turmaObj.turnos.length>1)?val("conf_turno"):(r.horario||dup.horario||"");
+ const alteracoes=[];
+ ["email","bi","nascimento","tel2","area"].forEach(function(k){if(!dup[k]&&r[k]){dup[k]=r[k];alteracoes.push(k);}});
+ const nomeR=(r.nome||"").trim(),nomeDup=(dup.nome||"").trim();
+ if(nomeR&&nomeR.length>nomeDup.length){dup.nome=nomeR;alteracoes.push("nome");}
+ if(cursoFinal&&dup.curso!==cursoFinal){dup.curso=cursoFinal;alteracoes.push("curso");}
+ if(turma&&dup.turma!==turma){dup.turma=turma;alteracoes.push("turma");}
+ dup.horario=horarioFinal;dup.periodo=r.periodo||dup.periodo;
+ if(!dup.vendedor&&val("conf_resp")){dup.vendedor=val("conf_resp");alteracoes.push("responsável pela venda");}
+ const pagoNovo=+r.valorPago||0;
+ if(pagoNovo>0){let p=payOf(dup.cod);if(!p){p={cod:dup.cod,plano:"Prestações",total:precoDe(cursoFinal)||0,pago:0,comprovativo:"Não",dataPrometida:"",prestacoes:[]};data.pagamentos.push(p);}
+  if(!Array.isArray(p.prestacoes))p.prestacoes=[];
+  p.prestacoes.push({valor:pagoNovo,data:new Date().toISOString().slice(0,10),comprovativo:r.comprovativo?"Sim":"Não",comprovativoImg:r.comprovativo||""});
+  p.pago=(+p.pago||0)+pagoNovo;if(r.comprovativo)p.comprovativo="Sim";
+  alteracoes.push("pagamento de "+kz(pagoNovo));}
+ persist();inscConfirmModal=null;confCursoSel=null;
+ toast("Fundido com "+dup.nome+" ("+dup.cod+")"+(alteracoes.length?" — actualizado: "+alteracoes.join(", "):" — sem novidades a preencher"));
+ fFicha=dup.cod;show("formandos");}
 function inscParaLead(i){const r=Array.isArray(INSCR)&&INSCR[i];if(!r)return;const hoje=new Date().toISOString().slice(0,10);data.leads.unshift({data:hoje,ultimoMov:hoje,nome:r.nome||"",tel:r.tel||"",canal:"Landing",curso:r.curso||"",estado:r.tipo==="Pagamento"?"Inscrito":"Novo",resp:"",fonte:r.fonte||"",criadoEm:r.quando||new Date().toISOString(),notas:"Inscrição pela landing"+(r.valorPago?" · pagou "+kz(r.valorPago):"")+(r.comprovativo?" · com comprovativo":"")});persist();toast("Convertido em lead");show("leads");}
 function inscApagar(i){const r=Array.isArray(INSCR)&&INSCR[i];if(!r)return;if(!confirm("Apagar esta inscrição da landing? (não afeta o lead/formando já criado)"))return;var ref=_fbInscRef();if(ref&&r._key){ref.child(r._key).remove();}INSCR.splice(i,1);render();}
 
@@ -3167,21 +3194,27 @@ function enviarAvisoSalarioPago(nome,mes,valor,dataPag){var c=(data.colaboradore
  var assunto="Recibo de salário — "+mes;var corpo="Olá "+nome+",\n\nO seu salário de "+mes+" foi processado em "+dataPag+".\n\nTotal recebido: "+kz(valor)+"\n\nQualquer dúvida, fala com a Gestão.\n\nKnowledge Angola";
  try{window.open("mailto:"+encodeURIComponent(c.email)+"?subject="+encodeURIComponent(assunto)+"&body="+encodeURIComponent(corpo),"_blank");}catch(e){}
  toast("Recibo de "+nome+" pronto a enviar por e-mail.");}
+/* L64: marcar/reverter um salário como pago passa também a criar/remover um gasto ligado (categoria
+   "Salários"), para o custo entrar nas Finanças e reduzir a Margem/Proveito — antes, pagar salário não
+   tinha nenhum efeito nos Custos/Margem mostrados no Painel e nos relatórios. */
 function togglePago(nome){const mes=(typeof rhMes!=="undefined"&&rhMes)||new Date().toISOString().slice(0,7);const P=pagosMes(mes);const quem=(currentUser&&currentUser.nome)||role;
  if(P[nome]){var pagas=comissoesPagas();var comPorCod=P[nome].comPorCod||{};(P[nome].cods||[]).forEach(function(cod){if(!pagas[cod])return;var rev=+comPorCod[cod]||0;pagas[cod].total=Math.max(0,(+pagas[cod].total||0)-rev);if(pagas[cod].total<=0)delete pagas[cod];});
+  var F0=fin();if(Array.isArray(F0.gastos))F0.gastos=F0.gastos.filter(function(g){return !(g.folhaSalarioRef&&g.folhaSalarioRef.nome===nome&&g.folhaSalarioRef.mes===mes);});
   salariosPagosLog().unshift({nome:nome,mes:mes,valor:P[nome].valor||0,acao:"Revertido",data:new Date().toISOString().slice(0,10),hora:_horaAgora(),quem:quem});delete P[nome];persist();render();return;}
  var cods=_codsComissaoMes(nome,mes);var pagas=comissoesPagas();var comPorCod={};var com=0;
  cods.forEach(function(cod){var delta=_comissaoPendente(cod);comPorCod[cod]=delta;com+=delta;});
  var valor=(+(data.salarios[nome]||0)+com+subsidioDe(nome)-descontoDe(nome,mes));var dataPag=new Date().toISOString().slice(0,10);var horaPag=_horaAgora();
  cods.forEach(function(cod){var novoTotal=((pagas[cod]&&+pagas[cod].total)||0)+comPorCod[cod];pagas[cod]={total:novoTotal,mes:mes,nome:nome,quem:quem,data:dataPag};});
  P[nome]={data:dataPag,hora:horaPag,valor:valor,pagoPor:quem,cods:cods,comPorCod:comPorCod};
+ if(valor>0){var F1=fin();if(!Array.isArray(F1.gastos))F1.gastos=[];F1.gastos.push({valor:valor,categoria:"Salários",motivo:"Salário de "+nome+" — "+mes,data:dataPag,dataCompra:dataPag,criadoEm:new Date().toISOString(),criadoPor:quem,folhaSalarioRef:{nome:nome,mes:mes}});}
  salariosPagosLog().unshift({nome:nome,mes:mes,valor:valor,acao:"Pago",data:dataPag,hora:horaPag,quem:quem});
  persist();enviarAvisoSalarioPago(nome,mes,valor,dataPag);render();}
 let recSal=null;
 function reciboSalario(nome){recSal=nome;render();}
 function fecharRecibo(){recSal=null;render();}
 function printRecibo(){window.print();}
-function reciboModalHTML(){if(!recSal)return"";const nome=recSal;const c=(data.colaboradores||[]).find(x=>x.nome===nome)||{};const sal=+(data.salarios[nome]||0);const mes=(typeof rhMes!=="undefined"&&rhMes)||new Date().toISOString().slice(0,7);const com=comissaoPessoaMes(nome,mes);const sub=subsidioDe(nome);const desc=descontoDe(nome,mes);const P=pagosMes(mes)[nome];const cc=data.comp;return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.45);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharRecibo()"><div class="card" style="padding:0;width:560px;max-width:94vw;max-height:90vh;overflow:auto"><div id="recdoc" style="padding:28px 34px;font-size:13.5px;line-height:1.6;color:#222"><div style="display:flex;justify-content:space-between;align-items:flex-start">${cc.logo?`<img src="${cc.logo}" style="height:40px">`:'<b style="color:var(--azul);font-size:16px">Knowledge Angola</b>'}<div style="text-align:right;font-size:11px;color:#555">${esc(cc.morada||"")}<br>${esc(cc.tel||"")}</div></div><h2 style="color:var(--azul);margin:14px 0 4px;font-size:16px">RECIBO DE SALÁRIO</h2><div class="muted" style="font-size:11.5px;margin-bottom:14px">Mês de referência: ${mes} · Emitido em ${new Date().toLocaleDateString("pt-PT")}</div><div>Colaborador: <b>${esc(nome)}</b>${c.categoria?" · "+esc(c.categoria):""}</div>${c.iban?`<div>IBAN: <b>${esc(c.iban)}</b></div>`:""}<div style="border-top:1px solid var(--linha);margin-top:12px;padding-top:10px"><div>Salário base: <b>${kz(sal)}</b></div><div>Comissões: <b>${kz(com)}</b></div><div>Ajuda de custo (Transporte): <b>${kz(sub)}</b></div>${desc>0?`<div>Desconto${(descontosMes(mes)[nome]&&descontosMes(mes)[nome].motivo)?' ('+esc(descontosMes(mes)[nome].motivo)+')':''}: <b>−${kz(desc)}</b></div>`:""}<div style="margin-top:6px;font-size:15px">Total recebido: <b>${kz(sal+com+sub-desc)}</b></div></div><div style="margin-top:12px">${P?'<span class="pill p-verde">Pago em '+esc(P.data)+(P.hora?' às '+esc(P.hora):'')+(P.pagoPor?' · processado por '+esc(P.pagoPor):'')+'</span>':'<span class="pill p-dour">Por pagar</span>'}</div><p style="margin-top:16px">Declara-se que o colaborador recebeu o valor acima na sua conta bancária.</p><div style="margin-top:18px"><b>${esc(cc.director||"")}</b></div></div><div class="row-actions noprint" style="padding:0 34px 22px"><button class="btn-p" onclick="printRecibo()">Imprimir / PDF</button><button class="btn-o" onclick="fecharRecibo()">Fechar</button></div></div></div>`;}
+function _mesPT(mYYYYMM){var p=String(mYYYYMM||"").split("-");var mm=+p[1];return (MESES_NOME_CAL[mm-1]||"")+" de "+p[0];}
+function reciboModalHTML(){if(!recSal)return"";const nome=recSal;const c=(data.colaboradores||[]).find(x=>x.nome===nome)||{};const sal=+(data.salarios[nome]||0);const mes=(typeof rhMes!=="undefined"&&rhMes)||new Date().toISOString().slice(0,7);const mesTrabalho=_mesAnterior(mes);const com=comissaoPessoaMes(nome,mes);const sub=subsidioDe(nome);const desc=descontoDe(nome,mes);const P=pagosMes(mes)[nome];const cc=data.comp;return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.45);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharRecibo()"><div class="card" style="padding:0;width:560px;max-width:94vw;max-height:90vh;overflow:auto"><div id="recdoc" style="padding:28px 34px;font-size:13.5px;line-height:1.6;color:#222"><div style="display:flex;justify-content:space-between;align-items:flex-start">${cc.logo?`<img src="${cc.logo}" style="height:40px">`:'<b style="color:var(--azul);font-size:16px">Knowledge Angola</b>'}<div style="text-align:right;font-size:11px;color:#555">${esc(cc.morada||"")}<br>${esc(cc.tel||"")}</div></div><h2 style="color:var(--azul);margin:14px 0 4px;font-size:16px">RECIBO DE SALÁRIO</h2><div class="muted" style="font-size:11.5px;margin-bottom:14px">Referente a <b>${esc(_mesPT(mesTrabalho))}</b> — salário pago em ${esc(_mesPT(mes))} · Emitido em ${new Date().toLocaleDateString("pt-PT")}</div><div>Colaborador: <b>${esc(nome)}</b>${c.categoria?" · "+esc(c.categoria):""}</div>${c.iban?`<div>IBAN: <b>${esc(c.iban)}</b></div>`:""}<div style="border-top:1px solid var(--linha);margin-top:12px;padding-top:10px"><div>Salário base: <b>${kz(sal)}</b></div><div>Comissões: <b>${kz(com)}</b></div><div>Ajuda de custo (Transporte): <b>${kz(sub)}</b></div>${desc>0?`<div>Desconto${(descontosMes(mes)[nome]&&descontosMes(mes)[nome].motivo)?' ('+esc(descontosMes(mes)[nome].motivo)+')':''}: <b>−${kz(desc)}</b></div>`:""}<div style="margin-top:6px;font-size:15px">Total recebido: <b>${kz(sal+com+sub-desc)}</b></div></div><div style="margin-top:12px">${P?'<span class="pill p-verde">Pago em '+esc(P.data)+'</span>':'<span class="pill p-dour">Por pagar</span>'}</div><p style="margin-top:16px">Declara-se que o colaborador recebeu o valor acima na sua conta bancária.</p><div style="margin-top:18px"><b>${esc(cc.director||"")}</b></div></div><div class="row-actions noprint" style="padding:0 34px 22px"><button class="btn-p" onclick="printRecibo()">Imprimir / PDF</button><button class="btn-o" onclick="fecharRecibo()">Fechar</button></div></div></div>`;}
 function aniversariosProximos(dias){const out=[];const hoje=new Date();hoje.setHours(0,0,0,0);const add=(nome,nasc,tipo)=>{if(!nasc)return;const d=new Date(nasc);if(isNaN(d))return;let prox=new Date(hoje.getFullYear(),d.getMonth(),d.getDate());if(prox<hoje)prox=new Date(hoje.getFullYear()+1,d.getMonth(),d.getDate());const diff=Math.round((prox-hoje)/86400000);if(diff<=dias)out.push({nome,tipo,quando:prox.toISOString().slice(0,10),dias:diff});};(data.colaboradores||[]).forEach(c=>add(c.nome,c.nasc,"Colaborador"));data.formandos.forEach(f=>add(f.nome,f.nasc,"Formando"));return out.sort((a,b)=>a.dias-b.dias);}
 let rhLogQ="";function setRhLogQ(v){rhLogQ=v;render();}
 /* L51-1 — comparar "quem registou" com "responsável pela venda" por turma, para confirmar se a comissão
