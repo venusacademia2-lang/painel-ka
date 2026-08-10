@@ -601,6 +601,10 @@ function ensureOnlineCod(o){if(!o.cod)o.cod=onlineCod(o);return o.cod;}
    o histórico de prestações (o que fazia a receita desaparecer ou saltar de mês nos relatórios), acrescenta-se
    uma prestação de "ajuste" com a diferença (pode ser negativa), datada de hoje. O histórico antigo mantém-se
    intacto — os meses passados continuam correctos — e a correcção entra só no mês em que foi feita. */
+/* L68 — "Data prometida" deixa de precisar que cada sítio que mexe em pago/total se lembre de a limpar
+   quando a dívida chega a zero: fica centralizado aqui, dentro do único ponto por onde todo o ajuste de
+   pagamento já passa. Antes, editPagamento/finDetEditar/zerarBonus/addPay faziam isto cada um por si (e
+   syncPagOnline nunca o fazia). */
 function _ajustarPago(p,novoTotal,novoPago){
  p.total=novoTotal;
  if(!Array.isArray(p.prestacoes))p.prestacoes=[];
@@ -608,6 +612,7 @@ function _ajustarPago(p,novoTotal,novoPago){
  var delta=novoPago-somaActual;
  if(delta!==0)p.prestacoes.push({valor:delta,data:new Date().toISOString().slice(0,10),comprovativo:p.comprovativo||"Não",ajuste:true});
  p.pago=novoPago;
+ if(divida(p)<=0)p.dataPrometida="";
 }
 function syncPagOnline(o){const cod=ensureOnlineCod(o);const val=+o.valorPago||0;let p=data.pagamentos.find(x=>x.cod===cod);const hoje=new Date().toISOString().slice(0,10);
  if(!p){if(val<=0)return;p={cod:cod,plano:"Turma Online",total:val,pago:val,comprovativo:"Não",dataPrometida:"",criadoEm:new Date().toISOString(),prestacoes:val>0?[{valor:val,data:hoje,comprovativo:"Não"}]:[]};data.pagamentos.push(p);return;}
@@ -707,7 +712,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v34.1";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v34.2";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -893,18 +898,30 @@ let finPer="mes";
    finEscala (dia|semana|mes|ano — controla o que um clique selecciona e o passo de navegação),
    finNav (mês em navegação no calendário, YYYY-MM — vazio = mês de hoje ou de finDe). */
 let finDe="",finAte="",finEscala="mes",finNav="";
+/* L68 — selecção multi-dia/multi-mês: antes, cada clique substituía sempre finDe/finAte pela unidade
+   clicada (um só dia, uma só semana, um só mês, um só ano) — não dava para escolher um intervalo à
+   medida (ex.: de 5 a 20 de Agosto, ou de Junho a Agosto). Agora funciona a dois cliques, como um
+   calendário normal de intervalo: o 1º clique marca o início (fica só essa unidade seleccionada), o 2º
+   clique marca o fim e o intervalo passa a cobrir tudo o que estiver entre os dois (para o lado que for);
+   o clique seguinte começa um intervalo novo. finSelAncora guarda a unidade do 1º clique enquanto se
+   espera pelo 2º — null quando não há nenhuma selecção a meio. */
+let finSelAncora=null;
 function _fimDoMes(m){var p=String(m||"").split("-");var y=+p[0],mm=+p[1];if(!y||!mm){var d0=new Date();y=d0.getFullYear();mm=d0.getMonth()+1;}var last=new Date(y,mm,0).getDate();return m+"-"+String(last).padStart(2,"0");}
 function finRange(){if(finDe&&finAte){var a=finDe<finAte?finDe:finAte,b=finDe<finAte?finAte:finDe;return{ini:a,fim:b};}var hoje=new Date().toISOString().slice(0,7);return{ini:hoje+"-01",fim:_fimDoMes(hoje)};}
 function finMesAtivo(){return finRange().ini.slice(0,7);}
 function _finNavMes(){if(finNav)return finNav;if(finDe)return finDe.slice(0,7);return new Date().toISOString().slice(0,7);}
 function finCalPrev(){var m=_finNavMes();var p=m.split("-");var y=+p[0],mm=+p[1];if(finEscala==="ano"){y--;}else{mm--;if(mm<1){mm=12;y--;}}finNav=y+"-"+String(mm).padStart(2,"0");render();}
 function finCalNext(){var m=_finNavMes();var p=m.split("-");var y=+p[0],mm=+p[1];if(finEscala==="ano"){y++;}else{mm++;if(mm>12){mm=1;y++;}}finNav=y+"-"+String(mm).padStart(2,"0");render();}
-function setFinEscala(e){finEscala=e;render();}
-function finCalLimpar(){finDe="";finAte="";finNav="";render();}
+function setFinEscala(e){finEscala=e;finSelAncora=null;render();}
+function finCalLimpar(){finDe="";finAte="";finNav="";finSelAncora=null;render();}
 /* Datas construídas e manipuladas sempre em UTC (Date.UTC/getUTCDay/setUTCDate) e só depois
    convertidas com toISOString — misturar Date local com toISOString desloca o dia (bug visto em
    testes, ex.: fuso de Angola UTC+1 fazia a grelha começar um dia antes do que devia). */
-function finCalClick(d){if(finEscala==="dia"){finDe=d;finAte=d;}else if(finEscala==="semana"){var seg=new Date(d+"T00:00:00Z");var wd=(seg.getUTCDay()+6)%7;seg.setUTCDate(seg.getUTCDate()-wd);var dom=new Date(seg);dom.setUTCDate(seg.getUTCDate()+6);finDe=seg.toISOString().slice(0,10);finAte=dom.toISOString().slice(0,10);}else if(finEscala==="ano"){var y=d.slice(0,4);finDe=y+"-01-01";finAte=y+"-12-31";}else{var m=d.slice(0,7);finDe=m+"-01";finAte=_fimDoMes(m);}finNav=d.slice(0,7);render();}
+function _finUnidade(d){if(finEscala==="dia"){return{ini:d,fim:d};}if(finEscala==="semana"){var seg=new Date(d+"T00:00:00Z");var wd=(seg.getUTCDay()+6)%7;seg.setUTCDate(seg.getUTCDate()-wd);var dom=new Date(seg);dom.setUTCDate(seg.getUTCDate()+6);return{ini:seg.toISOString().slice(0,10),fim:dom.toISOString().slice(0,10)};}if(finEscala==="ano"){var y=d.slice(0,4);return{ini:y+"-01-01",fim:y+"-12-31"};}var m=d.slice(0,7);return{ini:m+"-01",fim:_fimDoMes(m)};}
+function finCalClick(d){var u=_finUnidade(d);
+ if(!finSelAncora){finDe=u.ini;finAte=u.fim;finSelAncora=u;}
+ else{finDe=finSelAncora.ini<u.ini?finSelAncora.ini:u.ini;finAte=finSelAncora.fim>u.fim?finSelAncora.fim:u.fim;finSelAncora=null;}
+ finNav=d.slice(0,7);render();}
 function _gridDoMes(m){var p=m.split("-");var y=+p[0],mm=+p[1];var primeiro=new Date(Date.UTC(y,mm-1,1));var wd=(primeiro.getUTCDay()+6)%7;var inicio=new Date(primeiro);inicio.setUTCDate(primeiro.getUTCDate()-wd);var dias=[];for(var i=0;i<42;i++){var d=new Date(inicio);d.setUTCDate(inicio.getUTCDate()+i);dias.push({iso:d.toISOString().slice(0,10),inMes:d.getUTCMonth()===(mm-1)});}return dias;}
 const MESES_NOME_CAL=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 function calendarioFinHTML(){var nav=_finNavMes();var p=nav.split("-");var y=+p[0],mm=+p[1];var rng=finRange();var hoje=new Date().toISOString().slice(0,10);var dias=_gridDoMes(nav);var DOW=["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"];
@@ -916,9 +933,10 @@ function calendarioFinHTML(){var nav=_finNavMes();var p=nav.split("-");var y=+p[
   +dias.map(function(d){var sel=d.iso>=rng.ini&&d.iso<=rng.fim;var isHoje=d.iso===hoje;var style='text-align:center;padding:6px 0;border-radius:6px;cursor:pointer;font-size:12.5px;'+(d.inMes?'':'color:#c3cad9;')+(sel?'background:var(--azul);color:#fff;font-weight:700;':'')+(isHoje&&!sel?'border:1.5px solid var(--azul);':'');return '<div style="'+style+'" onclick="finCalClick(\''+d.iso+'\')">'+(+d.iso.slice(8,10))+'</div>';}).join("")
   +'</div>';
  var labelPeriodo=(rng.ini===rng.fim)?rng.ini:(rng.ini+" a "+rng.fim);
+ var dica=finSelAncora?'<div class="muted" style="margin-top:6px">Clica noutro '+({dia:"dia",semana:"semana",mes:"mês",ano:"ano"}[finEscala]||"dia")+' para completar o intervalo (multi-dia/multi-mês).</div>':'<div class="muted" style="margin-top:6px">Um clique escolhe '+({dia:"um dia",semana:"uma semana",mes:"um mês",ano:"um ano"}[finEscala]||"um dia")+'; clica outra vez noutro ponto para abranger vários.</div>';
  return '<div class="sec"><div class="flex" style="flex-wrap:wrap;gap:20px;align-items:flex-start">'
   +'<div>'+cab+grid+'</div>'
-  +'<div style="padding-top:2px"><span class="muted">Período seleccionado:</span><br><b style="font-size:16px;color:var(--azul)">'+labelPeriodo+'</b></div>'
+  +'<div style="padding-top:2px"><span class="muted">Período seleccionado:</span><br><b style="font-size:16px;color:var(--azul)">'+labelPeriodo+'</b>'+dica+'</div>'
   +'</div></div>';}
 function setFinPer(v){finPer=v;render();}
 function setContaDestino(key,campo,el){var F=fin();if(!F.contasDestino)F.contasDestino={};if(!F.contasDestino[key])F.contasDestino[key]={};
@@ -1077,7 +1095,20 @@ function finDetItens(fd){var itens=[];
  if(fd.dir==="desc")itens.reverse();
  return itens;}
 function finDetVerFicha(cod){var f=data.formandos.find(function(x){return x.cod===cod;});if(f){fFicha=cod;fecharFinDet();show('formandos');return;}var oi=(data.online||[]).findIndex(function(o){return ensureOnlineCod(o)===cod;});if(oi>=0){onDetail=oi;fecharFinDet();show('online');return;}toast("Sem ficha associada a este registo");}
-function finDetEditar(cod){if(role!=="admin"){toast("Só a gestão");return;}var i=data.pagamentos.findIndex(function(p){return p.cod===cod;});if(i<0){toast("Pagamento não encontrado");return;}if(!_reauthGestor()){toast("Senha errada — não editei");return;}var p=data.pagamentos[i];var tot=prompt("Total (Kz):",p.total||0);if(tot===null)return;var pg=prompt("Pago / recebido (Kz):",p.pago||0);if(pg===null)return;p.total=+String(tot).replace(/\D/g,"")||0;p.pago=+String(pg).replace(/\D/g,"")||0;if(divida(p)<=0)p.dataPrometida="";persist();toast("Pagamento actualizado");render();}
+/* L68 — este era o único ponto que ainda editava total/pago directamente (p.total=...;p.pago=...), sem
+   passar por _ajustarPago() — ou seja, sem o lançamento de ajuste que preserva o histórico de prestações
+   (a mesma falha que o L62 já tinha corrigido em editPagamento). Passa agora a usar _ajustarPago() e o
+   mesmo motivo obrigatório + pagamentoEditLog() do L67-1, para ficar consistente com a Ficha do formando
+   — mantém também a senha de gestão (_reauthGestor) que já tinha, por vir de um sítio mais sensível (Finanças). */
+function finDetEditar(cod){if(role!=="admin"){toast("Só a gestão");return;}var i=data.pagamentos.findIndex(function(p){return p.cod===cod;});if(i<0){toast("Pagamento não encontrado");return;}if(!_reauthGestor()){toast("Senha errada — não editei");return;}
+ var p=data.pagamentos[i];var tot=prompt("Total (Kz):",p.total||0);if(tot===null)return;var pg=prompt("Pago / recebido (Kz):",p.pago||0);if(pg===null)return;
+ var novoTotal=+String(tot).replace(/\D/g,"")||0,novoPago=+String(pg).replace(/\D/g,"")||0;
+ var totalAntes=+p.total||0,pagoAntes=+p.pago||0;
+ if(novoTotal===totalAntes&&novoPago===pagoAntes){toast("Nada mudou");return;}
+ var motivo=prompt("Motivo da alteração (fica registado no histórico):");
+ if(motivo===null||!(motivo||"").trim()){toast("É preciso indicar um motivo — nada foi alterado");return;}
+ pagamentoEditLog().unshift({cod:p.cod,quando:new Date().toISOString(),quem:(currentUser&&currentUser.nome)||role,totalAntes:totalAntes,totalDepois:novoTotal,pagoAntes:pagoAntes,pagoDepois:novoPago,motivo:motivo.trim()});
+ _ajustarPago(p,novoTotal,novoPago);persist();toast("Pagamento actualizado");render();}
 function finDetApagar(cod){if(role!=="admin"){toast("Só a gestão");return;}var i=data.pagamentos.findIndex(function(p){return p.cod===cod;});if(i<0){toast("Pagamento não encontrado");return;}var p=data.pagamentos[i];var f=data.formandos.find(function(x){return x.cod===p.cod;})||{};if(!confirm("Apagar o registo de pagamento de "+(f.nome||p.cod)+"? Fica no registo de apagados (recuperável)."))return;if(!_reauthGestor()){toast("Senha errada — não apaguei");return;}var motivo=prompt("Motivo para apagar este pagamento:");if(motivo===null||!motivo.trim()){toast("É preciso indicar um motivo");return;}if(!Array.isArray(data.apagados))data.apagados=[];data.apagados.unshift({quando:new Date().toISOString().slice(0,16).replace('T',' '),quem:(currentUser&&currentUser.nome)||"Gestão",aba:"pagamentos",registo:JSON.parse(JSON.stringify(p)),motivo:motivo.trim()});data.pagamentos.splice(i,1);persist();toast("Pagamento apagado");render();}
 function finDetModalHTML(){if(!finDet)return"";var fd=finDet;var itens=finDetItens(fd);
  var tot=itens.reduce(function(a,x){return a+(x.val||0);},0);
@@ -2140,7 +2171,7 @@ function editPagamento(i){if(role!=="admin"){toast("Só a gestão");return;}var 
  var motivo=prompt("Motivo da alteração (fica registado no histórico):");
  if(motivo===null||!(motivo||"").trim()){toast("É preciso indicar um motivo — nada foi alterado");return;}
  pagamentoEditLog().unshift({cod:p.cod,quando:new Date().toISOString(),quem:(currentUser&&currentUser.nome)||role,totalAntes:totalAntes,totalDepois:novoTotal,pagoAntes:pagoAntes,pagoDepois:novoPago,motivo:motivo.trim()});
- _ajustarPago(p,novoTotal,novoPago);if(divida(p)<=0)p.dataPrometida="";persist();toast("Pagamento actualizado");render();}
+ _ajustarPago(p,novoTotal,novoPago);persist();toast("Pagamento actualizado");render();}
 let PAY_COMP="";
 function onPayComp(inp){const f=inp.files&&inp.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const img=new Image();img.onload=()=>{const max=1100;let w=img.width,h=img.height;if(w>max){h=Math.round(h*max/w);w=max;}const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);PAY_COMP=c.toDataURL("image/jpeg",0.7);const l=document.getElementById("p_complabel");if(l)l.textContent="✅ Comprovativo carregado";};img.src=e.target.result;};r.readAsDataURL(f);}
 let payPre="";
@@ -2452,7 +2483,7 @@ function _chamDe(nome,ini,fim){return data.chamadas.filter(function(c){if((c.res
 function _convDe(nome,ini,fim){return data.formandos.filter(function(f){if((f.vendedor||"")!==nome)return false;var d=(f.data||(f.criadoEm||"").slice(0,10))||"";if(ini&&d<ini)return false;if(fim&&d>fim)return false;var p=payOf(f.cod);return p&&(+p.pago||0)>0;}).length;}
 /* L47 — comissão gerada no período (mesma janela de leads/receita), para a Gestão ver
    vendas + impacto no resultado + comissão de cada pessoa juntos, na mesma tabela. */
-function _comissaoDe(nome,ini,fim){return _todosVendaveis().filter(function(f){if((f.vendedor||"")!==nome)return false;var d=(f.data||(f.criadoEm||"").slice(0,10))||"";if(ini&&d<ini)return false;if(fim&&d>fim)return false;return true;}).reduce(function(s,f){return s+comissaoDe(f.cod);},0);}
+function _comissaoDe(nome,ini,fim){return _todosVendaveis().filter(function(f){var div=_comissaoDivisao(f);var envolvido=div.split?(nome===div.closer||nome===div.setter):(nome===div.closer);if(!envolvido)return false;var d=(f.data||(f.criadoEm||"").slice(0,10))||"";if(ini&&d<ini)return false;if(fim&&d>fim)return false;return true;}).reduce(function(s,f){return s+_comissaoQuotaPessoa(f.cod,nome);},0);}
 function statusMetaDia(nome,dataISO){const util=ehDiaUtil(dataISO);const meta=util?metaDe(nome):0;const feitas=chamadasDoDia(nome,dataISO);const pendentes=leadsPendentesDe(nome);const falta=Math.max(0,meta-feitas);return{feitas,meta,falta,util,cumpriuChamadas:!util||feitas>=meta,pendentes};}
 function colaboradoresComMeta(){var vend=new Set((data.formandos||[]).map(function(f){return f.vendedor;}).filter(Boolean));var out=new Set();(data.perfis||[]).forEach(function(p){var t=((p.departamento||"")+" "+(p.categorias||"")+" "+(p.funcao||"")).toLowerCase();if(p.incluirDesempenho===true||/marketing|vendas|comercial|vendedor|assistente/.test(t)||vend.has(p.nome)){if(p.nome)out.add(p.nome);}});vend.forEach(function(n){out.add(n);});return [...out].filter(Boolean).filter(function(n){return !estaArquivado(n);}).sort(function(a,b){return a.localeCompare(b);});}
 function todosColaboradores(){var s=new Set((data.perfis||[]).map(function(p){return p.nome;}).filter(Boolean));(data.formandos||[]).forEach(function(f){if(f.vendedor)s.add(f.vendedor);});return [...s].filter(Boolean).filter(function(n){return n!=="Gestão";}).filter(function(n){return !estaArquivado(n);}).sort(function(a,b){return a.localeCompare(b);});}
@@ -3177,7 +3208,13 @@ function respInputHTML(id,valorAtual,placeholder){const v=(valorAtual!==undefine
     — ex.: pessoa entretanto arquivada/renomeada — mantém-se como opção para não apagar dados existentes. */
  var opts=pessoas.slice();if(v&&opts.indexOf(v)<0)opts.unshift(v);
  return `<select id="${id}">${!v?'<option value="">'+esc(placeholder||"— escolher —")+'</option>':''}${opts.map(n=>`<option value="${esc(n)}" ${n===v?"selected":""}>${esc(n)}</option>`).join("")}</select>`;}
-function comissaoPessoa(nome){if(!nome||nome==="Gestão")return 0;return _todosVendaveis().filter(f=>f.vendedor===nome).reduce((s,f)=>s+comissaoDe(f.cod),0)}
+/* L68 — comissão de chamada dividida (setter/closer): quando a última chamada a um contacto foi feita
+   por alguém diferente de quem está como "Responsável pela venda" (o fecho), a comissão desse aluno
+   divide-se a meio entre os dois. Sem chamada registada, ou com o mesmo nome nos dois papéis, continua
+   100% para o Responsável pela venda — comportamento igual ao de sempre. */
+function _comissaoDivisao(f){var closer=(f&&f.vendedor||"").trim();var setter=(chamadaRespDe((f&&(f.tel||f.contacto))||"")||"").trim();var split=!!(closer&&closer!=="Gestão"&&setter&&setter!=="Gestão"&&setter!==closer);return{closer:closer,setter:setter,split:split};}
+function _comissaoQuotaPessoa(cod,nome){if(!nome||nome==="Gestão")return 0;var f=_vendavelPorCod(cod);if(!f)return 0;var div=_comissaoDivisao(f);var com=comissaoDe(cod);if(div.split)return(nome===div.closer||nome===div.setter)?Math.round(com/2):0;return nome===div.closer?com:0;}
+function comissaoPessoa(nome){if(!nome||nome==="Gestão")return 0;return _todosVendaveis().filter(function(f){var div=_comissaoDivisao(f);return div.split?(nome===div.closer||nome===div.setter):(nome===div.closer);}).reduce(function(s,f){return s+_comissaoQuotaPessoa(f.cod,nome);},0);}
 /* L20-2/L61: detalhe de quem justifica a comissão de cada pessoa — nome, telefone, modalidade e
    edição (ou "Turma Online") de cada aluno com pago>0, para a gestão poder confirmar o valor sem
    ter de ir procurar aluno a aluno. Desde L61 já não exige dívida zero. */
@@ -3185,7 +3222,7 @@ let comDet=null;let comDetMesFolha="";
 function abrirComDet(nome,mesFolha){comDet=nome;comDetMesFolha=mesFolha||"";render();}
 function fecharComDet(){comDet=null;comDetMesFolha="";render();}
 function _comItemDe(f){const online=f._origem==="online";const t=online?null:turmaByCod(f.turma);return{modalidade:f.modalidade||(t&&t.modalidade)||(online?"Online":"Presencial"),turmaLabel:online?("Turma Online"+(f.formador?" — "+f.formador:"")):(t?(t.ed+"ª — "+(t.curso||"")):(f.turma||"—")),tel:f.tel||f.contacto||""};}
-function comDetItens(nome){return _todosVendaveis().filter(function(f){return f.vendedor===nome;}).map(function(f){const com=comissaoDe(f.cod);const info=_comItemDe(f);return{cod:f.cod,nome:f.nome||f.cod,tel:info.tel,modalidade:info.modalidade,turmaLabel:info.turmaLabel,com:com};}).filter(function(x){return x.com>0;}).sort(function(a,b){return b.com-a.com;});}
+function comDetItens(nome){return _todosVendaveis().filter(function(f){var div=_comissaoDivisao(f);return div.split?(nome===div.closer||nome===div.setter):(nome===div.closer);}).map(function(f){var div=_comissaoDivisao(f);const com=_comissaoQuotaPessoa(f.cod,nome);const info=_comItemDe(f);return{cod:f.cod,nome:f.nome||f.cod,tel:info.tel,modalidade:info.modalidade,turmaLabel:info.turmaLabel,com:com,dividida:div.split,outraPessoa:div.split?(nome===div.closer?div.setter:div.closer):""};}).filter(function(x){return x.com>0;}).sort(function(a,b){return b.com-a.com;});}
 /* L46-2 — diagnóstico de comissão: apanhar (a) vendas atribuídas mas ainda sem nenhum pagamento
    (nada a comissionar ainda) e (b) vendas com o nome do responsável escrito de forma ligeiramente
    diferente (espaço a mais, maiúsculas, acento) — essas ficam invisíveis ao comparador exacto e
@@ -3212,18 +3249,36 @@ function setRhAutorizarMesActual(mesFolha,on){if(role!=="admin"){toast("Só a ge
    para este aluno. Cada folha nova só soma a DIFERENÇA entre a comissão actual (comissaoDe) e esse
    total — nunca a mesma fatia duas vezes, mas sempre a parte nova quando o aluno paga mais. */
 function comissoesPagas(){if(!data.comissoesPagasCods)data.comissoesPagasCods={};return data.comissoesPagasCods;}
-function _comissaoJaPaga(cod){var e=comissoesPagas()[cod];return e?(+e.total||0):0;}
+/* L68 — cada entrada do ledger passa a guardar quanto já entrou em folha POR PESSOA (porPessoa:{nome:valor}),
+   porque agora um mesmo cod pode ter duas pessoas (setter+closer) a receber cada uma a sua metade. Os
+   registos antigos (uma pessoa só, forma {total,nome}) continuam a ler-se correctamente — _pessoasDoLedger
+   converte-os na hora, sem precisar de migrar os dados guardados. */
+function _pessoasDoLedger(e){if(!e)return{};if(e.porPessoa)return e.porPessoa;var m={};if(e.nome)m[e.nome]=+e.total||0;return m;}
+function _comissaoJaPaga(cod){var e=comissoesPagas()[cod];var m=_pessoasDoLedger(e);return Object.keys(m).reduce(function(s,n){return s+(+m[n]||0);},0);}
+function _comissaoJaPagaPessoa(cod,nome){var e=comissoesPagas()[cod];var m=_pessoasDoLedger(e);return +m[nome]||0;}
 function _comissaoPendente(cod){return Math.max(0,comissaoDe(cod)-_comissaoJaPaga(cod));}
-function _codsComissaoMes(nome,mesFolha){if(!nome||nome==="Gestão")return[];var mref=comissaoMesRef(mesFolha);return _todosVendaveis().filter(function(f){if(f.vendedor!==nome)return false;if(_comissaoPendente(f.cod)<=0)return false;var p=payOf(f.cod);if(!p)return false;var du=_dataUltimoPagamento(p);if(!du||du.slice(0,7)!==mref)return false;return true;}).map(function(f){return f.cod;});}
-function comissaoPessoaMes(nome,mesFolha){return _codsComissaoMes(nome,mesFolha).reduce(function(s,cod){return s+_comissaoPendente(cod);},0);}
-function comDetItensMes(nome,mesFolha){return _codsComissaoMes(nome,mesFolha).map(function(cod){var f=_vendavelPorCod(cod)||{};const com=_comissaoPendente(cod);const info=_comItemDe(f);return{cod:cod,nome:f.nome||cod,tel:info.tel,modalidade:info.modalidade,turmaLabel:info.turmaLabel,com:com};}).sort(function(a,b){return b.com-a.com;});}
+function _comissaoPendentePessoa(cod,nome){return Math.max(0,_comissaoQuotaPessoa(cod,nome)-_comissaoJaPagaPessoa(cod,nome));}
+/* L68 — togglePago() precisa de somar/reverter a fatia de UMA pessoa num cod que pode ter DUAS pessoas
+   (setter+closer). _comissaoAdicionarPessoa migra na hora uma entrada antiga {total,nome} para
+   {porPessoa:{...}} só quando essa entrada é tocada — não mexe em entradas antigas que não voltem a ser
+   pagas/revertidas, por isso é seguro correr mesmo com anos de histórico em ledger no formato antigo. */
+function _comissaoAdicionarPessoa(cod,nome,delta,mes,quem,dataPag){if(!delta)return;var pagas=comissoesPagas();var e=pagas[cod];
+ if(!e){e={porPessoa:{},mes:mes,quem:quem,data:dataPag};pagas[cod]=e;}
+ else if(!e.porPessoa){var legNome=e.nome,legTotal=+e.total||0;e.porPessoa={};if(legNome&&legTotal>0)e.porPessoa[legNome]=legTotal;delete e.nome;delete e.total;}
+ e.porPessoa[nome]=(+e.porPessoa[nome]||0)+delta;e.mes=mes;e.quem=quem;e.data=dataPag;}
+function _comissaoRevertPessoa(cod,nome,rev){if(!rev)return;var pagas=comissoesPagas();var e=pagas[cod];if(!e)return;
+ if(e.porPessoa){e.porPessoa[nome]=Math.max(0,(+e.porPessoa[nome]||0)-rev);if(e.porPessoa[nome]<=0)delete e.porPessoa[nome];if(!Object.keys(e.porPessoa).length)delete pagas[cod];}
+ else if(e.nome===nome){e.total=Math.max(0,(+e.total||0)-rev);if(e.total<=0)delete pagas[cod];}}
+function _codsComissaoMes(nome,mesFolha){if(!nome||nome==="Gestão")return[];var mref=comissaoMesRef(mesFolha);return _todosVendaveis().filter(function(f){var div=_comissaoDivisao(f);var envolvido=div.split?(nome===div.closer||nome===div.setter):(nome===div.closer);if(!envolvido)return false;if(_comissaoPendentePessoa(f.cod,nome)<=0)return false;var p=payOf(f.cod);if(!p)return false;var du=_dataUltimoPagamento(p);if(!du||du.slice(0,7)!==mref)return false;return true;}).map(function(f){return f.cod;});}
+function comissaoPessoaMes(nome,mesFolha){return _codsComissaoMes(nome,mesFolha).reduce(function(s,cod){return s+_comissaoPendentePessoa(cod,nome);},0);}
+function comDetItensMes(nome,mesFolha){return _codsComissaoMes(nome,mesFolha).map(function(cod){var f=_vendavelPorCod(cod)||{};var div=_comissaoDivisao(f);const com=_comissaoPendentePessoa(cod,nome);const info=_comItemDe(f);return{cod:cod,nome:f.nome||cod,tel:info.tel,modalidade:info.modalidade,turmaLabel:info.turmaLabel,com:com,dividida:div.split,outraPessoa:div.split?(nome===div.closer?div.setter:div.closer):""};}).sort(function(a,b){return b.com-a.com;});}
 function comDetModalHTML(){if(!comDet)return"";const nome=comDet;const mesFolha=comDetMesFolha;const itens=mesFolha?comDetItensMes(nome,mesFolha):comDetItens(nome);const tot=itens.reduce(function(a,x){return a+x.com;},0);
  const pend=comVendedorPendentes(nome);const parecidas=comVendasParecidas(nome);
  let avisos="";
  if(mesFolha){const mref=comissaoMesRef(mesFolha);avisos+='<div class="note" style="margin-bottom:10px">Esta lista é a que entra na <b>folha de '+esc(mesFolha)+'</b>: alunos de '+esc(nome)+' com pagamento novo em <b>'+esc(mref)+'</b>'+(rhAutorizado(mesFolha)?' (mês actual — autorizado pela gestão)':' (mês anterior à folha, regra normal)')+', mostrando só a comissão que ainda não tinha entrado nalguma folha paga antes. Se o aluno ainda tiver dívida, o valor é sobre o que já pagou — quando pagar mais, a diferença entra numa folha futura. É diferente do total acumulado (todo o histórico) que aparece noutros relatórios.</div>';}
  if(parecidas.length){const somaParecidas=parecidas.reduce(function(a,x){return a+x.com;},0);const variantes=[...new Set(parecidas.map(function(x){return x.vendedorEscrito;}))];avisos+='<div class="note" style="background:#fff7e6;border-color:#f0d999;color:#8a6d00;margin-bottom:10px"><b>⚠ '+parecidas.length+' venda(s) com o nome do responsável escrito de forma diferente de "'+esc(nome)+'"</b> — por isso NÃO estão a contar nesta comissão'+(somaParecidas>0?' (ficariam '+kz(somaParecidas)+' de fora)':'')+'. Está escrito assim: '+variantes.map(function(v){return '"'+esc(v)+'"';}).join(', ')+'. Se for a mesma pessoa, corrige o campo "Responsável pela venda" na ficha do aluno, ou usa "unificar" em Marketing &amp; Vendas → Vendas por responsável.</div>';}
  if(pend.length){avisos+='<div class="note" style="margin-bottom:10px">ℹ '+pend.length+' venda(s) atribuída(s) a '+esc(nome)+' mas o aluno ainda não pagou nada — assim que houver o primeiro pagamento, já gera comissão (não é preciso esperar a dívida chegar a zero).</div>';}
- const rows=itens.map(function(x){return '<tr><td>'+esc(x.nome)+'</td><td>'+esc(x.tel)+'</td><td>'+esc(x.modalidade)+'</td><td>'+esc(x.turmaLabel)+'</td><td style="text-align:right">'+kz(x.com)+'</td><td><button class="btn-o" style="padding:3px 9px" onclick="fecharComDet();fFicha=\''+esc(x.cod)+'\';show(\'formandos\')">Ficha</button></td></tr>';}).join("")||'<tr><td colspan="6" class="muted">Sem alunos com comissão a mostrar.</td></tr>';
+ const rows=itens.map(function(x){return '<tr><td>'+esc(x.nome)+'</td><td>'+esc(x.tel)+'</td><td>'+esc(x.modalidade)+'</td><td>'+esc(x.turmaLabel)+'</td><td style="text-align:right">'+kz(x.com)+(x.dividida?' <span class="pill p-cinza" title="Comissão dividida a meio com quem fez a última chamada a este contacto">÷2 com '+esc(x.outraPessoa)+'</span>':'')+'</td><td><button class="btn-o" style="padding:3px 9px" onclick="fecharComDet();fFicha=\''+esc(x.cod)+'\';show(\'formandos\')">Ficha</button></td></tr>';}).join("")||'<tr><td colspan="6" class="muted">Sem alunos com comissão a mostrar.</td></tr>';
  return '<div style="position:fixed;inset:0;background:rgba(20,30,60,.4);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharComDet()"><div class="card" style="padding:20px;width:680px;max-width:96vw;max-height:88vh;overflow:auto"><div class="flex"><h2 style="color:var(--azul)">Comissão de '+esc(nome)+(mesFolha?' — folha '+esc(mesFolha):'')+'</h2><div class="spacer"></div><button class="btn-o" style="padding:4px 10px" onclick="fecharComDet()">Fechar ✕</button></div><div class="muted" style="margin-bottom:8px">Comissão = 7,14% do que foi efectivamente pago, mesmo que o aluno ainda tenha dívida em aberto — quando pagar mais, a diferença entra numa folha futura.</div>'+avisos+'<table><thead><tr><th>Aluno</th><th>Telefone</th><th>Modalidade</th><th>Edição</th><th style="text-align:right">Comissão</th><th></th></tr></thead><tbody>'+rows+'</tbody><tfoot><tr style="font-weight:700;border-top:2px solid var(--linha)"><td colspan="4">Total</td><td style="text-align:right">'+kz(tot)+'</td><td></td></tr></tfoot></table></div></div>';}
 const CATEGORIAS=["Formador","Gestor(a) de Formação","Assistente","Marketing/Mídia","Vendas","Finanças/Administrativo","Direcção/Gestão"];
 function colabs(){if(!data.colaboradores)data.colaboradores=[];return data.colaboradores;}
@@ -3296,13 +3351,13 @@ function enviarAvisoSalarioPago(nome,mes,valor,dataPag){var c=(data.colaboradore
    "Salários"), para o custo entrar nas Finanças e reduzir a Margem/Proveito — antes, pagar salário não
    tinha nenhum efeito nos Custos/Margem mostrados no Painel e nos relatórios. */
 function togglePago(nome){const mes=(typeof rhMes!=="undefined"&&rhMes)||new Date().toISOString().slice(0,7);const P=pagosMes(mes);const quem=(currentUser&&currentUser.nome)||role;
- if(P[nome]){var pagas=comissoesPagas();var comPorCod=P[nome].comPorCod||{};(P[nome].cods||[]).forEach(function(cod){if(!pagas[cod])return;var rev=+comPorCod[cod]||0;pagas[cod].total=Math.max(0,(+pagas[cod].total||0)-rev);if(pagas[cod].total<=0)delete pagas[cod];});
+ if(P[nome]){var comPorCod=P[nome].comPorCod||{};(P[nome].cods||[]).forEach(function(cod){_comissaoRevertPessoa(cod,nome,+comPorCod[cod]||0);});
   var F0=fin();if(Array.isArray(F0.gastos))F0.gastos=F0.gastos.filter(function(g){return !(g.folhaSalarioRef&&g.folhaSalarioRef.nome===nome&&g.folhaSalarioRef.mes===mes);});
   salariosPagosLog().unshift({nome:nome,mes:mes,valor:P[nome].valor||0,acao:"Revertido",data:new Date().toISOString().slice(0,10),hora:_horaAgora(),quem:quem});delete P[nome];persist();render();return;}
- var cods=_codsComissaoMes(nome,mes);var pagas=comissoesPagas();var comPorCod={};var com=0;
- cods.forEach(function(cod){var delta=_comissaoPendente(cod);comPorCod[cod]=delta;com+=delta;});
+ var cods=_codsComissaoMes(nome,mes);var comPorCod={};var com=0;
+ cods.forEach(function(cod){var delta=_comissaoPendentePessoa(cod,nome);comPorCod[cod]=delta;com+=delta;});
  var valor=(+(data.salarios[nome]||0)+com+subsidioDe(nome)-descontoDe(nome,mes));var dataPag=new Date().toISOString().slice(0,10);var horaPag=_horaAgora();
- cods.forEach(function(cod){var novoTotal=((pagas[cod]&&+pagas[cod].total)||0)+comPorCod[cod];pagas[cod]={total:novoTotal,mes:mes,nome:nome,quem:quem,data:dataPag};});
+ cods.forEach(function(cod){_comissaoAdicionarPessoa(cod,nome,comPorCod[cod],mes,quem,dataPag);});
  P[nome]={data:dataPag,hora:horaPag,valor:valor,pagoPor:quem,cods:cods,comPorCod:comPorCod};
  if(valor>0){var F1=fin();if(!Array.isArray(F1.gastos))F1.gastos=[];F1.gastos.push({valor:valor,categoria:"Salários",motivo:"Salário de "+nome+" — "+mes,data:dataPag,dataCompra:dataPag,criadoEm:new Date().toISOString(),criadoPor:quem,folhaSalarioRef:{nome:nome,mes:mes}});}
  salariosPagosLog().unshift({nome:nome,mes:mes,valor:valor,acao:"Pago",data:dataPag,hora:horaPag,quem:quem});
@@ -3515,7 +3570,7 @@ function fichaCard(cod){const f=data.formandos.find(x=>x.cod===cod);if(!f)return
    <div><label>Código / Curso</label><div>${esc(f.cod)} · ${esc(f.curso||"")}</div></div>
    <div><label>Estado</label><div>${f.estado==="Concluído"?'<span class="pill p-azul">Concluído</span>':t?'<span class="pill p-verde">Formando · '+esc(t.ed)+'ª ed.</span>':'<span class="pill p-cinza">'+esc(f.estado||"—")+'</span>'}</div></div>
    <div><label>Área de formação</label><div>${esc(f.area||"—")}</div></div>
-   <div><label>Turma / Formador</label><div>${t?esc(t.ed)+'ª — '+esc(f.horario||f.turno||t.horario||''):esc(f.turma||'—')}${t&&t.resp?' · '+esc(t.resp):''}</div></div>
+   <div><label>Turma / Formador</label><div>${t?esc(t.ed)+'ª — '+esc(f.horario||f.turno||t.horario||''):esc(f.turma||'—')}${t&&t.resp?' · '+esc(t.resp):''}${t&&t.gestora?' · Gestora: '+esc(t.gestora):''}</div></div>
    <div><label>Período / Horário</label><div>${f.periodo?esc(f.periodo):'—'}${f.horario?' · '+esc(f.horario):''}</div></div>
    <div><label>Nº do BI</label><div>${esc(f.bi||'—')}</div></div>
    <div><label>Data de nascimento</label><div>${esc(f.nasc||'—')}</div></div>
