@@ -707,7 +707,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v34.0";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v34.1";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -2128,6 +2128,9 @@ function delPagamento(i){if(role!=="admin"){toast("Só a gestão");return;}var p
 function pagamentoEditLog(){if(!Array.isArray(data.pagamentoEditLog))data.pagamentoEditLog=[];return data.pagamentoEditLog;}
 function pagamentoEditLogHTML(cod){var L=pagamentoEditLog().filter(function(x){return x.cod===cod;});if(!L.length)return"";
  return '<details style="margin-top:4px"><summary class="muted" style="cursor:pointer;font-size:12px">Histórico de edições ('+L.length+')</summary><div style="margin-top:4px">'+L.map(function(x){return '<div style="font-size:11.5px;padding:3px 0;border-bottom:1px solid var(--linha)">'+esc((x.quando||"").slice(0,16).replace("T"," "))+' · <b>'+esc(x.quem||"—")+'</b> — Total: '+kz(x.totalAntes)+' → '+kz(x.totalDepois)+' · Pago: '+kz(x.pagoAntes)+' → '+kz(x.pagoDepois)+'<br><span class="muted">Motivo: '+esc(x.motivo||"—")+'</span></div>';}).join("")+'</div></details>';}
+/* L68 — pedido para editar o valor pago directamente na Ficha do formando, sem ter de ir à aba Pagamentos
+   procurar a linha certa. editPagamento() trabalha por índice do array; esta função só traduz cod→índice. */
+function editPagamentoDeCod(cod){var i=data.pagamentos.findIndex(function(x){return x.cod===cod;});if(i<0){toast("Sem registo de pagamento para editar");return;}editPagamento(i);}
 function editPagamento(i){if(role!=="admin"){toast("Só a gestão");return;}var p=data.pagamentos[i];if(!p)return;
  var tot=prompt("Total (Kz):",p.total||0);if(tot===null)return;
  var pg=prompt("Pago / recebido (Kz):",p.pago||0);if(pg===null)return;
@@ -2457,6 +2460,11 @@ function renomearVendedor(de){if(role!=="admin"){toast("Só a gestão");return;}
 function saveMetas(){data.metas=data.metas||{};data.metas.chamadasDia=+val("mt_chamadas")||20;data.metas.horaLimite=val("mt_hora")||"10:00";persist();toast("Metas actualizadas");render();}
 function addChamada(){const nome=val("c_nome");if(!nome){toast("Escolhe ou escreve quem foi contactado");return}
  data.chamadas.unshift({data:new Date().toISOString().slice(0,10),nome,tel:val("c_tel"),tipo:val("c_tipo"),canal:val("c_canal"),sentido:val("c_sentido"),resultado:val("c_res"),seguimento:val("c_seg"),horaPedida:val("c_horaped"),resp:val("c_resp"),notas:val("c_notas")});persist();toast("Chamada registada");limparCampos(["c_nome","c_tel","c_seg","c_horaped","c_notas"]);render();}
+/* L68 — comissão de chamada dividida (setter+closer): quem fez a ÚLTIMA chamada a este contacto,
+   usada para saber quem "abriu" a venda quando é diferente de quem está como Responsável pela venda
+   (o "fecho"). data.chamadas é sempre inserido com unshift (mais recente à cabeça), por isso o primeiro
+   registo que bate com o telefone já é o mais recente — não é preciso ordenar por data. */
+function chamadaRespDe(tel){var nt=normTel(tel);if(!nt)return"";var c=(data.chamadas||[]).find(function(x){return normTel(x.tel)===nt;});return c?(c.resp||""):"";}
 
 /* CERTIFICADOS */
 let certSearch="",certEd="",certTurno="",certEstado="";
@@ -3121,12 +3129,18 @@ function finalizarFusaoInscricao(i){const r=Array.isArray(INSCR)&&INSCR[i];if(!r
  if(modalidadeFinal&&dup.modalidade!==modalidadeFinal){dup.modalidade=modalidadeFinal;alteracoes.push("modalidade");}
  dup.horario=horarioFinal;dup.periodo=r.periodo||dup.periodo;
  if(!dup.vendedor&&val("conf_resp")){dup.vendedor=val("conf_resp");alteracoes.push("responsável pela venda");}
+ /* L68 — corrigido: antes somava sempre r.valorPago (o valor trazido da landing) ao pago já existente
+    na ficha, mesmo quando o formando já tinha um valor registado por outra via (ex.: registo manual)
+    — resultado: duplicava o total (ex.: 70.000 + 70.000 = 140.000). Agora só aplica o valor da landing
+    se a ficha ainda não tiver nenhum valor pago; se já tiver, não soma nem substitui — fica como está. */
  const pagoNovo=+r.valorPago||0;
- if(pagoNovo>0){let p=payOf(dup.cod);if(!p){p={cod:dup.cod,plano:"Prestações",total:precoDe(cursoFinal)||0,pago:0,comprovativo:"Não",dataPrometida:"",prestacoes:[]};data.pagamentos.push(p);}
-  if(!Array.isArray(p.prestacoes))p.prestacoes=[];
-  p.prestacoes.push({valor:pagoNovo,data:new Date().toISOString().slice(0,10),comprovativo:r.comprovativo?"Sim":"Não",comprovativoImg:r.comprovativo||""});
-  p.pago=(+p.pago||0)+pagoNovo;if(r.comprovativo)p.comprovativo="Sim";
-  alteracoes.push("pagamento de "+kz(pagoNovo));}
+ if(pagoNovo>0){let p=payOf(dup.cod);const jaTinhaValor=!!(p&&(+p.pago||0)>0);
+  if(jaTinhaValor){alteracoes.push("pagamento da landing ("+kz(pagoNovo)+") ignorado — a ficha já tinha "+kz(p.pago)+" registado");}
+  else{if(!p){p={cod:dup.cod,plano:"Prestações",total:precoDe(cursoFinal)||0,pago:0,comprovativo:"Não",dataPrometida:"",prestacoes:[]};data.pagamentos.push(p);}
+   if(!Array.isArray(p.prestacoes))p.prestacoes=[];
+   p.prestacoes.push({valor:pagoNovo,data:new Date().toISOString().slice(0,10),comprovativo:r.comprovativo?"Sim":"Não",comprovativoImg:r.comprovativo||""});
+   p.pago=(+p.pago||0)+pagoNovo;if(r.comprovativo)p.comprovativo="Sim";
+   alteracoes.push("pagamento de "+kz(pagoNovo));}}
  _marcarInscConfirmada(r);persist();inscConfirmModal=null;confCursoSel=null;
  toast("Fundido com "+dup.nome+" ("+dup.cod+")"+(alteracoes.length?" — actualizado: "+alteracoes.join(", "):" — sem novidades a preencher"));
  fFicha=dup.cod;show("formandos");}
@@ -3510,7 +3524,7 @@ function fichaCard(cod){const f=data.formandos.find(x=>x.cod===cod);if(!f)return
    <div><label>Data de registo</label><div>${esc(f.data||(f.criadoEm?String(f.criadoEm).slice(0,10):"—"))}</div></div>
    <div><label>Registado por</label><div>${esc(f.criadoPor||f.vendedor||"—")}</div></div>
    ${role==="admin"?`<div><label>Formador potencial</label><div>${f.formadorPotencial?'<span class="pill p-dour">✓ Candidato</span> <span class="muted" style="font-size:11px">'+esc(f.formadorPotencialNota||"")+'</span>':'<span class="muted">—</span>'} <button class="btn-o" style="padding:2px 8px;font-size:12px" onclick="toggleFormadorPotencial('${esc(f.cod)}')">${f.formadorPotencial?"Retirar":"Marcar como candidato"}</button></div></div>`:""}
-   <div><label>Pagamento</label><div>${d>0?'<span class="pill p-verm">Em dívida: '+kz(d)+'</span>':'<span class="pill p-verde">Em dia</span>'} <span class="muted">(${esc(p.plano||"—")})</span>${(d>0&&podeEditar())?' <button class="btn-o" style="padding:2px 8px;font-size:12px" onclick="irPagar(\''+esc(f.cod)+'\')">Registar pagamento</button>':''}${role==="admin"?' · Pago: <b>'+kz(p.pago||0)+'</b> <button class="btn-o" style="padding:2px 8px;font-size:12px" onclick="zerarBonus(\''+esc(f.cod)+'\')">Zerar (bónus)</button>':''}</div>${pagamentoEditLogHTML(f.cod)}</div>
+   <div><label>Pagamento</label><div>${d>0?'<span class="pill p-verm">Em dívida: '+kz(d)+'</span>':'<span class="pill p-verde">Em dia</span>'} <span class="muted">(${esc(p.plano||"—")})</span>${(d>0&&podeEditar())?' <button class="btn-o" style="padding:2px 8px;font-size:12px" onclick="irPagar(\''+esc(f.cod)+'\')">Registar pagamento</button>':''}${role==="admin"?' · Pago: <b>'+kz(p.pago||0)+'</b> <button class="btn-o" style="padding:2px 8px;font-size:12px" onclick="editPagamentoDeCod(\''+esc(f.cod)+'\')">✎ Editar</button> <button class="btn-o" style="padding:2px 8px;font-size:12px" onclick="zerarBonus(\''+esc(f.cod)+'\')">Zerar (bónus)</button>':''}</div>${pagamentoEditLogHTML(f.cod)}</div>
    <div><label>Certificado</label><div>${(function(){var c=data.certificados.find(function(x){return x.cod===cod;});return c?'<span class="pill '+(c.estado==="Entregue"?"p-verde":c.estado==="Emitido"?"p-dour":"p-cinza")+'">'+esc(c.estado)+'</span>':'<span class="muted">—</span>';})()}</div></div>
    <div><label>Faltas</label><div><b>${faltasDe(cod)}</b> <span class="muted">(contadas das presenças)</span></div></div>
    ${faltasDe(cod)>0?`<div><label>Avisou que ia faltar?</label><div>${avisouFalta(f.tel)?'<span class="pill p-dour">Sim</span>':'<span class="pill p-cinza">Não</span>'}</div></div>`:''}
