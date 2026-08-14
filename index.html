@@ -481,6 +481,9 @@ if(!data.perfis.length)data.perfis.push({nome:"Ventura Camilo",funcao:"Gestor",e
 function setRespOnline(){data.responsaveis=data.responsaveis||{};data.responsaveis.online=val("resp_online")||"";persist();toast("Gestora da Turma Online actualizada");render();}
 function ultimaTransferencia(nome){var arr=(data.transferencias||[]).filter(function(x){return x.nome===nome;});if(!arr.length)return null;arr=arr.slice().sort(function(a,b){return (a.criadoEm||"").localeCompare(b.criadoEm||"");});return arr[arr.length-1];}
 function fmtDataHora(iso){if(!iso)return"";var d=new Date(iso);if(isNaN(d.getTime()))return"";return d.toLocaleDateString("pt-PT")+" às "+d.toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit"});}
+/* L69-2 — datas guardadas como "AAAA-MM-DD" (vindas de <input type=date>) mostradas como dia/mês/ano,
+   como a Gestão pediu. Não mexe no valor guardado nem nos inputs de edição — só na apresentação. */
+function fmtDataCurta(iso){if(!iso)return"";var m=String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);if(!m)return esc(iso);return m[3]+"/"+m[2]+"/"+m[1];}
 function transferHistLista(nome){var hist=(data.transferencias||[]).filter(function(x){return x.nome===nome;}).slice().sort(function(a,b){return (a.criadoEm||"").localeCompare(b.criadoEm||"");});if(!hist.length)return"";return '<div class="note" style="margin-top:10px;background:#eef3fb;border-color:#c7d6f0;color:#1F3864"><b>Histórico de transferências</b><ul style="margin:6px 0 0 18px">'+hist.map(function(x){var dest=x.paraLabel||x.paraTurma||x.transferidoPara||x.para||x.destino||"";var ori=x.de||x.origem||x.origemLabel||"";var meio=(ori||dest)?(' — '+esc(ori)+((ori&&dest)?' → ':'')+esc(dest)):'';return '<li>'+fmtDataHora(x.criadoEm)+meio+(x.quem?' <span class="muted">(por '+esc(x.quem)+')</span>':'')+'</li>';}).join("")+'</ul></div>';}
 function transferHistBlockOnline(o,idx){var out="";if(o.origemPresencial){out+='<div class="note" style="margin-top:10px">Veio da turma presencial'+(o.origemPresencialCod?' ('+esc(o.origemPresencialCod)+')':'')+' em '+fmtDataHora(o.criadoEm)+'.</div>';}if(o.status==="Transferido"){var tr=ultimaTransferencia(o.nome);out+='<div class="note" style="margin-top:10px">Já foi transferido(a) para a turma presencial <b>'+esc(o.transferidoPara||"")+'</b>'+(tr?' em '+fmtDataHora(tr.criadoEm):'')+'.</div>';}out+=transferHistLista(o.nome);if(o.status!=="Transferido"){out+='<div class="row-actions" style="margin-top:14px"><button class="btn-o" onclick="abrirTransferOnline('+idx+')">Transferir para turma presencial</button></div>';}return out;}
 function transferHistBlockFormando(f){var out="";if(f.origemOnline){out+='<div class="note" style="margin-top:10px">Veio da Turma Online em '+fmtDataHora(f.criadoEm)+'.</div>';}if(f.estado==="Transferido p/ Online"){var tr=ultimaTransferencia(f.nome);out+='<div class="note" style="margin-top:10px">Já foi transferido(a) para Turma Online em '+(tr?fmtDataHora(tr.criadoEm):fmtDataHora(f.transferidoOnlineEm))+'.</div>';}out+=transferHistLista(f.nome);return out;}
@@ -512,6 +515,38 @@ function estadoPag(p){if(divida(p)<=0)return"Liquidado";if(p.dataPrometida&&new 
 function payOf(cod){return data.pagamentos.find(p=>p.cod===cod)}
 function val(id){const e=document.getElementById(id);return e?e.value.trim():""}
 function precoDe(curso){return +(data.precos&&data.precos[curso])||0}
+/* L69-1 — cupões promocionais: desconto percentual criado pela gestão em Definições, aplicável tanto
+   à venda presencial como à Turma Online (mesmo formulário "Registo de venda / inscrição"), e também
+   às inscrições vindas da landing (Confirmar Inscrição). Reutilizável até um limite de usos, com
+   validade opcional; só se aplica ao confirmar/gravar a inscrição — nunca retroactivamente. */
+function cupoesArr(){if(!Array.isArray(data.cupoes))data.cupoes=[];return data.cupoes;}
+function cupomPorCodigo(cod){const c=String(cod||"").trim().toUpperCase();if(!c)return null;return cupoesArr().find(function(x){return (x.codigo||"").toUpperCase()===c;})||null;}
+function cupomValidar(cod,curso){const c=cupomPorCodigo(cod);if(!c)return{ok:false,msg:"Código promocional inválido."};
+ if(!c.activo)return{ok:false,msg:"Este código promocional já não está activo."};
+ if(c.validade&&new Date(c.validade)<new Date(new Date().toDateString()))return{ok:false,msg:"Este código promocional expirou em "+c.validade.split("-").reverse().join("/")+"."};
+ if(c.limiteUsos&&(+c.usos||0)>=(+c.limiteUsos||0))return{ok:false,msg:"Este código promocional já atingiu o limite de "+c.limiteUsos+" usos."};
+ if(c.curso&&curso&&c.curso!==curso)return{ok:false,msg:"Este código promocional só é válido para "+c.curso+"."};
+ return{ok:true,cupom:c};}
+function cupomRegistarUso(cod){const c=cupomPorCodigo(cod);if(!c)return;c.usos=(+c.usos||0)+1;}
+function addCupom(){const codigo=(val("cp_codigo")||"").trim().toUpperCase();if(!codigo){toast("Falta o código do cupão");return;}
+ if(cupomPorCodigo(codigo)){toast("Já existe um cupão com este código");return;}
+ const pct=+val("cp_pct")||0;if(pct<=0||pct>100){toast("A percentagem de desconto deve ser entre 1 e 100");return;}
+ cupoesArr().push({codigo,percentagem:pct,curso:val("cp_curso")||"",limiteUsos:+val("cp_limite")||0,validade:val("cp_validade")||"",usos:0,activo:true,criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role});
+ persist();toast("Cupão "+codigo+" criado");limparCampos(["cp_codigo","cp_pct","cp_limite","cp_validade"]);render();}
+function toggleCupomActivo(i){const c=cupoesArr()[i];if(!c)return;c.activo=!c.activo;persist();render();}
+function delCupom(i){const c=cupoesArr()[i];if(!c)return;if(!confirm("Apagar o cupão "+c.codigo+"?"))return;cupoesArr().splice(i,1);persist();render();}
+function cupoesHTML(){const cs=cupoesArr();const linhas=cs.map(function(c,i){return '<tr><td><b>'+esc(c.codigo)+'</b></td><td>'+c.percentagem+'%</td><td>'+esc(c.curso||"Todos os cursos")+'</td><td>'+(c.usos||0)+(c.limiteUsos?"/"+c.limiteUsos:"")+'</td><td>'+(c.validade?c.validade.split("-").reverse().join("/"):"—")+'</td><td>'+(c.activo?'<span class="tag" style="background:#e6f4ea;color:#1a7a3c">Activo</span>':'<span class="tag" style="background:#f4e6e6;color:#a3311f">Inactivo</span>')+'</td><td><button class="btn-o" style="padding:3px 8px" onclick="toggleCupomActivo('+i+')">'+(c.activo?"Desactivar":"Activar")+'</button> <button class="btn-o" style="padding:3px 8px" onclick="delCupom('+i+')">Apagar</button></td></tr>';}).join("");
+ return `<div class="sec"><h2>Cupões promocionais</h2><div class="muted">Código de desconto (%) aplicável na venda presencial, na Turma Online, e nas inscrições vindas da landing. Reutilizável até ao limite de usos definido; validade opcional.</div>
+  <div class="formgrid" style="margin-top:10px">
+   <div><label>Código</label><input id="cp_codigo" placeholder="Ex.: PROMO10" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
+   <div><label>Desconto (%)</label><input id="cp_pct" type="number" min="1" max="100" placeholder="10"></div>
+   <div><label>Curso (opcional)</label><select id="cp_curso"><option value="">Todos os cursos</option>${cursosLista().map(function(c){return '<option value="'+esc(c)+'">'+esc(c)+'</option>';}).join("")}</select></div>
+   <div><label>Limite de usos (opcional)</label><input id="cp_limite" type="number" min="0" placeholder="Ex.: 20 — em branco = ilimitado"></div>
+   <div><label>Validade (opcional)</label><input id="cp_validade" type="date"></div>
+  </div>
+  <div class="row-actions" style="margin-top:8px"><button class="btn-p" onclick="addCupom()">Criar cupão</button></div>
+  ${cs.length?`<table style="margin-top:12px"><thead><tr><th>Código</th><th>Desconto</th><th>Curso</th><th>Usos</th><th>Validade</th><th>Estado</th><th>Acções</th></tr></thead><tbody>${linhas}</tbody></table>`:'<div class="muted" style="margin-top:10px">Sem cupões criados.</div>'}
+ </div>`;}
 function turmaByCod(cod){return data.turmas.find(t=>t.cod===cod)}
 function inscritosDe(cod,turno){return data.formandos.filter(f=>f.turma===cod&&f.estado!=="Transferido p/ Online"&&(!turno||(f.horario||f.turno||"")===turno)).length}
 /* Só quem já pagou alguma coisa (pelo menos um sinal) ocupa vaga/computador. Quem ainda não pagou continua visível na turma, mas sem prejuízo de quem já pagou. */
@@ -615,10 +650,17 @@ function _ajustarPago(p,novoTotal,novoPago){
  if(divida(p)<=0)p.dataPrometida="";
 }
 function syncPagOnline(o){const cod=ensureOnlineCod(o);const val=+o.valorPago||0;let p=data.pagamentos.find(x=>x.cod===cod);const hoje=new Date().toISOString().slice(0,10);
- if(!p){if(val<=0)return;p={cod:cod,plano:"Turma Online",total:val,pago:val,comprovativo:"Não",dataPrometida:"",criadoEm:new Date().toISOString(),prestacoes:val>0?[{valor:val,data:hoje,comprovativo:"Não"}]:[]};data.pagamentos.push(p);return;}
+ /* L69-1 — se o registo online tiver um cupão (definido ao inscrever, ou depois via "Editar registo"),
+    o "total" passa a ser o preço do curso já com o desconto aplicado, em vez de ser sempre igual ao
+    valor recebido — assim a dívida (se o aluno ainda não pagou o valor total com desconto) aparece
+    correctamente. Sem cupão, comportamento inalterado (total=pago=valorPago, como sempre foi). */
+ let total=val,cupomCod="";
+ if(o.cupom){const cv=cupomValidar(o.cupom,o.curso||o.area||"");if(cv.ok){total=Math.round((precoDe(o.curso||o.area||"")||val)*(1-cv.cupom.percentagem/100));cupomCod=cv.cupom.codigo;if(!o._cupomAplicado){cupomRegistarUso(cv.cupom.codigo);o._cupomAplicado=cv.cupom.codigo;}}}
+ if(!p){if(val<=0)return;p={cod:cod,plano:"Turma Online",total:total,pago:val,comprovativo:"Não",dataPrometida:"",criadoEm:new Date().toISOString(),prestacoes:val>0?[{valor:val,data:hoje,comprovativo:"Não"}]:[],cupom:cupomCod};data.pagamentos.push(p);return;}
+ if(cupomCod){p.total=total;p.cupom=cupomCod;}
  _ajustarPago(p,val,val);}
 let _rowEdit=null;
-const EDIT_LABELS={nome:"Nome",tel:"Telefone",contacto:"Contacto",email:"E-mail",curso:"Curso",area:"Área de formação/trabalho",canal:"Canal",estado:"Estado",resp:"Responsável",notas:"Notas",nivel:"Nível",fase:"Fase",formador:"Formador",inicio:"Data de início",valorPago:"Valor pago (Kz)",vendedor:"Responsável",turma:"Turma",data:"Data",tipo:"Tipo",resultado:"Resultado",seguimento:"Seguimento",horaPedida:"Hora pedida para contacto",msg:"Mensagem",usaPC:"Usa PC"};
+const EDIT_LABELS={nome:"Nome",tel:"Telefone",contacto:"Contacto",email:"E-mail",curso:"Curso",area:"Área de formação/trabalho",canal:"Canal",estado:"Estado",resp:"Responsável",notas:"Notas",nivel:"Nível",fase:"Fase",formador:"Formador",inicio:"Data de início",valorPago:"Valor pago (Kz)",vendedor:"Responsável",turma:"Turma",data:"Data",tipo:"Tipo",resultado:"Resultado",seguimento:"Seguimento",horaPedida:"Hora pedida para contacto",msg:"Mensagem",usaPC:"Usa PC",cupom:"Código promocional"};
 const EDIT_SKIP=["cod","prazo","pdsFeitos","ultimoPDS","proximoPDS","proximoHora","recorrente","tarefa","avaliacao","status","avals","prestacoes","ultimoMov","comprovativo","total","pago","dataPrometida","plano"];
 function editRow(arr,i){_rowEdit={arr:arr,i:i};render();}
 function fecharRowEdit(){_rowEdit=null;render();}
@@ -712,7 +754,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v34.2";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v34.3";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -1759,7 +1801,16 @@ function onDispo(){const d=document.getElementById("dispo");if(d)d.textContent=v
 function modChg(){var on=val("f_mod")==="Online";["wf_turma","wf_turno"].forEach(function(id){var e=document.getElementById(id);if(e)e.style.display=on?"none":"";});["wf_onl_nivel","wf_onl_form","wf_onl_modo","wf_onl_inicio","wf_onl_horario"].forEach(function(id){var e=document.getElementById(id);if(e)e.style.display=on?"":"none";});}
 function edPeriodo(){const t=turmaByCod(val("f_turma"));const sel=document.getElementById("f_turno");if(!sel)return;if(!t||!Array.isArray(t.turnos)||!t.turnos.length){sel.innerHTML='<option value="">(edição sem turnos definidos)</option>';return;}sel.innerHTML='<option value="">— escolher turno —</option>'+t.turnos.map((tn,i)=>`<option value="${i}">${esc(tn.horario)}${tn.gestora?' · '+esc(tn.gestora):''}</option>`).join("");}
 function turnoSelInfo(){const t=turmaByCod(val("f_turma"));const idx=val("f_turno");const tn=(t&&Array.isArray(t.turnos)&&t.turnos[+idx])||null;if(!tn)return{turno:"",periodo:"",horario:"",gestora:"",formador:""};return{turno:tn.horario,periodo:(tn.tipo==="semana"?"Dias de semana":"Sábados"),horario:tn.horario,gestora:tn.gestora||"",formador:tn.formador||""};}
-function fillPreco(){const e=document.getElementById("f_total");if(e)e.value=fmtMil(precoDe(val("f_curso"))||0);promToggle();}
+function fillPreco(){aplicarCupomVenda();}
+/* L69-1 — recalcula o "Valor total" com o desconto do cupão (se houver um código válido para este
+   curso) sempre que o curso ou o código do cupão mudam. Sem cupão, comportamento igual ao de sempre. */
+function aplicarCupomVenda(){const e=document.getElementById("f_total");if(!e)return;const base=precoDe(val("f_curso"))||0;const cod=val("f_cupom");const hint=document.getElementById("f_cupom_hint");
+ if(!cod){e.value=fmtMil(base);if(hint)hint.textContent="";promToggle();return;}
+ const cv=cupomValidar(cod,val("f_curso"));
+ if(!cv.ok){if(hint){hint.textContent=cv.msg;hint.style.color="#a3311f";}e.value=fmtMil(base);promToggle();return;}
+ const desc=Math.round(base*(1-cv.cupom.percentagem/100));e.value=fmtMil(desc);
+ if(hint){hint.textContent="Cupão "+cv.cupom.codigo+" aplicado: -"+cv.cupom.percentagem+"% (de "+kz(base)+" para "+kz(desc)+")";hint.style.color="#1a7a3c";}
+ promToggle();}
 function promToggle(){var w=document.getElementById("f_promwrap");if(!w)return;var raw=val("f_pago");var t=numVal("f_total"),p=numVal("f_pago");w.style.display=(raw!==""&&p<t&&t>0)?"block":"none";}
 function bonusChg(){const b=val("f_bonus")==="Sim";["f_total","f_pago"].forEach(function(id){const e=document.getElementById(id);if(!e)return;if(b){if(e.dataset.bk===undefined)e.dataset.bk=e.value;e.value="0";e.readOnly=true;}else{if(e.dataset.bk!==undefined){e.value=e.dataset.bk;delete e.dataset.bk;}e.readOnly=(id==="f_total"&&role!=="admin");}});promToggle();}
 function onNome(){const h=document.getElementById("f_hint");if(!h)return;const q=val("f_nome").toLowerCase();if(!q){h.textContent="";return}const f=data.formandos.find(x=>(x.nome||"").toLowerCase()===q)||data.formandos.find(x=>(x.nome||"").toLowerCase().includes(q));if(f){const t=turmaByCod(f.turma);h.innerHTML='Já na base: <b>'+esc(f.nome)+'</b>'+(t?' — turma '+esc(t.ed)+'ª ('+esc(t.curso)+')':' — sem turma');}else h.textContent="";}
@@ -1832,6 +1883,7 @@ function vRegistoForm(){return `<details class="sec accdet"><summary>Registo de 
    <div id="wf_onl_inicio" style="display:none"><label>Data de início (online)</label><input id="f_oinicio" type="date"></div><div id="wf_onl_horario" style="display:none"><label>Horário proposto de início (opcional)</label><input id="f_ohorario" type="time"></div>
    <div><label>Valor total (Kz)</label><input id="f_total" type="text" inputmode="numeric" value="${fmtMil(precoDe(CURSOS[0])||0)}" ${role==="admin"?"":"readonly"} oninput="maskMil(this);promToggle()">${role==="admin"?"":'<div class="muted" style="margin-top:3px">Definido pela gestão.</div>'}</div>
    <div><label>Valor recebido (Kz)</label><input id="f_pago" type="text" inputmode="numeric" placeholder="0" oninput="maskMil(this);promToggle()"><div class="muted" style="margin-top:3px">Se for menos que o total, fica em prestações.</div></div>
+   <div><label>Código promocional (opcional)</label><input id="f_cupom" placeholder="Ex.: PROMO10" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase();aplicarCupomVenda()"><div id="f_cupom_hint" class="muted" style="margin-top:3px"></div></div>
    <div><label>Comprovativo recebido?</label><select id="f_comp"><option>Não</option><option>Sim</option></select></div>
    ${(role==="admin"||podeEditar())?`<div><label>Inscrição por bónus? (não paga)</label><select id="f_bonus" onchange="bonusChg()"><option>Não</option><option>Sim</option></select></div>`:""}
    <div id="f_promwrap" style="display:none"><label>Data prometida pelo cliente p/ próxima prestação</label><input id="f_prom" type="date"></div>
@@ -1883,10 +1935,14 @@ function avisoDuplicado(nome,tel){const dup=formandoDuplicado(tel,nome);if(!dup)
 function addVenda(){const nome=val("f_nome");if(!nome){toast("Falta o nome");return}
  if(!val("f_vend")){toast("O responsável pela venda é obrigatório");var _fv=document.getElementById("f_vend");if(_fv)_fv.focus();return;}
  if(!avisoDuplicado(nome,val("f_tel")))return;
+ /* L69-1 — cupão validado uma última vez ao gravar (a par da validação em tempo real que já recalcula
+    o "Valor total"), para o caso de o código ter sido alterado sem disparar o recálculo. */
+ const cupomCod=(val("f_cupom")||"").trim().toUpperCase();let cupomAplicado=null;
+ if(cupomCod){const cv=cupomValidar(cupomCod,val("f_curso"));if(!cv.ok){toast(cv.msg);var _fcp=document.getElementById("f_cupom");if(_fcp)_fcp.focus();return;}cupomAplicado=cv.cupom;}
  if(val("f_mod")==="Online"){
   if(!val("f_oform")){toast("Escolhe o formador antes de inscrever — obrigatório em Turma Online");document.getElementById("f_oform").focus();return;}
   if(!val("f_email")){toast("O e-mail do aluno é obrigatório em Turma Online");document.getElementById("f_email").focus();return;}
-  const _o={nome:nome,email:val("f_email"),contacto:val("f_tel"),area:val("f_area"),nivel:val("f_onivel"),fase:val("f_omodo")||FASES[0],formador:val("f_oform"),inicio:val("f_oinicio"),horarioProposto:val("f_ohorario"),prazo:30,status:"Em andamento",valorPago:numVal("f_pago"),tarefa:"Não",avaliacao:"Não",proximoPDS:"",ultimoPDS:"",pdsFeitos:0,recorrente:false,bi:val("f_bi"),nasc:val("f_nasc"),tel2:val("f_tel2"),nota:val("f_nota"),canal:val("f_canal"),fonte:fonteDeTel(val("f_tel")),criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role,vendedor:val("f_vend")};ensureOnlineCod(_o);data.online.push(_o);syncPagOnline(_o);persist();toast("Aluno online registado");limparCampos(["f_tel","f_nome","f_email","f_area","f_bi","f_nasc","f_tel2","f_nota","f_oinicio","f_pago"]);render();return;}
+  const _o={nome:nome,email:val("f_email"),contacto:val("f_tel"),area:val("f_area"),nivel:val("f_onivel"),fase:val("f_omodo")||FASES[0],formador:val("f_oform"),inicio:val("f_oinicio"),horarioProposto:val("f_ohorario"),prazo:30,status:"Em andamento",valorPago:numVal("f_pago"),tarefa:"Não",avaliacao:"Não",proximoPDS:"",ultimoPDS:"",pdsFeitos:0,recorrente:false,bi:val("f_bi"),nasc:val("f_nasc"),tel2:val("f_tel2"),nota:val("f_nota"),canal:val("f_canal"),fonte:fonteDeTel(val("f_tel")),criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role,vendedor:val("f_vend"),cupom:cupomAplicado?cupomAplicado.codigo:""};ensureOnlineCod(_o);data.online.push(_o);syncPagOnline(_o);persist();toast("Aluno online registado");limparCampos(["f_tel","f_nome","f_email","f_area","f_bi","f_nasc","f_tel2","f_nota","f_oinicio","f_pago","f_cupom"]);render();return;}
  const turma=val("f_turma");if(!turma){toast("Selecciona a turma/edição antes de gravar — é obrigatório para o P&L bater certo.");document.getElementById("f_turma").focus();return;}const usaPC=val("f_pc");
  if(turma){const t=turmaByCod(turma);const vl=vagasLivres(t);
   if(vl===0&&!confirm("A turma "+t.ed+"ª está CHEIA. Inscrever mesmo assim?"))return;
@@ -1895,10 +1951,11 @@ function addVenda(){const nome=val("f_nome");if(!nome){toast("Falta o nome");ret
  data.formandos.push({cod,nome,tel:val("f_tel"),tel2:val("f_tel2"),bi:val("f_bi"),nasc:val("f_nasc"),email:val("f_email"),area:val("f_area"),curso:val("f_curso"),proximoCurso:val("f_prox"),nota:val("f_nota"),turma,turno:turnoSelInfo().turno,periodo:turnoSelInfo().periodo,horario:turnoSelInfo().horario,gestora:turnoSelInfo().gestora,formador:turnoSelInfo().formador,canal:val("f_canal"),fonte:fonteDeTel(val("f_tel")),data:new Date().toISOString().slice(0,10),criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role,estado:"Activo",vendedor:val("f_vend")||"Gestão",usaPC});
  const bonus=(val("f_bonus")==="Sim");const total=bonus?0:numVal("f_total");const pagoAgora=bonus?0:numVal("f_pago");const comp=val("f_comp");
  const plano=bonus?"Bónus":((pagoAgora>=total&&total>0)?"A pronto":"Prestações");
- const pag={cod,plano,total,pago:pagoAgora,bonus:bonus,bonusPor:bonus?((currentUser&&currentUser.nome)||role):"",comprovativo:comp,dataPrometida:val("f_prom"),criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role,prestacoes:[]};
+ const pag={cod,plano,total,pago:pagoAgora,bonus:bonus,bonusPor:bonus?((currentUser&&currentUser.nome)||role):"",comprovativo:comp,dataPrometida:val("f_prom"),criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role,prestacoes:[],cupom:(cupomAplicado&&!bonus)?cupomAplicado.codigo:""};
  if(pagoAgora>0)pag.prestacoes.push({valor:pagoAgora,data:new Date().toISOString().slice(0,10),comprovativo:comp});
  data.pagamentos.push(pag);
- persist();toast("Venda registada — "+cod);limparCampos(["f_tel","f_nome","f_total","f_pago","f_prom","f_nota","f_email","f_area","f_bi","f_nasc","f_tel2"]);render();}
+ if(cupomAplicado&&!bonus)cupomRegistarUso(cupomAplicado.codigo);
+ persist();toast("Venda registada — "+cod);limparCampos(["f_tel","f_nome","f_total","f_pago","f_prom","f_nota","f_email","f_area","f_bi","f_nasc","f_tel2","f_cupom"]);render();}
 function delFormando(cod){if(!confirm("Remover "+cod+"?"))return;data.formandos=data.formandos.filter(f=>f.cod!==cod);data.pagamentos=data.pagamentos.filter(p=>p.cod!==cod);persist();render()}
 
 /* TURMAS / EDIÇÕES */
@@ -1943,6 +2000,11 @@ function turmaExpModalHTML(){if(!turmaExp)return"";const t=turmaByCod(turmaExp);
   <table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th style="text-align:left;border-bottom:1px solid #999;padding:5px">#</th><th style="text-align:left;border-bottom:1px solid #999;padding:5px">Nome</th><th style="text-align:left;border-bottom:1px solid #999;padding:5px">Telefone</th><th style="text-align:left;border-bottom:1px solid #999;padding:5px">Turno/Horário</th></tr></thead><tbody>${alunos.map((f,idx)=>`<tr><td style="padding:5px;border-bottom:1px solid #eee">${idx+1}</td><td style="padding:5px;border-bottom:1px solid #eee">${esc(f.nome)}</td><td style="padding:5px;border-bottom:1px solid #eee">${esc(f.tel||"")}</td><td style="padding:5px;border-bottom:1px solid #eee">${esc(f.horario||f.turno||"")}</td></tr>`).join("")||'<tr><td colspan="4" style="padding:6px;color:#888">Sem formandos.</td></tr>'}</tbody></table>
   <div style="margin-top:14px;font-size:11px;color:#555">Emitido em ${new Date().toLocaleDateString("pt-PT")} — Knowledge Angola</div></div>
   <div class="row-actions noprint" style="padding:0 34px 20px"><button class="btn-p" onclick="printRecibo()">Imprimir / PDF</button><button class="btn-o" onclick="fecharTurmaExp()">Fechar</button></div></div></div>`;}
+/* L69-3 — cada edição aparece colapsada por omissão (Planeada, Em andamento ou já concluída);
+   clicar na linha abre o detalhe (responsável, horário, datas, vagas, computadores, acções).
+   Estado só em memória (não precisa de persistir — é só uma preferência de visualização). */
+let turmasAbertas={};
+function toggleTurmaDetalhe(cod){turmasAbertas[cod]=!turmasAbertas[cod];render();}
 function vTurmas(){
  const andamento=data.turmas.filter(t=>estadoTurma(t)==="Em andamento");
  const colid=role==="admin"?turmasColidentes():[];
@@ -1967,12 +2029,19 @@ function vTurmas(){
    </tbody></table></div>
   <div class="muted" style="margin-top:6px">Os dias de presença são automáticos: turnos de sábado → os 5 sábados; turno de semana → Segunda e Quinta.</div>
   <div class="row-actions"><button class="btn-p" onclick="addTurma()">Gravar edição</button></div></details>
- <div class="sec"><h2>Edições</h2>
-  <table><thead><tr><th>Edição</th><th>Curso</th><th>Responsável</th><th>Horário</th><th>Início</th><th>Fim</th><th>Inscritos</th><th>Vagas livres</th><th>Computadores</th><th>Estado</th><th></th></tr></thead><tbody>
-  ${turmasVisiveis().slice().sort((a,b)=>(+b.ed||0)-(+a.ed||0)).map(t=>{const i=data.turmas.indexOf(t);const st=estadoTurma(t);const insc=inscritosDe(t.cod);const inscPagos=inscritosPagosDe(t.cod);const ipt=inscritosPorTurno(t);const vl=vagasLivres(t);const vpt=vagasLivresPorTurno(t);const pc=pcOcupados(t.cod);const cdp=computadoresDe(t);const cheia=vl===0;const pcFull=pc>=cdp;const vlCell=vpt?vpt.map(function(x){return '<div style="white-space:nowrap"><span class="muted" style="font-size:10.5px">'+esc(x.horario)+':</span> <span class="pill '+(x.vl===0?'p-verm':'p-verde')+'" style="padding:1px 7px">'+(x.vl===0?'CHEIA':x.vl)+'</span></div>';}).join(""):null;return `<tr><td><b>${esc(t.ed)}ª</b></td><td>${esc(t.curso)}</td><td>${esc(t.resp||"")}</td><td>${(t.horario||"").split(" / ").filter(Boolean).map(function(h){return '<div style="white-space:nowrap;font-size:12px;line-height:1.5">'+esc(h)+'</div>';}).join("")||'<span class="muted">—</span>'}</td><td>${esc(t.inicio||"")}</td><td>${esc(t.fim||"")}</td><td><span class="pill p-cinza" style="font-size:12px;white-space:nowrap">${inscPagos} pago(s)${insc>inscPagos?' + '+(insc-inscPagos)+' pend.':''}${t.vagas?' / '+esc(t.vagas)+(vpt?' turno':''):''}</span>${ipt?'<div style="margin-top:5px;display:flex;flex-direction:column;gap:2px">'+ipt.map(function(x){return '<div style="white-space:nowrap;font-size:10.5px'+(x.aviso?';color:#b8860b;font-weight:600':'')+'" class="'+(x.aviso?'':'muted')+'">'+(x.aviso?'⚠ ':'')+esc(x.horario)+': '+x.pg+' pago(s)'+(x.dv?' + '+x.dv+' pend.':'')+'</div>';}).join("")+'</div>':''}</td><td>${vlCell!=null?vlCell:(vl==null?'<span class="muted">sem limite</span>':(cheia?'<span class="pill p-verm">CHEIA</span>':'<span class="pill p-verde">'+vl+'</span>'))}</td><td><span class="pill ${pcFull?'p-verm':'p-cinza'}">${pc}/${cdp}</span></td><td><span class="pill ${st==='Em andamento'?'p-verde':st==='Planeada'?'p-dour':'p-cinza'}">${st==='Concluída'?'Edição passada':st}</span>${t.excecaoAte&&st==='Em andamento'?'<br><span class="muted" style="font-size:10.5px" title="'+esc(t.excecaoMotivo||'')+'">exceção até '+esc(t.excecaoAte)+'</span>':''}</td><td class="flex" style="gap:6px"><button class="btn-o" style="padding:4px 8px" onclick="verEdicao('${esc(t.cod)}')">Ver alunos</button>${role==="admin"&&t.fim?`<button class="btn-o" style="padding:4px 8px" title="Manter a turma aberta depois da data de fim (com motivo registado)" onclick="pedirExcecaoTurma('${esc(t.cod)}')">Exceção</button>`:""}${(role==="admin"||(currentUser&&currentUser.nome===t.gestora))?`<button class="btn-${t.concluida?'g':'o'}" style="padding:4px 8px" onclick="marcarTurmaConcluida(${i})">${t.concluida?'✓ Concluída':'Concluir turma'}</button>`:""}${podeExportar()?`<button class="btn-o" style="padding:4px 8px" onclick="exportTurma('${esc(t.cod)}')">Exportar</button>`:""}${podeExportar()?`<button class="btn-o" style="padding:4px 8px" onclick="exportTurmaPDF('${esc(t.cod)}')">PDF</button>`:""}${role==="admin"?`<button class="btn-o" style="padding:4px 8px" title="Editar tudo: datas, curso, vagas, computadores, orçamento e equipa" onclick="editTurma(${i})">Editar</button>`:""}${(function(){var p=procProgresso(t.cod);return '<span class="pill '+(p.feitos>=p.total?'p-verde':'p-dour')+'" title="Procedimentos da turma">📋 '+p.feitos+'/'+p.total+'</span>';})()}${(Array.isArray(t.turnos)&&t.turnos.length?t.turnos:[{horario:t.horario||"",gestora:t.gestora||"",formador:t.resp||""}]).map(function(tn,ti){var prog=feedbackProgresso(t.cod,ti);return '<button class="btn-o" style="padding:3px 8px" title="Recolher feedback deste turno" onclick="abrirFeedback(\''+esc(t.cod)+'\','+ti+')">🎤 '+prog+'/5</button>';}).join("")}${role==="admin"?`<button class="btn-o" style="padding:4px 10px" onclick="delTurma(${i})">✕</button>`:""}</td></tr>`}).join("")||`<tr><td colspan="11" class="muted">Sem edições. Abre a primeira acima.</td></tr>`}
+  <div class="sec"><h2>Edições</h2><div class="muted">Clica numa edição para abrir o detalhe (responsável, horário, datas, vagas, computadores e acções).</div>
+  <table><thead><tr><th></th><th>Edição</th><th>Curso</th><th>Inscritos</th><th>Estado</th></tr></thead><tbody>
+  ${turmasVisiveis().slice().sort((a,b)=>(+b.ed||0)-(+a.ed||0)).map(t=>{const i=data.turmas.indexOf(t);const st=estadoTurma(t);const insc=inscritosDe(t.cod);const inscPagos=inscritosPagosDe(t.cod);const ipt=inscritosPorTurno(t);const vl=vagasLivres(t);const vpt=vagasLivresPorTurno(t);const pc=pcOcupados(t.cod);const cdp=computadoresDe(t);const cheia=vl===0;const pcFull=pc>=cdp;const vlCell=vpt?vpt.map(function(x){return '<div style="white-space:nowrap"><span class="muted" style="font-size:10.5px">'+esc(x.horario)+':</span> <span class="pill '+(x.vl===0?'p-verm':'p-verde')+'" style="padding:1px 7px">'+(x.vl===0?'CHEIA':x.vl)+'</span></div>';}).join(""):null;const aberta=!!turmasAbertas[t.cod];const resumo=`<tr style="cursor:pointer" onclick="toggleTurmaDetalhe('${esc(t.cod)}')"><td style="width:22px;text-align:center;color:var(--azul2)">${aberta?"▾":"▸"}</td><td><b>${esc(t.ed)}ª</b></td><td>${esc(t.curso)}</td><td><span class="pill p-cinza" style="font-size:12px;white-space:nowrap">${inscPagos} pago(s)${insc>inscPagos?' + '+(insc-inscPagos)+' pend.':''}${t.vagas?' / '+esc(t.vagas)+(vpt?' turno':''):''}</span></td><td><span class="pill ${st==='Em andamento'?'p-verde':st==='Planeada'?'p-dour':'p-cinza'}">${st==='Concluída'?'Edição passada':st}</span>${t.excecaoAte&&st==='Em andamento'?'<br><span class="muted" style="font-size:10.5px" title="'+esc(t.excecaoMotivo||'')+'">exceção até '+esc(t.excecaoAte)+'</span>':''}</td></tr>`;if(!aberta)return resumo;const detalhe=`<tr><td></td><td colspan="4" style="background:#f7f9fc;padding:12px 14px"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;font-size:13px"><div><span class="muted" style="font-size:11px;text-transform:uppercase">Responsável</span><br>${esc(t.resp||"—")}</div><div><span class="muted" style="font-size:11px;text-transform:uppercase">Horário</span><br>${(t.horario||"").split(" / ").filter(Boolean).map(function(h){return '<div style="white-space:nowrap">'+esc(h)+'</div>';}).join("")||"—"}</div><div><span class="muted" style="font-size:11px;text-transform:uppercase">Início</span><br>${fmtDataCurta(t.inicio)||"—"}</div><div><span class="muted" style="font-size:11px;text-transform:uppercase">Fim</span><br>${fmtDataCurta(t.fim)||"—"}</div><div><span class="muted" style="font-size:11px;text-transform:uppercase">Vagas livres</span><br>${vlCell!=null?vlCell:(vl==null?'<span class="muted">sem limite</span>':(cheia?'<span class="pill p-verm">CHEIA</span>':'<span class="pill p-verde">'+vl+'</span>'))}</div><div><span class="muted" style="font-size:11px;text-transform:uppercase">Computadores</span><br><span class="pill ${pcFull?'p-verm':'p-cinza'}">${pc}/${cdp}</span></div></div>${ipt?'<div style="margin-top:8px;display:flex;flex-direction:column;gap:2px">'+ipt.map(function(x){return '<div style="white-space:nowrap;font-size:11px'+(x.aviso?';color:#b8860b;font-weight:600':'')+'" class="'+(x.aviso?'':'muted')+'">'+(x.aviso?'⚠ ':'')+esc(x.horario)+': '+x.pg+' pago(s)'+(x.dv?' + '+x.dv+' pend.':'')+'</div>';}).join("")+'</div>':''}<div class="flex" style="gap:6px;flex-wrap:wrap;margin-top:12px" onclick="event.stopPropagation()"><button class="btn-o" style="padding:4px 8px" onclick="verEdicao('${esc(t.cod)}')">Ver alunos</button>${role==="admin"&&t.fim?`<button class="btn-o" style="padding:4px 8px" title="Manter a turma aberta depois da data de fim (com motivo registado)" onclick="pedirExcecaoTurma('${esc(t.cod)}')">Exceção</button>`:""}${(role==="admin"||(currentUser&&currentUser.nome===t.gestora))?`<button class="btn-${t.concluida?'g':'o'}" style="padding:4px 8px" onclick="marcarTurmaConcluida(${i})">${t.concluida?'✓ Concluída':'Concluir turma'}</button>`:""}${podeExportar()?`<button class="btn-o" style="padding:4px 8px" onclick="exportTurma('${esc(t.cod)}')">Exportar</button>`:""}${podeExportar()?`<button class="btn-o" style="padding:4px 8px" onclick="exportTurmaPDF('${esc(t.cod)}')">PDF</button>`:""}${role==="admin"?`<button class="btn-o" style="padding:4px 8px" title="Editar tudo: datas, curso, vagas, computadores, orçamento e equipa" onclick="editTurma(${i})">Editar</button>`:""}${(function(){var p=procProgresso(t.cod);return '<span class="pill '+(p.feitos>=p.total?'p-verde':'p-dour')+'" title="Procedimentos da turma">📋 '+p.feitos+'/'+p.total+'</span>';})()}${(Array.isArray(t.turnos)&&t.turnos.length?t.turnos:[{horario:t.horario||"",gestora:t.gestora||"",formador:t.resp||""}]).map(function(tn,ti){var prog=feedbackProgresso(t.cod,ti);return '<button class="btn-o" style="padding:3px 8px" title="Recolher feedback deste turno" onclick="abrirFeedback(\''+esc(t.cod)+'\','+ti+')">🎤 '+prog+'/5</button>';}).join("")}${role==="admin"?`<button class="btn-o" style="padding:4px 10px" onclick="delTurma(${i})">✕</button>`:""}</div></td></tr>`;return resumo+detalhe;}).join("")||`<tr><td colspan="5" class="muted">Sem edições. Abre a primeira acima.</td></tr>`}
   </tbody></table></div>`;
 }
+/* L69-0b — causa-raiz das edições duplicadas (Ed14/Ed15): este formulário só sabia criar,
+   nunca verificava se a edição já existia, por isso reabrir "Abrir / registar edição" para a
+   mesma edição+curso criava sempre uma turma nova em vez de actualizar a existente (foi assim
+   que surgiram as colisões corrigidas manualmente). Agora bloqueia e aponta para "Editar tudo". */
 function addTurma(){const ed=val("t_ed");if(!ed){toast("Falta o nº da edição");return}
+ const curso0=val("t_curso");
+ const jaExiste=(data.turmas||[]).find(function(t){return String(t.ed)===String(ed)&&(t.curso||"")===curso0;});
+ if(jaExiste){toast("Já existe a "+ed+"ª edição de "+curso0+" (código "+jaExiste.cod+"). Usa \"Editar tudo\" nessa linha da tabela Edições para mudar turnos, datas ou equipa — não criar outra.");return;}
  const turnos=[];function addT(id,tipo,horario){const c=document.getElementById(id);if(c&&c.checked)turnos.push({tipo,horario,gestora:val(id+"_g"),formador:val(id+"_f"),inicio:val(id+"_i"),fim:val(id+"_fim")});}
  addT("tn_sabM","sabManha","Sábado manhã (8:30–13:00)");addT("tn_sabT","sabTarde","Sábado tarde (14:00–18:00)");addT("tn_sem","semana","Dias de semana (9h–11h)");
  if(!turnos.length){toast("Activa pelo menos um turno");return}
@@ -2015,8 +2084,55 @@ function lancamentoHTML(){return `<details class="sec accdet"><summary>Checklist
   <div class="row-actions"><button class="btn-o" onclick="novoLancamento()">Novo lançamento (limpar)</button></div></details>`;}
 function ensureChkPadrao(){if(!data.checklistPadrao)data.checklistPadrao={"Assistente":["Confirmar presenças do dia","Responder a novos leads e seguir os pendentes","Registar gastos do dia"],"Formador":["Marcar PDS realizados","Registar avaliações entregues"],"Gestora de Formação":["Rever turmas em andamento","Confirmar próximos PDS e chamadas"],"Gestor":["Ver o painel do dia","Rever tarefas por resolver e pagamentos"]};return data.checklistPadrao;}
 function setChkPadrao(func,el){var C=ensureChkPadrao();C[func]=(el.value||"").split("\n").map(function(s){return s.trim();}).filter(Boolean);persist();}
-function toggleChkFeito(idx){var hoje=new Date().toISOString().slice(0,10);var me=(currentUser&&currentUser.nome)||role;if(!data.checklistFeito)data.checklistFeito={};if(!data.checklistFeito[hoje])data.checklistFeito[hoje]={};var k=me+"::"+idx;if(data.checklistFeito[hoje][k])delete data.checklistFeito[hoje][k];else data.checklistFeito[hoje][k]=true;persist();render();}
-function minhaChecklistHTML(){var C=ensureChkPadrao();var func=(currentUser&&currentUser.funcao)||(role==="admin"?"Gestor":"Assistente");var itens=C[func]||[];if(!itens.length)return"";var hoje=new Date().toISOString().slice(0,10);var me=(currentUser&&currentUser.nome)||role;var feito=(data.checklistFeito&&data.checklistFeito[hoje])||{};return `<div class="sec"><h2>A minha checklist de hoje <span class="muted" style="font-size:12px;font-weight:400">(${esc(func)})</span></h2><table><tbody>${itens.map(function(t,ix){var done=feito[me+"::"+ix];return '<tr><td style="width:56px"><button class="pill '+(done?'p-verde':'p-verm')+'" style="border:none;cursor:pointer" onclick="toggleChkFeito('+ix+')">'+(done?'✓':'—')+'</button></td><td>'+esc(t)+'</td></tr>';}).join("")}</tbody></table></div>`;}
+/* L69-5 — checklist por camadas: além da checklist por função (acima, já existia), a gestão pode
+   definir tarefas Gerais (toda a gente), por Departamento, e atribuições individuais por Pessoa. Cada
+   colaborador vê a soma de todas as camadas que se aplicam a ele. */
+function ensureChkGeral(){if(!Array.isArray(data.checklistGeral))data.checklistGeral=[];return data.checklistGeral;}
+function setChkGeral(el){data.checklistGeral=(el.value||"").split("\n").map(function(s){return s.trim();}).filter(Boolean);persist();}
+function ensureChkDept(){if(!data.checklistDept)data.checklistDept={};return data.checklistDept;}
+function setChkDept(dep,el){var C=ensureChkDept();C[dep]=(el.value||"").split("\n").map(function(s){return s.trim();}).filter(Boolean);persist();}
+function ensureChkPessoal(){if(!data.checklistPessoal)data.checklistPessoal={};return data.checklistPessoal;}
+function setChkPessoal(pessoa,el){if(!pessoa)return;var C=ensureChkPessoal();C[pessoa]=(el.value||"").split("\n").map(function(s){return s.trim();}).filter(Boolean);persist();}
+let chkPessoalSel=null;
+/* Chave de conclusão passa a incluir a camada de origem (geral/dept/funcao/pessoal), para uma tarefa
+   "Geral" nº0 nunca colidir com uma tarefa "Função" nº0 da mesma pessoa. */
+function toggleChkFeito(origem,idx){var hoje=new Date().toISOString().slice(0,10);var me=(currentUser&&currentUser.nome)||role;if(!data.checklistFeito)data.checklistFeito={};if(!data.checklistFeito[hoje])data.checklistFeito[hoje]={};var k=me+"::"+origem+":"+idx;if(data.checklistFeito[hoje][k])delete data.checklistFeito[hoje][k];else data.checklistFeito[hoje][k]=true;persist();render();}
+function minhaChecklistHTML(){
+ var func=(currentUser&&currentUser.funcao)||(role==="admin"?"Gestor":"Assistente");
+ var me=(currentUser&&currentUser.nome)||role;
+ var dep=(currentUser&&currentUser.departamento)||"";
+ var itensGeral=ensureChkGeral().map(function(t,ix){return{t:t,origem:"geral",etq:"Geral"};});
+ var itensDept=(dep?(ensureChkDept()[dep]||[]):[]).map(function(t,ix){return{t:t,origem:"dept",etq:"Depto"};});
+ var itensFunc=(ensureChkPadrao()[func]||[]).map(function(t,ix){return{t:t,origem:"funcao",etq:"Função"};});
+ var itensPessoal=(ensureChkPessoal()[me]||[]).map(function(t,ix){return{t:t,origem:"pessoal",etq:"Pessoal"};});
+ var contadores={};
+ var itens=itensGeral.concat(itensDept,itensFunc,itensPessoal).map(function(x){var ix=contadores[x.origem]=(contadores[x.origem]||0);contadores[x.origem]++;return Object.assign({idx:ix},x);});
+ var hoje=new Date().toISOString().slice(0,10);
+ var feito=(data.checklistFeito&&data.checklistFeito[hoje])||{};
+ var checklistBlock=itens.length?`<div class="sec"><h2>A minha checklist de hoje <span class="muted" style="font-size:12px;font-weight:400">(${esc(func)}${dep?" · "+esc(dep):""})</span></h2><table><tbody>${itens.map(function(x){var k=me+"::"+x.origem+":"+x.idx;var done=feito[k];return '<tr><td style="width:56px"><button class="pill '+(done?'p-verde':'p-verm')+'" style="border:none;cursor:pointer" onclick="toggleChkFeito(&#39;'+x.origem+'&#39;,'+x.idx+')">'+(done?'✓':'—')+'</button></td><td>'+esc(x.t)+' <span class="muted" style="font-size:10.5px">('+x.etq+')</span></td></tr>';}).join("")}</tbody></table></div>`:"";
+ return checklistBlock+outrosDiaHTML()+(role==="admin"?outrosGestaoHTML():"");
+}
+/* "Outros" — timesheet simples: lista de coisas adicionais feitas hoje, só descrição (sem campo de
+   horas), com botão "+ Adicionar" para ir crescendo a lista ao longo do dia. */
+function ensureOutrosDia(){if(!Array.isArray(data.outrosDia))data.outrosDia=[];return data.outrosDia;}
+function addOutroDia(){var txt=(val("outro_txt")||"").trim();if(!txt){toast("Escreve o que fizeste");return;}
+ var me=(currentUser&&currentUser.nome)||role;var hoje=new Date().toISOString().slice(0,10);
+ ensureOutrosDia().push({data:hoje,pessoa:me,texto:txt,criadoEm:new Date().toISOString()});
+ persist();var inp=document.getElementById("outro_txt");if(inp)inp.value="";toast("Adicionado");render();}
+function delOutroDia(i){var arr=ensureOutrosDia();var o=arr[i];if(!o)return;var me=(currentUser&&currentUser.nome)||role;if(role!=="admin"&&o.pessoa!==me){toast("Só podes apagar as tuas próprias entradas");return;}arr.splice(i,1);persist();render();}
+function outrosDiaHTML(){
+ var me=(currentUser&&currentUser.nome)||role;var hoje=new Date().toISOString().slice(0,10);
+ var meus=ensureOutrosDia().map(function(o,i){return{o:o,i:i};}).filter(function(x){return x.o.data===hoje&&x.o.pessoa===me;});
+ return `<div class="sec"><h2>Outros — o que mais fiz hoje</h2><div class="muted">Coisas adicionais que fizeste hoje, fora da checklist. Só descrição — vai ficando registado ao longo do dia.</div>
+  <div class="flex" style="gap:8px;margin-top:8px"><input id="outro_txt" placeholder="Ex.: Ajudei a preparar o panfleto da nova turma" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();addOutroDia();}"><button class="btn-p" onclick="addOutroDia()">+ Adicionar</button></div>
+  ${meus.length?'<ul style="margin:10px 0 0 18px;line-height:1.8">'+meus.map(function(x){return '<li>'+esc(x.o.texto)+' <button class="btn-o" style="padding:1px 7px;margin-left:6px" onclick="delOutroDia('+x.i+')">✕</button></li>';}).join("")+'</ul>':'<div class="muted" style="margin-top:8px">Ainda nada registado hoje.</div>'}
+ </div>`;}
+function outrosGestaoHTML(){
+ var hoje=new Date().toISOString().slice(0,10);
+ var todos=ensureOutrosDia().filter(function(o){return o.data===hoje;});
+ if(!todos.length)return"";
+ var porPessoa={};todos.forEach(function(o){(porPessoa[o.pessoa]=porPessoa[o.pessoa]||[]).push(o.texto);});
+ return `<div class="sec"><h2>Outros de hoje — toda a equipa <span class="muted" style="font-size:12px;font-weight:400">(só gestão)</span></h2><table><tbody>${Object.keys(porPessoa).map(function(p){return '<tr><td style="font-weight:600;white-space:nowrap;vertical-align:top;padding-right:10px">'+esc(p)+'</td><td>'+porPessoa[p].map(function(t){return esc(t);}).join('<br>')+'</td></tr>';}).join("")}</tbody></table></div>`;}
 function marcarTurmaConcluida(i){var t=data.turmas[i];if(!t)return;var podeG=(role==="admin")||(currentUser&&currentUser.nome===t.gestora);if(!podeG){toast("Só a gestora responsável ou a gestão");return;}if(t.concluida){if(confirm("Reabrir a "+t.ed+"ª turma (desmarcar concluída)?")){t.concluida=null;persist();render();}return;}if(!confirm("Marcar a "+t.ed+"ª turma como CONCLUÍDA? Fica pronta para gerar certificados."))return;t.concluida={por:(currentUser&&currentUser.nome)||role,quando:new Date().toISOString().slice(0,10)};persist();toast("Turma marcada como concluída");render();}
 let turmaEditIdx=null;
 function editTurma(i){if(role!=="admin"){toast("Só a gestão edita edições");return;}turmaEditIdx=i;render();}
@@ -3118,6 +3234,9 @@ function confirmarInscricaoModalHTML(){if(inscConfirmModal===null||!Array.isArra
  ${turnosSel?`<div style="margin-top:10px"><label style="display:block;font-weight:700;font-size:12px;color:var(--azul);text-transform:uppercase;margin-bottom:5px">Turno</label>
  <select id="conf_turno" onchange="setConfTurno(this)">${!turnoGuess?'<option value="">— escolhe o turno —</option>':""}${turnosSel.map(function(tn){return '<option value="'+esc(tn.horario)+'" '+(tn.horario===turnoGuess?"selected":"")+'>'+esc(tn.horario)+'</option>';}).join("")}</select>
  <div class="muted" style="margin-top:4px">${turnoGuess?'Palpite automático a partir do que veio da landing — confirma ou corrige antes de gravar, para os números por turno baterem certo.':'<b style="color:#a3311f">O texto da landing não deu para adivinhar o turno — escolhe manualmente antes de confirmar.</b>'}</div></div>`:""}
+ <div style="margin-top:10px"><label style="display:block;font-weight:700;font-size:12px;color:var(--azul);text-transform:uppercase;margin-bottom:5px">Código promocional (opcional)</label>
+ <input id="conf_cupom" placeholder="Ex.: PROMO10" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+ <div class="muted" style="margin-top:4px">Se o formando tiver um cupão de desconto, escreve o código aqui — a percentagem é aplicada ao valor total ao confirmar.</div></div>
  <div style="margin-top:10px"><label style="display:block;font-weight:700;font-size:12px;color:var(--azul);text-transform:uppercase;margin-bottom:5px">Responsável pela venda ${(dup&&dup.vendedor)?"":'<span style="color:#C0392B">*</span>'}</label>
  <select id="conf_resp"><option value="">— escolher${(dup&&dup.vendedor)?"":" (obrigatório)"} —</option>${todosColaboradores().map(function(n){return '<option value="'+esc(n)+'" '+((dup&&dup.vendedor===n)?"selected":"")+'>'+esc(n)+'</option>';}).join("")}<option value="Gestão" ${(dup&&dup.vendedor==="Gestão")?"selected":""}>Gestão (sem comissão a ninguém)</option></select>
  <div class="muted" style="margin-top:4px">${(dup&&dup.vendedor)?("Este formando já tem responsável ("+esc(dup.vendedor)+") — não é alterado ao fundir."):"Obrigatório indicar quem fez a venda, para a comissão ser atribuída correctamente. Escolhe \"Gestão\" só se, de facto, ninguém deve receber comissão por esta venda."}</div></div>
@@ -3134,11 +3253,14 @@ function finalizarInscricao(i){const r=Array.isArray(INSCR)&&INSCR[i];if(!r)retu
  const turma=val("conf_turma")||"";
  const turmaObj=turmaByCod(turma);
  if(turmaObj&&Array.isArray(turmaObj.turnos)&&turmaObj.turnos.length>1&&!val("conf_turno")){toast("Escolhe o turno antes de confirmar — não havia palpite fiável a partir do que veio da landing.");return;}
+ const cupomCod=(val("conf_cupom")||"").trim().toUpperCase();let cupomAplicado=null;
+ if(cupomCod){const cv=cupomValidar(cupomCod,cursoFinal);if(!cv.ok){toast(cv.msg);var _cc=document.getElementById("conf_cupom");if(_cc)_cc.focus();return;}cupomAplicado=cv.cupom;}
  const n=data.formandos.reduce((m,f)=>{const x=parseInt((f.cod||"").replace(/\D/g,""))||0;return x>m?x:m},0)+1;const cod="KA-"+String(n).padStart(3,"0");
  const horarioFinal=(turmaObj&&Array.isArray(turmaObj.turnos)&&turmaObj.turnos.length>1)?val("conf_turno"):(r.horario||"");
  data.formandos.push({cod,nome:r.nome||"",tel:r.tel||"",email:r.email||"",curso:cursoFinal,turma,periodo:r.periodo||"",horario:horarioFinal,modalidade:confModalidadeSel||r.modalidade||"Presencial",canal:"Landing",fonte:r.fonte||"",data:new Date().toISOString().slice(0,10),criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role,estado:"Activo",vendedor:val("conf_resp")||"Gestão"});
- const total=precoDe(cursoFinal)||0;const pago=+r.valorPago||0;
- data.pagamentos.push({cod,plano:(pago>=total&&total>0)?"A pronto":"Prestações",total:total,pago:pago,comprovativo:r.comprovativo?"Sim":"Não",dataPrometida:"",prestacoes:pago>0?[{valor:pago,data:new Date().toISOString().slice(0,10),comprovativo:r.comprovativo?"Sim":"Não",comprovativoImg:r.comprovativo||""}]:[],criadoEm:new Date().toISOString()});
+ const totalBase=precoDe(cursoFinal)||0;const total=cupomAplicado?Math.round(totalBase*(1-cupomAplicado.percentagem/100)):totalBase;const pago=+r.valorPago||0;
+ data.pagamentos.push({cod,plano:(pago>=total&&total>0)?"A pronto":"Prestações",total:total,pago:pago,comprovativo:r.comprovativo?"Sim":"Não",dataPrometida:"",prestacoes:pago>0?[{valor:pago,data:new Date().toISOString().slice(0,10),comprovativo:r.comprovativo?"Sim":"Não",comprovativoImg:r.comprovativo||""}]:[],criadoEm:new Date().toISOString(),cupom:cupomAplicado?cupomAplicado.codigo:""});
+ if(cupomAplicado)cupomRegistarUso(cupomAplicado.codigo);
  _marcarInscConfirmada(r);persist();inscConfirmModal=null;confCursoSel=null;toast("Inscrito como formando"+(turma?" na turma":"")); fFicha=cod; show("formandos");}
 /* L64 — quando a inscrição da landing já corresponde a um formando existente (mesmo telefone),
    funde em vez de bloquear: preenche só o que estiver vazio, nunca apaga dados já certos. */
@@ -3149,6 +3271,8 @@ function finalizarFusaoInscricao(i){const r=Array.isArray(INSCR)&&INSCR[i];if(!r
  const turma=val("conf_turma")||"";
  const turmaObj=turmaByCod(turma);
  if(turmaObj&&Array.isArray(turmaObj.turnos)&&turmaObj.turnos.length>1&&!val("conf_turno")){toast("Escolhe o turno antes de confirmar — não havia palpite fiável a partir do que veio da landing.");return;}
+ const cupomCod=(val("conf_cupom")||"").trim().toUpperCase();let cupomAplicado=null;
+ if(cupomCod){const cv=cupomValidar(cupomCod,cursoFinal);if(!cv.ok){toast(cv.msg);var _cc=document.getElementById("conf_cupom");if(_cc)_cc.focus();return;}cupomAplicado=cv.cupom;}
  const horarioFinal=(turmaObj&&Array.isArray(turmaObj.turnos)&&turmaObj.turnos.length>1)?val("conf_turno"):(r.horario||dup.horario||"");
  const alteracoes=[];
  ["email","bi","nascimento","tel2","area"].forEach(function(k){if(!dup[k]&&r[k]){dup[k]=r[k];alteracoes.push(k);}});
@@ -3167,11 +3291,12 @@ function finalizarFusaoInscricao(i){const r=Array.isArray(INSCR)&&INSCR[i];if(!r
  const pagoNovo=+r.valorPago||0;
  if(pagoNovo>0){let p=payOf(dup.cod);const jaTinhaValor=!!(p&&(+p.pago||0)>0);
   if(jaTinhaValor){alteracoes.push("pagamento da landing ("+kz(pagoNovo)+") ignorado — a ficha já tinha "+kz(p.pago)+" registado");}
-  else{if(!p){p={cod:dup.cod,plano:"Prestações",total:precoDe(cursoFinal)||0,pago:0,comprovativo:"Não",dataPrometida:"",prestacoes:[]};data.pagamentos.push(p);}
+  else{const _novo=!p;if(!p){const totalBase=precoDe(cursoFinal)||0;const totalCupom=cupomAplicado?Math.round(totalBase*(1-cupomAplicado.percentagem/100)):totalBase;p={cod:dup.cod,plano:"Prestações",total:totalCupom,pago:0,comprovativo:"Não",dataPrometida:"",prestacoes:[],cupom:cupomAplicado?cupomAplicado.codigo:""};data.pagamentos.push(p);}
    if(!Array.isArray(p.prestacoes))p.prestacoes=[];
    p.prestacoes.push({valor:pagoNovo,data:new Date().toISOString().slice(0,10),comprovativo:r.comprovativo?"Sim":"Não",comprovativoImg:r.comprovativo||""});
    p.pago=(+p.pago||0)+pagoNovo;if(r.comprovativo)p.comprovativo="Sim";
-   alteracoes.push("pagamento de "+kz(pagoNovo));}}
+   alteracoes.push("pagamento de "+kz(pagoNovo));
+   if(_novo&&cupomAplicado){cupomRegistarUso(cupomAplicado.codigo);alteracoes.push("cupão "+cupomAplicado.codigo+" aplicado (-"+cupomAplicado.percentagem+"%)");}}}
  _marcarInscConfirmada(r);persist();inscConfirmModal=null;confCursoSel=null;
  toast("Fundido com "+dup.nome+" ("+dup.cod+")"+(alteracoes.length?" — actualizado: "+alteracoes.join(", "):" — sem novidades a preencher"));
  fFicha=dup.cod;show("formandos");}
@@ -3843,12 +3968,23 @@ function vDefs(){const _im=indicadoresMarketing(mesTrafego||null);const _fontes=
   <div class="formgrid"><div><label>Nova senha</label><input id="np" type="password"></div></div>
   <div class="row-actions"><button class="btn-p" onclick="changePass()">Guardar senha</button></div>
   <div class="note">A senha fica guardada só neste navegador. Anota-a num sítio seguro.</div></div>
+ ${cupoesHTML()}
  <div class="sec"><h2>Manual de procedimentos das turmas</h2><div class="muted">O que a gestora de formação deve cumprir em cada turma. Uma tarefa por linha. Aparece em cada turma (Ver alunos) com botões para marcar como feito, com registo de quem e quando.</div>
   <textarea rows="8" onchange="setProcPadrao(this)">${esc(procPadrao().join("\n"))}</textarea>
   <div class="muted" style="margin-top:6px">Progresso por turma visível na lista de Edições (📋 x/y).</div></div>
- <div class="sec"><h2>Checklists-padrão por função</h2><div class="muted">Define as tarefas diárias de cada função. Cada colaborador vê a sua checklist nas Notificações; os checks reiniciam a cada dia. Uma tarefa por linha.</div>
-  ${Object.keys(ensureChkPadrao()).map(function(func){return '<div style="margin-top:10px"><label>'+esc(func)+'</label><textarea rows="4" onchange="setChkPadrao(&#39;'+esc(func)+'&#39;,this)">'+esc((ensureChkPadrao()[func]||[]).join("\n"))+'</textarea></div>';}).join("")}
-  <div class="note">As tarefas pontuais com prazo atribuídas a uma pessoa continuam a usar a aba "Comunicados &amp; Tarefas".</div></div>
+ <div class="sec"><h2>Checklists-padrão (geral + departamento + função + pessoa)</h2><div class="muted">Cada colaborador vê, na sua checklist diária, a soma de tudo o que se aplica a ele: as tarefas gerais (todos), as do seu departamento, as da sua função, e as que lhe forem atribuídas individualmente. Os checks reiniciam a cada dia. Uma tarefa por linha.</div>
+  <div style="margin-top:12px"><label><b>Geral — aplica-se a toda a gente</b></label><textarea rows="3" onchange="setChkGeral(this)">${esc(ensureChkGeral().join("\n"))}</textarea></div>
+  <div style="margin-top:14px"><label style="font-weight:700;color:var(--azul)">Por departamento</label>
+   ${Object.keys(DEPARTAMENTOS).map(function(dep){return '<div style="margin-top:8px"><label>'+esc(dep)+'</label><textarea rows="3" onchange="setChkDept(&#39;'+esc(dep)+'&#39;,this)">'+esc((ensureChkDept()[dep]||[]).join("\n"))+'</textarea></div>';}).join("")}
+  </div>
+  <div style="margin-top:14px"><label style="font-weight:700;color:var(--azul)">Por função</label>
+  ${Object.keys(ensureChkPadrao()).map(function(func){return '<div style="margin-top:8px"><label>'+esc(func)+'</label><textarea rows="3" onchange="setChkPadrao(&#39;'+esc(func)+'&#39;,this)">'+esc((ensureChkPadrao()[func]||[]).join("\n"))+'</textarea></div>';}).join("")}
+  </div>
+  <div style="margin-top:14px"><label style="font-weight:700;color:var(--azul)">Por pessoa (atribuição individual)</label>
+   <select onchange="chkPessoalSel=this.value;render();"><option value="">— escolhe a pessoa —</option>${todosColaboradores().map(function(n){return '<option value="'+esc(n)+'" '+(chkPessoalSel===n?"selected":"")+'>'+esc(n)+'</option>';}).join("")}</select>
+   ${chkPessoalSel?'<textarea rows="3" style="margin-top:8px" onchange="setChkPessoal(chkPessoalSel,this)">'+esc((ensureChkPessoal()[chkPessoalSel]||[]).join("\n"))+'</textarea>':''}
+  </div>
+  <div class="note" style="margin-top:10px">As tarefas pontuais com prazo atribuídas a uma pessoa continuam a usar a aba "Comunicados &amp; Tarefas".</div></div>
  <div class="sec"><h2>Registo de apagados</h2><div class="muted">O que foi apagado, por quem e quando. Podes restaurar.</div>
   <details class="accdet" ${apagOpen?"open":""} ontoggle="apagOpen=this.open"><summary style="cursor:pointer;display:inline-block;padding:8px 14px;background:var(--azul);color:#fff;border-radius:8px;font-weight:600;list-style:none">🗑 Mostrar registo de apagados</summary>
   <table style="margin-top:8px"><thead><tr><th>Quando</th><th>Quem</th><th>Aba</th><th>Registo</th><th>Motivo</th><th></th></tr></thead><tbody>

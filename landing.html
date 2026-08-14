@@ -234,7 +234,18 @@ function bumpStat(page,kind){try{var d=new Date().toISOString().slice(0,10);fetc
 function _matchCurso(a,b){a=(a||"").toLowerCase();b=(b||"").toLowerCase();return a&&b&&(a===b||a.indexOf(b)>=0||b.indexOf(a)>=0);}
 function fmtKz(n){n=Math.round(+n||0);var str=String(Math.abs(n)),out="",c=0;for(var i=str.length-1;i>=0;i--){out=str.charAt(i)+out;c++;if(c%3===0&&i>0)out="."+out;}return "Kz "+out+",00";}
 
-function turmaRecente(turmas){var pres=(turmas||[]).filter(function(t){return((t.modalidade||"Presencial")+"").toLowerCase().indexOf("presenc")>=0;});
+/* Bug corrigido: esta função nunca filtrava pelo curso — escolhia a edição presencial mais próxima
+   entre TODOS os cursos, e o resultado (TURMA) só era calculado uma vez no arranque da página, nunca
+   recalculado quando o estudante mudava a Formação no formulário. Resultado: a inscrição podia ficar
+   agarrada à edição de outro curso, ou a uma edição já em curso/cheia (ex.: a 15ª), em vez de passar
+   automaticamente para a próxima edição desse curso assim que a anterior já tivesse começado (já
+   passado um sábado ou uma semana). Agora filtra por curso e é recalculada sempre que a Formação muda
+   (ver cursoChg). Continua a mostrar a edição mais próxima mesmo que já esteja cheia — o estudante é
+   quem decide se quer arriscar a vaga; não salta automaticamente para a seguinte por falta de vagas. */
+function turmaRecente(turmas,curso){var pres=(turmas||[]).filter(function(t){
+ if(((t.modalidade||"Presencial")+"").toLowerCase().indexOf("presenc")<0)return false;
+ if(curso&&!_matchCurso(t.curso,curso))return false;
+ return true;});
 var hoje=new Date(new Date().toDateString());
 var fut=pres.filter(function(t){return t.inicio&&new Date(t.inicio)>=hoje;}).sort(function(a,b){return new Date(a.inicio)-new Date(b.inicio);});
 if(fut.length)return fut[0];
@@ -276,6 +287,7 @@ const PERIODO_UNICO={"Excel do Zero ao Fundamental":"Dias de semana"};
 function cursoChg(){
 var curso=val("i_curso")||CURSO_SEL;
 CURSO_SEL=curso;
+TURMA=turmaRecente(TURMAS_ALL,curso);
 var forcado=Object.keys(PERIODO_UNICO).find(function(n){return _matchCurso(n,curso);});
 forcado=forcado?PERIODO_UNICO[forcado]:null;
 var pers=forcado?[forcado]:periodosDe(curso);
@@ -377,7 +389,7 @@ if(_pb&&(_pb.iban||_pb.nome||_pb.titular))CFG.banco=_pb;
 if(d.precos)CFG.precos=d.precos;
 if(d.comp){if(d.comp.local&&(!CFG.local||CFG.local===DEF.local))CFG.local=d.comp.local;if(d.comp.tel&&(!CFG.tel||CFG.tel===DEF.tel))CFG.tel=d.comp.tel;var _cb={nome:d.comp.banco||"",iban:d.comp.iban||"",titular:d.comp.titular||"",ref:d.comp.ref||""};if(_cb.iban||_cb.nome||_cb.titular)CFG.banco=_cb;}
 TURMAS_ALL=d.turmas||[];
-TURMA=turmaRecente(d.turmas);
+TURMA=turmaRecente(TURMAS_ALL,CURSO_SEL);
 fetch("https://knowledge-angola-default-rtdb.firebaseio.com/publico/catalogo.json").then(function(r){return r.json();}).then(function(dc){
 if(dc){
 if(dc.precos){var _extra=Object.keys(dc.precos).filter(function(k){return DEF.cursos.indexOf(k)<0;});CFG.cursos=DEF.cursos.concat(_extra);CFG.precos=Object.assign({},CFG.precos||{},dc.precos);}
