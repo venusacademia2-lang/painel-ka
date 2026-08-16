@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-AO">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Registar despesa — Knowledge Angola</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+:root{--azul:#1F3864;--dour:#BF9000;--linha:#e3e7ee;--txt:#1c2333;--cinza:#f5f7fa}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--cinza);color:var(--txt);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+.card{background:#fff;border-radius:14px;box-shadow:0 4px 24px rgba(20,30,60,.12);padding:24px 22px;width:100%;max-width:380px}
+h1{font-size:18px;margin:0 0 2px;color:var(--azul)}
+.sub{font-size:12.5px;color:#666;margin-bottom:18px}
+label{display:block;font-size:12.5px;font-weight:600;margin:12px 0 4px;color:#444}
+input,select,textarea{width:100%;padding:11px 12px;border:1px solid var(--linha);border-radius:8px;font-size:16px;font-family:inherit;background:#fff}
+textarea{resize:vertical;min-height:60px}
+button{width:100%;padding:13px;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;margin-top:16px}
+.btn-p{background:var(--azul);color:#fff}
+.btn-p:disabled{background:#9aa5b8;cursor:default}
+.btn-o{background:#fff;border:1px solid var(--linha);color:var(--azul);margin-top:8px}
+.msg{margin-top:12px;padding:10px 12px;border-radius:8px;font-size:13.5px;display:none}
+.msg.ok{background:#e6f4ea;color:#1e7b45;display:block}
+.msg.err{background:#fdecea;color:#c0392b;display:block}
+.logo{width:40px;height:40px;border-radius:10px;background:var(--azul);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;margin-bottom:12px}
+.hide{display:none !important}
+.muted{font-size:11.5px;color:#888;margin-top:14px;text-align:center}
+</style>
+</head>
+<body>
+<div class="card">
+ <div class="logo">K</div>
+ <div id="pinBox">
+  <h1>Registar despesa</h1>
+  <div class="sub">Knowledge Angola — página só para registar gastos.</div>
+  <label>PIN</label>
+  <input id="pin" type="password" inputmode="numeric" placeholder="O teu PIN">
+  <div id="pinMsg" class="msg err"></div>
+  <button class="btn-p" onclick="entrar()">Entrar</button>
+ </div>
+ <div id="formBox" class="hide">
+  <h1>Registar despesa</h1>
+  <div class="sub">Preenche e grava. Podes registar vários gastos seguidos.</div>
+  <label>Categoria</label>
+  <select id="categoria"></select>
+  <label>Valor (Kz)</label>
+  <input id="valor" type="number" inputmode="numeric" placeholder="ex.: 5000">
+  <label>Nota (opcional)</label>
+  <textarea id="nota" placeholder="ex.: água para o escritório"></textarea>
+  <div id="formMsg" class="msg"></div>
+  <button class="btn-p" id="btnGravar" onclick="gravar()">Gravar despesa</button>
+  <div class="muted">Cada gasto fica registado com a tua marcação de "Assistente (link rápido)" e a data de hoje.</div>
+ </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+var FB_CONFIG={apiKey:"AIzaSyBBgqJJ1SsbpxXVJBiypRMntNjSywrgGtg",authDomain:"knowledge-angola.firebaseapp.com",databaseURL:"https://knowledge-angola-default-rtdb.firebaseio.com",projectId:"knowledge-angola",storageBucket:"knowledge-angola.firebasestorage.app",messagingSenderId:"1060751471100",appId:"1:1060751471100:web:1b416c95cd040265da4279"};
+firebase.initializeApp(FB_CONFIG);
+var ref=firebase.database().ref("estado");
+var GASTO_CATS=["Salários","Marketing","Renda","Comunicação","Água","Detergentes","Consumíveis","Deslocação","Serviços de limpeza","Outras"];
+var _pin="";
+
+function popularCategorias(extra){
+ var sel=document.getElementById("categoria");
+ sel.innerHTML="";
+ GASTO_CATS.concat(Array.isArray(extra)?extra.filter(Boolean):[]).forEach(function(c){
+  var o=document.createElement("option");o.value=c;o.textContent=c;sel.appendChild(o);
+ });
+}
+
+function entrar(){
+ var pinMsg=document.getElementById("pinMsg");
+ var pinVal=(document.getElementById("pin").value||"").trim();
+ if(!pinVal){pinMsg.textContent="Escreve o PIN.";pinMsg.style.display="block";return;}
+ pinMsg.style.display="none";
+ ref.once("value").then(function(snap){
+  var s=snap.val();
+  var data;
+  try{data=s?JSON.parse(s):{};}catch(e){data={};}
+  var pinCerto=(data.gastoRapidoPin||"").trim();
+  if(!pinCerto){pinMsg.textContent="Ainda não há PIN configurado — pede à gestão para o definir no painel (Definições).";pinMsg.style.display="block";return;}
+  if(pinVal!==pinCerto){pinMsg.textContent="PIN incorrecto.";pinMsg.style.display="block";return;}
+  _pin=pinVal;
+  try{localStorage.setItem("ka_gr_pin",pinVal);}catch(e){}
+  popularCategorias(data.gastoCatsExtra);
+  document.getElementById("pinBox").classList.add("hide");
+  document.getElementById("formBox").classList.remove("hide");
+ }).catch(function(){
+  pinMsg.textContent="Sem ligação — verifica a internet e tenta de novo.";pinMsg.style.display="block";
+ });
+}
+
+function gravar(){
+ var valor=+document.getElementById("valor").value||0;
+ var categoria=document.getElementById("categoria").value;
+ var nota=(document.getElementById("nota").value||"").trim();
+ var msg=document.getElementById("formMsg");
+ msg.className="msg";msg.style.display="none";
+ if(!categoria||!valor){msg.className="msg err";msg.textContent="Falta a categoria ou o valor.";msg.style.display="block";return;}
+ var btn=document.getElementById("btnGravar");btn.disabled=true;btn.textContent="A gravar…";
+ ref.transaction(function(current){
+  var data;
+  try{data=current?JSON.parse(current):{};}catch(e){data={};}
+  if(!data.financas)data.financas={saldoBanco:0,saldoData:"",gastos:[],metas:{},split:{}};
+  if(!Array.isArray(data.financas.gastos))data.financas.gastos=[];
+  data.financas.gastos.unshift({
+   categoria:categoria,
+   descricao:nota,
+   valor:valor,
+   moeda:"Kz",
+   valorOrig:valor,
+   cambio:0,
+   usd:0,
+   taxa:0,
+   canal:"",
+   centroCusto:"",
+   dataCompra:new Date().toISOString().slice(0,10),
+   data:new Date().toISOString().slice(0,10),
+   comprovativo:"",
+   reembolsar:false,
+   criadoEm:new Date().toISOString(),
+   criadoPor:"Assistente (link rápido)"
+  });
+  return JSON.stringify(data);
+ },function(err,committed){
+  btn.disabled=false;btn.textContent="Gravar despesa";
+  if(err||!committed){
+   msg.className="msg err";msg.textContent="Não foi possível gravar — tenta outra vez.";msg.style.display="block";
+   return;
+  }
+  msg.className="msg ok";msg.textContent="Despesa registada ✓";msg.style.display="block";
+  document.getElementById("valor").value="";
+  document.getElementById("nota").value="";
+  document.getElementById("valor").focus();
+ });
+}
+
+(function(){
+ var saved;
+ try{saved=localStorage.getItem("ka_gr_pin");}catch(e){saved="";}
+ if(saved){document.getElementById("pin").value=saved;entrar();}
+})();
+</script>
+</body>
+</html>
