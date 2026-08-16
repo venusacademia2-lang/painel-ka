@@ -724,22 +724,44 @@ function saveRowEdit(){if(!_rowEdit)return;const arrNome=_rowEdit.arr;const o=(d
  if(arrNome==="formandos")o.turno=o.horario||o.turno;
  if(arrNome==="online")syncPagOnline(o);
  persist();_rowEdit=null;toast("Registo actualizado"+(arrNome==="online"?" — Finanças sincronizadas":""));render();}
+function _mesAnoPT(dataStr){if(!dataStr)return"";var d=new Date(dataStr);if(isNaN(d))return"";return MESES_PT[d.getMonth()]+"/"+d.getFullYear();}
+function _criarLeadPorNaoPagamento(f){
+ if(!Array.isArray(data.leads))data.leads=[];
+ var t=turmaByCod(f.turma);
+ var edLabel=t?(t.ed+"ª Edição — "+(t.curso||"")):(f.curso||"a formação");
+ var mes=t?_mesAnoPT(t.inicio):"";
+ var hoje=new Date().toISOString().slice(0,10);
+ data.leads.unshift({data:hoje,ultimoMov:hoje,nome:f.nome||"",tel:f.tel||"",canal:"Pretendia fazer",curso:(t&&t.curso)||f.curso||"",estado:"Novo",resp:"",criadoEm:new Date().toISOString(),notas:"Não efectuou o pagamento a tempo na "+edLabel+(mes?" ("+mes+")":"")+"."});
+}
 function delRow(arr,i){const o=(data[arr]||[])[i];if(!o)return;
  if(arr==="formandos"){
-  /* Apagar um formando = apagar uma venda: só a gestão, com password de Gestão + motivo, e arrasta o pagamento associado para não sobrar valor nas Finanças. */
-  if(role!=="admin"){toast("Só a gestão pode apagar um formando/venda");return;}
-  var pin=prompt("Password de Gestão para confirmar (apaga o aluno "+(o.nome||"")+" e o pagamento associado):");
-  if(pin===null)return;
-  if(pin!==(data.pass||DEFAULT_PASS)){toast("Password incorrecta — nada foi apagado");return;}
+  /* L71-2: apagar um formando = apagar uma venda. A gestão continua a poder apagar sempre (password
+     + motivo, como antes). A equipa com podeEditar() passa também a poder apagar, sem password, mas
+     só quando o formando nunca chegou a pagar nada (pago===0) — se já pagou algo, mesmo com dívida
+     por saldar, só a gestão apaga (há dinheiro registado a reconciliar). Quando há dívida por saldar
+     no momento da eliminação, cria-se automaticamente um lead para retomar o contacto. */
+  var pagObj=(data.pagamentos||[]).find(function(p){return p.cod===o.cod;});
+  var pagoTotal=pagObj?(+pagObj.pago||0):0;
+  var temDivida=pagObj?divida(pagObj)>0:true;
+  var semPassword=role!=="admin"&&podeEditar()&&pagoTotal===0;
+  if(role!=="admin"&&!semPassword){toast(pagoTotal>0?"Só a gestão pode apagar quem já pagou algo":"Sem permissão para apagar formandos");return;}
+  if(semPassword){
+   if(!confirm("Apagar "+(o.nome||"este formando")+"? Não pagou nada — fica no histórico e é criado um lead automático para retomar o contacto."))return;
+  } else {
+   var pin=prompt("Password de Gestão para confirmar (apaga o aluno "+(o.nome||"")+" e o pagamento associado):");
+   if(pin===null)return;
+   if(pin!==(data.pass||DEFAULT_PASS)){toast("Password incorrecta — nada foi apagado");return;}
+  }
   var motivo=prompt("Motivo para apagar este registo de venda:");
   if(motivo===null||!motivo.trim()){toast("É preciso indicar um motivo");return;}
   if(!Array.isArray(data.apagados))data.apagados=[];
   var pagIdx=(data.pagamentos||[]).findIndex(function(p){return p.cod===o.cod;});
   var pagRemovido=pagIdx>=0?data.pagamentos[pagIdx]:null;
   data.apagados.unshift({quando:new Date().toISOString().slice(0,16).replace('T',' '),quem:(currentUser&&currentUser.nome)||"Gestão",aba:arr,motivo:motivo.trim(),registo:JSON.parse(JSON.stringify(o)),pagamentoRemovido:pagRemovido?JSON.parse(JSON.stringify(pagRemovido)):null});
+  if(temDivida)_criarLeadPorNaoPagamento(o);
   data[arr].splice(i,1);
   if(pagIdx>=0)data.pagamentos.splice(pagIdx,1);
-  persist();toast("Formando e venda associada apagados");render();
+  persist();toast("Formando e venda associada apagados"+(temDivida?" · lead criado para seguimento":""));render();
   return;
  }
  if(!confirm("Apagar este registo? A gestão pode vê-lo depois em Definições → Registo de apagados."))return;
@@ -761,7 +783,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v35.1";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v35.3";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -2146,7 +2168,7 @@ function vIncumprimentos(){var me=(currentUser&&currentUser.nome)||"";var admin=
  var porTurma={};lista.forEach(function(x){if(!porTurma[x.t.cod])porTurma[x.t.cod]={t:x.t,itens:[]};porTurma[x.t.cod].itens.push(x.item);});
  var blocos=Object.values(porTurma);
  return `<div class="sec"><h2>Incumprimentos — checklist de formação</h2><div class="muted">Itens da checklist de formação que ultrapassaram o limite definido pela gestão sem estarem marcados como feitos.${admin?"":" Mostra só as turmas onde és a gestora responsável ou o formador."}</div></div>
-  ${blocos.length?blocos.map(function(b){return '<div class="sec" style="border-left:4px solid #c0392b"><h2 style="margin:0">'+esc(b.t.ed)+'ª Edição — '+esc(b.t.curso||"")+'</h2><div class="muted">Gestora: '+esc(b.t.gestora||"—")+' · Formador: '+esc(b.t.resp||"—")+' · Início: '+esc(b.t.inicio||"—")+'</div><ul style="margin:8px 0 0 18px">'+b.itens.map(function(it){return '<li>'+esc(it.texto)+' <span class="muted">(prazo: '+esc(it.prazoDias)+'d antes · limite: '+esc(it.limiteDias)+'d antes)</span></li>';}).join("")+'</ul><div class="row-actions"><button class="btn-o" onclick="fFicha=\'\';presEd=\''+esc(b.t.cod)+'\';show(\'presencial\')">Abrir turma</button></div></div>';}).join(""):'<div class="sec"><div class="muted">Sem incumprimentos de checklist neste momento. ✓</div></div>'}`;}
+  ${blocos.length?blocos.map(function(b){return '<div class="sec" style="border-left:4px solid #c0392b"><h2 style="margin:0">'+esc(b.t.ed)+'ª Edição — '+esc(b.t.curso||"")+'</h2><div class="muted">Gestora: '+esc(b.t.gestora||"—")+' · Formador: '+esc(b.t.resp||"—")+' · Início: '+esc(b.t.inicio||"—")+'</div><ul style="margin:8px 0 0 18px">'+b.itens.map(function(it){return '<li>'+esc(it.texto)+' <span class="muted">(prazo: '+esc(it.prazoDias)+'d antes · limite: '+esc(it.limiteDias)+'d antes)</span></li>';}).join("")+'</ul><div class="row-actions"><button class="btn-o" onclick="fFicha=\'\';presEds=[\''+esc(b.t.cod)+'\'];show(\'presencial\')">Abrir turma</button></div></div>';}).join(""):'<div class="sec"><div class="muted">Sem incumprimentos de checklist neste momento. ✓</div></div>'}`;}
 /* L69-5 — checklist por camadas: além da checklist por função (acima, já existia), a gestão pode
    definir tarefas Gerais (toda a gente), por Departamento, e atribuições individuais por Pessoa. Cada
    colaborador vê a soma de todas as camadas que se aplicam a ele. */
@@ -3080,7 +3102,23 @@ function feedbackModalHTML(){if(!feedbackAlvo)return"";var t=turmaByCod(feedback
   </div></div>`;}
 
 /* TURMAS PRESENCIAIS */
-let presQ="",presEd="",presTurno="";
+let presQ="",presEds=null,presTurno="";
+/* L71-1: presEds=null significa "por inicializar" — na primeira vez que a página é aberta
+   calcula-se um valor por omissão (para Gestora de Formação: as turmas dela em andamento);
+   depois disso fica sempre um array (mesmo vazio) e nunca mais se recalcula sozinho, para não
+   apagar uma escolha manual do utilizador. Array vazio = "mostrar todas as turmas visíveis". */
+function presTurmaAdd(cod){if(!cod)return;if(!Array.isArray(presEds))presEds=[];if(presEds.indexOf(cod)<0)presEds.push(cod);render();}
+function presTurmaDel(cod){presEds=(presEds||[]).filter(function(c){return c!==cod;});render();}
+function presTurmasLimpar(){presEds=[];render();}
+function presSeletorHTML(){
+ var todas=turmasVisiveis().filter(function(t){return (t.modalidade||"Presencial")!=="Online";}).slice().sort(function(a,b){return (+b.ed||0)-(+a.ed||0);});
+ var sel=presEds||[];
+ var chips=sel.map(function(cod){var t=turmaByCod(cod);if(!t)return"";return '<span class="pill p-azul" style="padding:5px 10px;display:inline-flex;align-items:center;gap:6px">'+esc(t.ed)+'ª — '+esc(t.curso||"")+' <a href="#" onclick="presTurmaDel(\''+esc(cod)+'\');return false" style="color:inherit;text-decoration:none;font-weight:700" title="Remover">×</a></span>';}).join("");
+ var addSel='<select onchange="presTurmaAdd(this.value);this.value=\'\'" style="width:auto"><option value="">+ Adicionar turma…</option>'+todas.filter(function(t){return sel.indexOf(t.cod)<0;}).map(function(t){return '<option value="'+esc(t.cod)+'">'+esc(t.ed)+'ª — '+esc(t.curso||"")+'</option>';}).join("")+'</select>';
+ var limpar=sel.length?'<button class="btn-o" style="padding:5px 10px;font-size:12px" onclick="presTurmasLimpar()">Ver todas</button>':"";
+ var nota=(currentUser&&currentUser.funcao==="Gestora de Formação"&&sel.length)?'<div class="muted" style="width:100%;margin-top:2px;font-size:11.5px">Por regra: as tuas turmas em andamento. Podes adicionar ou tirar turmas.</div>':"";
+ return '<div class="flex" style="gap:8px;flex-wrap:wrap;align-items:center">'+chips+addSel+limpar+nota+'</div>';
+}
 /* Item 5 (L70): Avaliações e Presenças passam a sub-secções colapsáveis dentro de cada turma
    em "Turmas Presenciais", em vez de terem aba própria no menu lateral. Reaproveitam os mesmos
    dados/funções (toggleAvalP, setAvalNota, toggleDoente, getPres, sessoesDe) mas com estado
@@ -3121,25 +3159,33 @@ function acompanhamentoTurmaHTML(t){
  var faltaAval=alunos.filter(function(f){return !f.doente&&AVAL_LABELS.some(function(l){return !(f.avalsP&&f.avalsP[l]);});}).length;
  var abas=[
   {id:"chk",label:"Checklist",badge:nChk},
-  {id:"aval",label:"Avaliações",badge:faltaAval},
-  {id:"pres",label:"Presenças",badge:0}
+  {id:"pres",label:"Presenças",badge:0},
+  {id:"aval",label:"Avaliações",badge:faltaAval}
  ];
  var conteudo=abaAtiva==="aval"?avaliacoesTurmaConteudo(t):(abaAtiva==="pres"?presencasTurmaConteudo(t):checklistFormacaoTurmaConteudo(t));
- return `<details class="accdet" style="margin-top:8px"><summary>Acompanhamento da turma${nChk?' <span class="pill p-verm">'+nChk+'</span>':''}</summary>
-  <div class="flex" style="gap:0;border-bottom:2px solid var(--linha);margin:8px 0 12px">${abas.map(function(a){var ativo=a.id===abaAtiva;return '<button onclick="_setTurmaFriso(\''+esc(t.cod)+'\',\''+a.id+'\')" style="border:none;background:'+(ativo?'#fff':'transparent')+';border-bottom:3px solid '+(ativo?'var(--azul)':'transparent')+';padding:9px 16px;font-size:13px;font-weight:'+(ativo?'700':'500')+';color:'+(ativo?'var(--azul)':'#666')+';cursor:pointer;border-radius:6px 6px 0 0">'+esc(a.label)+(a.badge?' <span class="pill p-verm" style="padding:1px 6px;font-size:10px">'+a.badge+'</span>':'')+'</button>';}).join("")}</div>
+ /* L70-friso-2: já não é <details> — fica sempre visível (não pode "encolher" ao clicar numa aba,
+    porque cada clique chama render() e um <details> sem "open" fechava-se sozinho a cada render). */
+ return `<div class="friso-turma" style="margin:10px 0 16px;border:1px solid var(--linha);border-radius:8px;padding:12px;background:#fafbfd">
+  <div style="font-weight:700;color:var(--azul);margin-bottom:8px">Acompanhamento da turma${nChk?' <span class="pill p-verm">'+nChk+'</span>':''}</div>
+  <div class="flex" style="gap:0;border-bottom:2px solid var(--linha);margin:0 0 12px">${abas.map(function(a){var ativo=a.id===abaAtiva;return '<button onclick="_setTurmaFriso(\''+esc(t.cod)+'\',\''+a.id+'\')" style="border:none;background:'+(ativo?'#fff':'transparent')+';border-bottom:3px solid '+(ativo?'var(--azul)':'transparent')+';padding:9px 16px;font-size:13px;font-weight:'+(ativo?'700':'500')+';color:'+(ativo?'var(--azul)':'#666')+';cursor:pointer;border-radius:6px 6px 0 0">'+esc(a.label)+(a.badge?' <span class="pill p-verm" style="padding:1px 6px;font-size:10px">'+a.badge+'</span>':'')+'</button>';}).join("")}</div>
   ${conteudo}
-  </details>`;
+  </div>`;
 }
 function vPresencial(){var q=presQ.toLowerCase(),qd=q.replace(/\D/g,"");
- var turmasP=turmasVisiveis().filter(function(t){return (t.modalidade||"Presencial")!=="Online"&&(!presEd||t.cod===presEd);}).slice().sort(function(a,b){return (+b.ed||0)-(+a.ed||0);});
+ if(presEds===null){
+  var _base=turmasVisiveis().filter(function(t){return (t.modalidade||"Presencial")!=="Online";});
+  presEds=(currentUser&&currentUser.funcao==="Gestora de Formação")?_base.filter(function(t){return t.gestora===currentUser.nome&&estadoTurma(t)==="Em andamento";}).map(function(t){return t.cod;}):[];
+ }
+ var turmasP=turmasVisiveis().filter(function(t){return (t.modalidade||"Presencial")!=="Online"&&(!presEds.length||presEds.indexOf(t.cod)>=0);}).slice().sort(function(a,b){return (+b.ed||0)-(+a.ed||0);});
  /* L53-1: o total "X aluno(s) no total" no cabeçalho tem de ser sempre a MESMA contagem-base usada na tabela
     "Inscritos" logo abaixo (turnoOcupacaoHTML → inscritosDe), senão os dois números divergem sempre que houver
     pesquisa/filtro de turno activo (a tabela de alunos fica mais curta, mas a ocupação real da turma não muda).
     Por isso guardamos aqui o total REAL (sem filtro) à parte da lista filtrada que aparece na tabela. */
  var blocos=turmasP.map(function(t){var alsTotal=data.formandos.filter(function(f){return f.turma===t.cod&&f.estado!=="Transferido p/ Online";});var als=alsTotal;if(presTurno)als=als.filter(function(f){return (f.horario||f.turno||"")===presTurno;});if(q)als=als.filter(function(f){return (f.nome||"").toLowerCase().includes(q)||(qd&&(f.tel||"").replace(/\D/g,"").includes(qd));});return {t:t,als:als,totalReal:alsTotal.length};}).filter(function(x){return (!q&&!presTurno)||x.als.length;});
  return `${pdsPickerFHTML()}${transferParaOnlineModalHTML()}${transferAlunoModalHTML()}<div class="sec"><h2>Turmas presenciais</h2><div class="muted">Pesquisa por nome ou número e gera os cards da turma.</div>
-  <div class="flex" style="gap:8px;flex-wrap:wrap"><input id="q_pres" class="search" style="margin:0" placeholder="Procurar por nome ou nº…" value="${esc(presQ)}" oninput="presQ=this.value;refocusSearch('q_pres');render()"><select onchange="presEd=this.value;render()" style="width:auto"><option value="">Todas as turmas</option>${turmasVisiveis().filter(function(t){return (t.modalidade||"Presencial")!=="Online";}).slice().sort(function(a,b){return (+b.ed||0)-(+a.ed||0);}).map(function(t){return '<option value="'+esc(t.cod)+'" '+(presEd===t.cod?"selected":"")+'>'+esc(t.ed)+'ª — '+esc(t.curso||"")+'</option>';}).join("")}</select><select onchange="presTurno=this.value;render()" style="width:auto">${turnoOptsHTML(presTurno,presEd)}</select></div></div>
-  ${blocos.map(function(x){var t=x.t;return '<div class="sec"><div class="flex" style="flex-wrap:wrap;gap:8px"><div><h2 style="margin:0">'+esc(t.ed)+'ª Edição — '+esc(t.curso||"")+'</h2><div class="muted">Formador: '+esc(t.resp||"—")+' · '+x.totalReal+' aluno(s) no total'+(x.als.length!==x.totalReal?' <span class="pill p-cinza" title="Pesquisa ou filtro de turno activo — a lista abaixo não mostra todos">(a mostrar '+x.als.length+')</span>':'')+'</div></div><div class="spacer"></div><button class="btn-o" onclick="gerarCards(\''+esc(t.cod)+'\')" title="Só quem já pagou">🖨 Cards</button><button class="btn-o" onclick="gerarCardsTodos(\''+esc(t.cod)+'\')" title="Inclui também quem ainda não pagou — pede código da Gestão">🖨 Cards (todos)</button>'+(podeExportar()?'<button class="btn-o" onclick="exportTurma(\''+esc(t.cod)+'\')">Exportar</button>':'')+'</div>'+turnoOcupacaoHTML(t)+'<table style="margin-top:8px"><thead><tr><th>Nome</th><th>Telefone</th><th>Turno</th><th>Pagamento</th><th></th></tr></thead><tbody>'+x.als.map(function(f){var p=payOf(f.cod);var d=p?divida(p):0;return '<tr><td>'+esc(f.nome)+'</td><td>'+esc(f.tel||"")+'</td><td>'+esc(f.horario||f.turno||"—")+'</td><td>'+(d>0?'<span class="pill p-verm">Deve '+kz(d)+'</span>':'<span class="pill p-verde">Pago</span>')+'</td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:3px 9px" onclick="fFicha=\''+esc(f.cod)+'\';show(\'formandos\')">Ficha</button>'+((role==="admin"||podeEditar())?'<button class="btn-o" style="padding:3px 9px" onclick="transferAluno(\''+esc(f.cod)+'\')">Transferir</button><button class="btn-o" style="padding:3px 9px" onclick="agendarPdsF(\''+esc(f.cod)+'\')">Marcar PDS</button><button class="btn-o" style="padding:3px 9px" onclick="abrirTransferParaOnline(\''+esc(f.cod)+'\')">→ Online</button>':'')+((d>0&&podeEditar())?'<button class="btn-o" style="padding:3px 9px" onclick="irPagar(\''+esc(f.cod)+'\')">Pagar</button>':'')+'<button class="btn-g" style="padding:3px 9px" onclick="setChamada(\''+esc(f.nome)+'\',\''+esc(f.tel||"")+'\',\'Formando\')">☎</button>'+rowActs('formandos',data.formandos.indexOf(f))+'</td></tr>';}).join("")+'</tbody></table>'+acompanhamentoTurmaHTML(t)+'</div>';}).join("")||'<div class="sec"><div class="muted">Sem turmas presenciais'+(q?' com esse nome/nº':'')+'.</div></div>'}`;}
+  <div class="flex" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><input id="q_pres" class="search" style="margin:0" placeholder="Procurar por nome ou nº…" value="${esc(presQ)}" oninput="presQ=this.value;refocusSearch('q_pres');render()"><select onchange="presTurno=this.value;render()" style="width:auto">${turnoOptsHTML(presTurno,presEds.length===1?presEds[0]:null)}</select></div>
+  ${presSeletorHTML()}</div>
+  ${blocos.map(function(x){var t=x.t;return '<div class="sec"><div class="flex" style="flex-wrap:wrap;gap:8px"><div><h2 style="margin:0">'+esc(t.ed)+'ª Edição — '+esc(t.curso||"")+'</h2><div class="muted">Formador: '+esc(t.resp||"—")+' · '+x.totalReal+' aluno(s) no total'+(x.als.length!==x.totalReal?' <span class="pill p-cinza" title="Pesquisa ou filtro de turno activo — a lista abaixo não mostra todos">(a mostrar '+x.als.length+')</span>':'')+'</div></div><div class="spacer"></div><button class="btn-o" onclick="gerarCards(\''+esc(t.cod)+'\')" title="Só quem já pagou">🖨 Cards</button><button class="btn-o" onclick="gerarCardsTodos(\''+esc(t.cod)+'\')" title="Inclui também quem ainda não pagou — pede código da Gestão">🖨 Cards (todos)</button>'+(podeExportar()?'<button class="btn-o" onclick="exportTurma(\''+esc(t.cod)+'\')">Exportar</button>':'')+'</div>'+acompanhamentoTurmaHTML(t)+turnoOcupacaoHTML(t)+'<table style="margin-top:8px"><thead><tr><th>Nome</th><th>Telefone</th><th>Turno</th><th>Pagamento</th><th></th></tr></thead><tbody>'+x.als.map(function(f){var p=payOf(f.cod);var d=p?divida(p):0;return '<tr><td>'+esc(f.nome)+'</td><td>'+esc(f.tel||"")+'</td><td>'+esc(f.horario||f.turno||"—")+'</td><td>'+(d>0?'<span class="pill p-verm">Deve '+kz(d)+'</span>':'<span class="pill p-verde">Pago</span>')+'</td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:3px 9px" onclick="fFicha=\''+esc(f.cod)+'\';show(\'formandos\')">Ficha</button>'+((role==="admin"||podeEditar())?'<button class="btn-o" style="padding:3px 9px" onclick="transferAluno(\''+esc(f.cod)+'\')">Transferir</button><button class="btn-o" style="padding:3px 9px" onclick="agendarPdsF(\''+esc(f.cod)+'\')">Marcar PDS</button><button class="btn-o" style="padding:3px 9px" onclick="abrirTransferParaOnline(\''+esc(f.cod)+'\')">→ Online</button>':'')+((d>0&&podeEditar())?'<button class="btn-o" style="padding:3px 9px" onclick="irPagar(\''+esc(f.cod)+'\')">Pagar</button>':'')+'<button class="btn-g" style="padding:3px 9px" onclick="setChamada(\''+esc(f.nome)+'\',\''+esc(f.tel||"")+'\',\'Formando\')">☎</button>'+rowActs('formandos',data.formandos.indexOf(f))+'</td></tr>';}).join("")+'</tbody></table></div>';}).join("")||'<div class="sec"><div class="muted">Sem turmas presenciais'+(q?' com esse nome/nº':'')+'.</div></div>'}`;}
 /* COMPROVATIVO */
 function vComprovativo(){return `<div class="sec noprint"><h2>Comprovativo de inscrição</h2><div class="muted">Pesquisa o formando por nome ou telefone, confirma os dados e exporta em PDF. O texto de WhatsApp já vem pronto (o PDF anexas tu na partilha).</div>
   <div class="formgrid">
