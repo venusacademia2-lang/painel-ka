@@ -783,7 +783,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v35.6";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v35.9";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -1846,7 +1846,14 @@ function vPainel(){
   ${vrows.map(([v,o])=>`<tr><td><span style="cursor:pointer;color:var(--azul2);text-decoration:underline" onclick="abrirVendDet('${esc(v).replace(/'/g,"\\'")}')">${v==="—"?"Sem responsável atribuído":esc(v)}</span>${role==="admin"&&v!=="—"?` <button class="btn-o" style="padding:1px 7px;font-size:11px" data-v="${esc(v)}" onclick="renomearVendedor(this.dataset.v)" title="Unificar/renomear este vendedor">unificar</button>`:""}</td><td>${o.n}</td><td>${kz(o.tot)}</td><td>${kz(o.pago)}</td></tr>`).join("")||`<tr><td colspan="4" class="muted">Sem vendas.</td></tr>`}
   </tbody><tfoot><tr style="font-weight:700;border-top:2px solid var(--linha)"><td>Total geral</td><td>${vTotGeral.n}</td><td>${kz(vTotGeral.tot)}</td><td>${kz(vTotGeral.pago)}</td></tr></tfoot></table>
   ${vTotGeral.pago!==_finTotalPago?`<div class="note" style="background:#fdecea;border-color:#f0b8ad;color:#a3311f;margin-top:8px">⚠ O total geral (${kz(vTotGeral.pago)}) não bate com o recebido em Finanças (${kz(_finTotalPago)}) — avisa a gestão.</div>`:`<div class="muted" style="margin-top:6px">✓ O total geral bate certo com o valor recebido em Finanças.</div>`}
-  </div>`;
+  </div>
+  ${role==="admin"?(function(){var falt=vendasSemComissaoAtribuida();if(!falt.length)return "";var opts=todosColaboradores();return `<div class="sec" style="background:#fdecea;border-color:#f0b8ad">
+   <h2 style="color:#a3311f">⚠ Vendas pagas sem responsável válido (${falt.length})</h2>
+   <div class="muted">Estas vendas já foram pagas mas o vendedor está vazio, marcado "Gestão" ou não corresponde a nenhum colaborador actual — por isso a comissão nunca chegou a ser atribuída a ninguém. Costuma vir de dados antigos, de importação por Excel, ou de fusão de inscrições sem responsável definido. Escolhe o responsável correcto em cada linha para corrigir; a comissão passa a contar a partir da próxima folha.</div>
+   <table style="margin-top:8px"><thead><tr><th>Aluno</th><th>Turma</th><th>Pago</th><th>Vendedor actual</th><th>Comissão perdida</th><th>Atribuir a</th></tr></thead><tbody>
+   ${falt.map(function(x){return '<tr><td>'+esc(x.nome)+'</td><td>'+esc(x.turmaLabel||"—")+'</td><td>'+kz(x.pago)+'</td><td><span style="color:#a3311f">'+esc(x.vendedorActual)+'</span></td><td>'+kz(x.comPerdida)+'</td><td><select onchange="atribuirVendedorFalta(\''+x.cod+'\',this)"><option value="">— escolher —</option>'+opts.map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+'</option>';}).join("")+'</select></td></tr>';}).join("")}
+   </tbody></table>
+  </div>`;})():""}`;
 }
 let chartObj=null;
 function drawChart(){const ctx=document.getElementById("chart");if(!ctx)return;const counts=LEAD_ESTADOS.map(e=>data.leads.filter(l=>l.estado===e).length);if(chartObj)chartObj.destroy();
@@ -2732,6 +2739,12 @@ function statusMetaDia(nome,dataISO){const util=ehDiaUtil(dataISO);const meta=ut
 function colaboradoresComMeta(){var vend=new Set((data.formandos||[]).map(function(f){return f.vendedor;}).filter(Boolean));var out=new Set();(data.perfis||[]).forEach(function(p){var t=((p.departamento||"")+" "+(p.categorias||"")+" "+(p.funcao||"")).toLowerCase();if(p.incluirDesempenho===true||/marketing|vendas|comercial|vendedor|assistente/.test(t)||vend.has(p.nome)){if(p.nome)out.add(p.nome);}});vend.forEach(function(n){out.add(n);});return [...out].filter(Boolean).filter(function(n){return !estaArquivado(n);}).sort(function(a,b){return a.localeCompare(b);});}
 function todosColaboradores(){var s=new Set((data.perfis||[]).map(function(p){return p.nome;}).filter(Boolean));(data.formandos||[]).forEach(function(f){if(f.vendedor)s.add(f.vendedor);});return [...s].filter(Boolean).filter(function(n){return n!=="Gestão";}).filter(function(n){return !estaArquivado(n);}).sort(function(a,b){return a.localeCompare(b);});}
 function renomearVendedor(de){if(role!=="admin"){toast("Só a gestão");return;}var sug=(data.perfis||[]).map(function(p){return p.nome;}).filter(Boolean);var para=prompt("Unificar o vendedor \""+de+"\" para que nome? (usa o nome exacto do perfil)\n\nPerfis: "+sug.join(" · "),de);if(para===null)return;para=para.trim();if(!para||para===de)return;var n=0;(data.formandos||[]).forEach(function(f){if((f.vendedor||"")===de){f.vendedor=para;n++;}});persist();toast(n+" venda(s) passada(s) de \""+de+"\" para \""+para+"\"");render();}
+/* Diagnóstico: vendas já pagas (pago>0) cujo vendedor está vazio, marcado "Gestão" ou não bate
+   exactamente com nenhum colaborador conhecido — nestes casos a comissão nunca é atribuída a
+   ninguém (silenciosamente). Costuma vir de dados antigos (antes do respInputHTML virar select
+   estrito), de importação por Excel, ou de fusão de inscrições sem responsável definido. */
+function vendasSemComissaoAtribuida(){var validos={};todosColaboradores().forEach(function(n){validos[n]=true;});return _todosVendaveis().filter(function(f){var p=payOf(f.cod);if(!p||!(+p.pago>0))return false;var v=(f.vendedor||"").trim();return !v||v==="Gestão"||!validos[v];}).map(function(f){var p=payOf(f.cod);var info=_comItemDe(f);return{cod:f.cod,nome:f.nome||f.cod,vendedorActual:(f.vendedor||"").trim()||"(vazio)",pago:p?(+p.pago||0):0,turmaLabel:info.turmaLabel,comPerdida:comissaoDe(f.cod)};}).sort(function(a,b){return b.comPerdida-a.comPerdida;});}
+function atribuirVendedorFalta(cod,el){var novo=el.value;if(!novo)return;if(role!=="admin"){toast("Só a gestão pode atribuir o responsável em falta");return;}var f=(data.formandos||[]).find(function(x){return x.cod===cod;})||(data.online||[]).find(function(x){return ensureOnlineCod(x)===cod;});if(!f){toast("Registo não encontrado");return;}f.vendedor=novo;if(f.turma)f.gratifVolume10=gratifVolumeElegivel(f.turma,novo);persist();toast("Responsável atribuído a "+novo+" — comissão passa a contar para a próxima folha");render();}
 function saveMetas(){data.metas=data.metas||{};data.metas.chamadasDia=+val("mt_chamadas")||20;data.metas.horaLimite=val("mt_hora")||"10:00";data.metas.horaLimitePresenca=val("mt_horapresenca")||"10:00";persist();toast("Metas actualizadas");render();}
 function addChamada(){const nome=val("c_nome");if(!nome){toast("Escolhe ou escreve quem foi contactado");return}
  data.chamadas.unshift({data:new Date().toISOString().slice(0,10),nome,tel:val("c_tel"),tipo:val("c_tipo"),canal:val("c_canal"),sentido:val("c_sentido"),resultado:val("c_res"),seguimento:val("c_seg"),horaPedida:val("c_horaped"),resp:val("c_resp"),notas:val("c_notas")});persist();toast("Chamada registada");limparCampos(["c_nome","c_tel","c_seg","c_horaped","c_notas"]);render();}
@@ -3427,7 +3440,7 @@ function confirmarInscricaoModalHTML(){if(inscConfirmModal===null||!Array.isArra
  const cursoAtual=confCursoSel||r.curso||"";
  const ativas=turmasAtivasPara(cursoAtual);const autoCod=confTurmaSel||turmaAutoPara(Object.assign({},r,{curso:cursoAtual}));
  const turmaSel=turmaByCod(autoCod);
- const turnosSel=(turmaSel&&Array.isArray(turmaSel.turnos)&&turmaSel.turnos.length>1)?turmaSel.turnos:null;
+ const turnosSel=(modalidadeAtual!=="Online"&&turmaSel&&Array.isArray(turmaSel.turnos)&&turmaSel.turnos.length>1)?turmaSel.turnos:null;
  const turnoGuess=turnosSel?(confTurnoSel||_turnoGuessHorario(turmaSel,r)):"";
  return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.55);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharConfirmarInscricao()"><div class="card" style="padding:16px;max-width:460px;width:100%;max-height:90vh;overflow:auto">
  <div class="flex"><b style="color:var(--azul)">Confirmar inscrição — ${esc(r.nome||"")}</b><div class="spacer"></div><button class="btn-o" style="padding:4px 10px" onclick="fecharConfirmarInscricao()">Fechar ✕</button></div>
@@ -3454,6 +3467,16 @@ function confirmarInscricaoModalHTML(){if(inscConfirmModal===null||!Array.isArra
  <div style="margin-top:10px"><label style="display:block;font-weight:700;font-size:12px;color:var(--azul);text-transform:uppercase;margin-bottom:5px">Responsável pela venda ${(dup&&dup.vendedor)?"":'<span style="color:#C0392B">*</span>'}</label>
  <select id="conf_resp"><option value="">— escolher${(dup&&dup.vendedor)?"":" (obrigatório)"} —</option>${todosColaboradores().map(function(n){return '<option value="'+esc(n)+'" '+((dup&&dup.vendedor===n)?"selected":"")+'>'+esc(n)+'</option>';}).join("")}<option value="Gestão" ${(dup&&dup.vendedor==="Gestão")?"selected":""}>Gestão (sem comissão a ninguém)</option></select>
  <div class="muted" style="margin-top:4px">${(dup&&dup.vendedor)?("Este formando já tem responsável ("+esc(dup.vendedor)+") — não é alterado ao fundir."):"Obrigatório indicar quem fez a venda, para a comissão ser atribuída correctamente. Escolhe \"Gestão\" só se, de facto, ninguém deve receber comissão por esta venda."}</div></div>
+ ${dup?(function(){
+  var diffs=[];
+  if(cursoAtual&&dup.curso&&dup.curso!==cursoAtual)diffs.push("Formação: <b>"+esc(dup.curso)+"</b> → <b>"+esc(cursoAtual)+"</b>");
+  if(autoCod&&dup.turma&&dup.turma!==autoCod){var tOld=turmaByCod(dup.turma),tNew=turmaByCod(autoCod);diffs.push("Turma/Edição: <b>"+esc(tOld?(tOld.ed+"ª — "+tOld.curso):dup.turma)+"</b> → <b>"+esc(tNew?(tNew.ed+"ª — "+tNew.curso):autoCod)+"</b>");}
+  if(modalidadeAtual&&dup.modalidade&&dup.modalidade!==modalidadeAtual)diffs.push("Modalidade: <b>"+esc(dup.modalidade)+"</b> → <b>"+esc(modalidadeAtual)+"</b>");
+  var horPrev=turnosSel?(turnoGuess||"(por escolher)"):(r.horario||dup.horario||"");
+  if(dup.horario&&horPrev&&dup.horario!==horPrev)diffs.push("Horário: <b>"+esc(dup.horario)+"</b> → <b>"+esc(horPrev)+"</b>");
+  if(!diffs.length)return "";
+  return '<div class="note" style="background:#fff3cd;border:1px solid #ffe08a;border-left:3px solid #BF9000;color:#7a5c00;margin-top:10px;padding:10px 14px;border-radius:8px;font-size:13px"><b>⚠ Isto vai substituir dados já existentes de '+esc(dup.nome)+':</b><ul style="margin:6px 0 0 18px;padding:0">'+diffs.map(function(d){return '<li>'+d+'</li>';}).join("")+'</ul>Confirma que estas mudanças estão correctas antes de continuar.</div>';
+ })():""}
  <div class="row-actions" style="margin-top:14px"><button class="btn-p" onclick="${dup?"finalizarFusaoInscricao":"finalizarInscricao"}(${i})">${dup?"Confirmar e fundir":"Confirmar inscrição"}</button></div>
  </div></div>`;}
 /* L64-3 (corrigido) — só some da lista quando ESTA inscrição foi mesmo processada por este ecrã
@@ -3466,12 +3489,14 @@ function finalizarInscricao(i){const r=Array.isArray(INSCR)&&INSCR[i];if(!r)retu
  const cursoFinal=confCursoSel||r.curso||"";
  const turma=val("conf_turma")||"";
  const turmaObj=turmaByCod(turma);
- if(turmaObj&&Array.isArray(turmaObj.turnos)&&turmaObj.turnos.length>1&&!val("conf_turno")){toast("Escolhe o turno antes de confirmar — não havia palpite fiável a partir do que veio da landing.");return;}
+ const modalidadeChk=confModalidadeSel||r.modalidade||"Presencial";
+ const temTurno=modalidadeChk!=="Online"&&turmaObj&&Array.isArray(turmaObj.turnos)&&turmaObj.turnos.length>1;
+ if(temTurno&&!val("conf_turno")){toast("Escolhe o turno antes de confirmar — não havia palpite fiável a partir do que veio da landing.");return;}
  const cupomCod=(val("conf_cupom")||"").trim().toUpperCase();let cupomAplicado=null;
  if(cupomCod){const cv=cupomValidar(cupomCod,cursoFinal);if(!cv.ok){toast(cv.msg);var _cc=document.getElementById("conf_cupom");if(_cc)_cc.focus();return;}cupomAplicado=cv.cupom;}
  const n=data.formandos.reduce((m,f)=>{const x=parseInt((f.cod||"").replace(/\D/g,""))||0;return x>m?x:m},0)+1;const cod="KA-"+String(n).padStart(3,"0");
- const horarioFinal=(turmaObj&&Array.isArray(turmaObj.turnos)&&turmaObj.turnos.length>1)?val("conf_turno"):(r.horario||"");
- data.formandos.push({cod,nome:r.nome||"",tel:r.tel||"",email:r.email||"",curso:cursoFinal,turma,periodo:r.periodo||"",horario:horarioFinal,modalidade:confModalidadeSel||r.modalidade||"Presencial",canal:"Landing",fonte:r.fonte||"",data:new Date().toISOString().slice(0,10),criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role,estado:"Activo",vendedor:val("conf_resp")||"Gestão",gratifVolume10:gratifVolumeElegivel(turma,val("conf_resp")||"Gestão")});
+ const horarioFinal=temTurno?val("conf_turno"):(modalidadeChk==="Online"?"":(r.horario||""));
+ data.formandos.push({cod,nome:r.nome||"",tel:r.tel||"",email:r.email||"",curso:cursoFinal,turma,periodo:r.periodo||"",horario:horarioFinal,modalidade:modalidadeChk,canal:"Landing",fonte:r.fonte||"",data:new Date().toISOString().slice(0,10),criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role,estado:"Activo",vendedor:val("conf_resp")||"Gestão",gratifVolume10:gratifVolumeElegivel(turma,val("conf_resp")||"Gestão")});
  const totalBase=precoDe(cursoFinal)||0;const total=cupomAplicado?Math.round(totalBase*(1-cupomAplicado.percentagem/100)):totalBase;const pago=+r.valorPago||0;
  data.pagamentos.push({cod,plano:(pago>=total&&total>0)?"A pronto":"Prestações",total:total,pago:pago,comprovativo:r.comprovativo?"Sim":"Não",dataPrometida:"",prestacoes:pago>0?[{valor:pago,data:new Date().toISOString().slice(0,10),comprovativo:r.comprovativo?"Sim":"Não",comprovativoImg:r.comprovativo||""}]:[],criadoEm:new Date().toISOString(),cupom:cupomAplicado?cupomAplicado.codigo:""});
  if(cupomAplicado)cupomRegistarUso(cupomAplicado.codigo);
@@ -3484,17 +3509,20 @@ function finalizarFusaoInscricao(i){const r=Array.isArray(INSCR)&&INSCR[i];if(!r
  const cursoFinal=confCursoSel||r.curso||"";
  const turma=val("conf_turma")||"";
  const turmaObj=turmaByCod(turma);
- if(turmaObj&&Array.isArray(turmaObj.turnos)&&turmaObj.turnos.length>1&&!val("conf_turno")){toast("Escolhe o turno antes de confirmar — não havia palpite fiável a partir do que veio da landing.");return;}
+ const modalidadeFinal=confModalidadeSel||r.modalidade||dup.modalidade||"Presencial";
+ const temTurno=modalidadeFinal!=="Online"&&turmaObj&&Array.isArray(turmaObj.turnos)&&turmaObj.turnos.length>1;
+ if(temTurno&&!val("conf_turno")){toast("Escolhe o turno antes de confirmar — não havia palpite fiável a partir do que veio da landing.");return;}
  const cupomCod=(val("conf_cupom")||"").trim().toUpperCase();let cupomAplicado=null;
  if(cupomCod){const cv=cupomValidar(cupomCod,cursoFinal);if(!cv.ok){toast(cv.msg);var _cc=document.getElementById("conf_cupom");if(_cc)_cc.focus();return;}cupomAplicado=cv.cupom;}
- const horarioFinal=(turmaObj&&Array.isArray(turmaObj.turnos)&&turmaObj.turnos.length>1)?val("conf_turno"):(r.horario||dup.horario||"");
+ /* Nunca forçar o horário a vazio só por a modalidade ser Online — a ficha já existente (dup) pode já
+    ter um horário Presencial válido; a fusão só preenche o que vier de novo, nunca apaga o que já lá estava. */
+ const horarioFinal=temTurno?val("conf_turno"):(r.horario||dup.horario||"");
  const alteracoes=[];
  ["email","bi","nascimento","tel2","area"].forEach(function(k){if(!dup[k]&&r[k]){dup[k]=r[k];alteracoes.push(k);}});
  const nomeR=(r.nome||"").trim(),nomeDup=(dup.nome||"").trim();
  if(nomeR&&nomeR.length>nomeDup.length){dup.nome=nomeR;alteracoes.push("nome");}
  if(cursoFinal&&dup.curso!==cursoFinal){dup.curso=cursoFinal;alteracoes.push("curso");}
  if(turma&&dup.turma!==turma){dup.turma=turma;alteracoes.push("turma");}
- const modalidadeFinal=confModalidadeSel||r.modalidade||dup.modalidade||"Presencial";
  if(modalidadeFinal&&dup.modalidade!==modalidadeFinal){dup.modalidade=modalidadeFinal;alteracoes.push("modalidade");}
  dup.horario=horarioFinal;dup.periodo=r.periodo||dup.periodo;
  if(!dup.vendedor&&val("conf_resp")){dup.vendedor=val("conf_resp");alteracoes.push("responsável pela venda");}
