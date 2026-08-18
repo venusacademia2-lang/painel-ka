@@ -783,7 +783,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.0";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.1";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -4038,7 +4038,7 @@ function fichaCard(cod){const f=data.formandos.find(x=>x.cod===cod);if(!f)return
   </div>
   <div style="margin-top:10px"><label>Comunicados do estudante</label>${coms.length?'<ul style="margin:4px 0 0 18px">'+coms.map(c=>'<li>'+fmtDataCurta(c.data)+' — '+esc(c.tipo||'')+': '+esc(c.msg||'')+'</li>').join("")+'</ul>':'<div class="muted">Sem comunicados.</div>'}</div>
   ${transferHistBlockFormando(f)}
-  ${f.estado!=="Transferido p/ Online"?`<div class="row-actions" style="margin-top:12px"><button class="btn-o" onclick="abrirTransferParaOnline('${esc(f.cod)}')">Passar para turma online</button></div>`:``}
+  ${f.estado!=="Transferido p/ Online"?`<div class="row-actions" style="margin-top:12px">${(role==="admin"||podeEditar())?`<button class="btn-o" onclick="transferAluno('${esc(f.cod)}')">Transferir para turma presencial (turno)</button>`:``}<button class="btn-o" onclick="abrirTransferParaOnline('${esc(f.cod)}')">Passar para turma online</button></div>`:``}
  </div>`;}
 function podeClassroom(){return role==="admin"||(currentUser&&/gestora de forma|gest[aã]o|forma[çc]/i.test(((currentUser.funcao||"")+" "+(currentUser.categorias||""))));}
 function setClassroomLink(cod,el){var f=data.formandos.find(x=>x.cod===cod);if(!f)return;var t=turmaByCod(f.turma);if(!t){toast("Este formando não tem turma definida");return;}t.classroom=el.value.trim();persist();toast("Link da Classroom guardado para a turma");}
