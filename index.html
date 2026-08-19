@@ -786,7 +786,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.4";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.5";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -2512,39 +2512,69 @@ function reatribuir(i){const l=data.leads[i];if(!l)return;const novo=prompt("Rea
 /* L19-5: vista dedicada só aos leads que vieram do Quiz de Excel — nota, contacto e estado,
    para ligar sem ter de procurar no quadro geral de Marketing & Vendas. */
 let qlSearch="";
+/* L83 — as 3 secções (Leads do Quiz / por confirmar / já inscritos) deixam de vir todas empilhadas e
+   passam a slicers no topo (só uma visível de cada vez), com a taxa de conversão sempre à vista por
+   baixo dos botões, independente de qual está seleccionada. */
+let qlView="pend";
+let qlSoNaoContactados=false;
 function vQuizLeads(){
  const hoje=new Date(new Date().toDateString());
  const q=qlSearch.toLowerCase(),qd=qlSearch.replace(/\D/g,"");
- const L=data.leads.map(function(l,i){return{l:l,i:i};}).filter(function(o){return o.l.canal==="Quiz"&&(!q||(o.l.nome||"").toLowerCase().includes(q)||(qd&&(o.l.tel||"").replace(/\D/g,"").includes(qd)));}).sort(function(a,b){return (b.l.data||"").localeCompare(a.l.data||"");});
- const rows=L.map(function(o){const l=o.l,i=o.i;const ref=l.ultimoMov||l.data;const parado=ref&&((hoje-new Date(ref))/86400000>leadParadoDias(l));
+ let L=data.leads.map(function(l,i){return{l:l,i:i};}).filter(function(o){return o.l.canal==="Quiz"&&(!q||(o.l.nome||"").toLowerCase().includes(q)||(qd&&(o.l.tel||"").replace(/\D/g,"").includes(qd)));}).sort(function(a,b){return (b.l.data||"").localeCompare(a.l.data||"");});
+ const totalLeadsQuiz=L.length;
+ const novosCount=L.filter(function(o){return o.l.estado==="Novo";}).length;
+ if(qlSoNaoContactados)L=L.filter(function(o){return o.l.estado==="Novo";});
+ const rowsLeads=L.map(function(o){const l=o.l,i=o.i;const ref=l.ultimoMov||l.data;const parado=ref&&((hoje-new Date(ref))/86400000>leadParadoDias(l));
   return `<tr${parado?' style="background:#fdecea"':''}><td>${esc(l.nome)}</td><td>${esc(l.tel||"")}</td><td>${l.notaQuiz!=null?'<b>'+esc(l.notaQuiz)+'/20</b>':'—'}</td><td>${esc(l.curso||"")}</td><td><span class="pill ${l.estado==='Inscrito'?'p-verde':l.estado==='Contactado'?'p-dour':l.estado==='Perdido'?'p-verm':'p-cinza'}">${esc(l.estado||"")}</span>${(l.contactos&&l.contactos.length)?'<div class="muted" style="margin-top:2px;font-size:11px">📞 '+esc(l.contactos[0].quem)+(l.contactos[0].nota?' — '+esc(l.contactos[0].nota):'')+'</div>':''}</td><td>${fmtDataHora(l.criadoEm||l.data)}${parado?' <span class="pill p-verm">parado</span>':''}</td><td class="flex" style="gap:5px;flex-wrap:wrap"><button class="btn-g" style="padding:4px 8px" onclick="setChamada('${esc(l.nome)}','${esc(l.tel||'')}','Lead')">☎</button><button class="btn-o" style="padding:4px 8px" title="Enviar a página no WhatsApp" onclick="partilharWA('${esc(l.tel||'')}','${esc(l.nome||'')}')">📤</button>${LEAD_ESTADOS.filter(function(x){return x!==l.estado;}).map(function(x){return x==='Contactado'?('<button class="btn-o" style="padding:4px 8px" onclick="abrirContactarLead('+i+')">→ Contactado</button>'):('<button class="btn-o" style="padding:4px 8px" onclick="moveLead('+i+',\''+x+'\')">→ '+x+'</button>');}).join("")}</td></tr>`;
  }).join("")||`<tr><td colspan="7" class="muted">Ainda sem leads do quiz.</td></tr>`;
- let catalogoHtml;
- if(INSCR===null){carregarInscricoes();catalogoHtml=`<div class="sec"><div class="muted">A carregar quiz/catálogo…</div></div>`;}
- else if(INSCR==="load"){catalogoHtml=`<div class="sec"><div class="muted">A carregar quiz/catálogo…</div></div>`;}
- else{
+
+ const carregando=(INSCR===null||INSCR==="load");
+ if(INSCR===null)carregarInscricoes();
+ let pendentesArr=[],convertidosArr=[],taxaConv=0,totalQC=0;
+ if(!carregando){
   const outrosTodos=INSCR.filter(function(r){return r.tipo!=="Pagamento";}).slice().sort(function(a,b){return (b.quando||"").localeCompare(a.quando||"");});
-  /* L44 — quem já é formando (telefone bate com um aluno inscrito) conta automaticamente como convertido,
-     em vez de ficar sempre em "por confirmar" à espera de alguém clicar "→ Lead". Isto alimenta a taxa de
-     conversão desta lista (Quiz & Catálogo → inscritos), separada da taxa de conversão geral (aba Leads). */
+  /* L44 — quem já é formando (telefone bate com um aluno inscrito) conta automaticamente como convertido.
+     L83 — quem já tem lead criado (o HVCO já converte quase tudo sozinho, ver autoSeguimentoInscricoes)
+     também sai de "por confirmar" — já está a ser trabalhado noutro sítio, não precisa de aparecer aqui
+     como pendente de novo. */
   const _matchFormando=function(tel){var k=normTel(tel);if(!k)return null;return data.formandos.find(function(f){return normTel(f.tel)===k;})||null;};
-  const convertidos=[],pendentes=[];
-  outrosTodos.forEach(function(r){var f=_matchFormando(r.tel);if(f)convertidos.push({r:r,f:f});else pendentes.push(r);});
-  const taxaConv=outrosTodos.length?Math.round(convertidos.length/outrosTodos.length*100):0;
-  catalogoHtml=`${inscModalHTML()}<div class="sec"><h2>Quiz &amp; Catálogo (por confirmar) <span class="pill p-cinza">${pendentes.length}</span></h2><div class="muted">Quem respondeu ao teste de Excel ou mostrou interesse pelo catálogo mas ainda não se inscreveu/pagou. Ainda não é um formando — usa "Ver ficha" para detalhes ou "→ Lead" para dar seguimento comercial.</div>
-   <div class="kpigrid" style="margin:10px 0"><div class="kpi money"><div class="lab">Taxa de conversão (Quiz &amp; Catálogo → inscritos)</div><div class="val" style="font-size:20px">${taxaConv}%</div></div><div class="kpi"><div class="lab">Já inscritos</div><div class="val" style="font-size:20px">${convertidos.length}</div></div><div class="kpi"><div class="lab">Por confirmar</div><div class="val" style="font-size:20px">${pendentes.length}</div></div></div>
-   <table style="margin-top:8px"><thead><tr><th>Quando</th><th>Nome</th><th>Contacto</th><th>Curso</th><th>Tipo</th><th>Fonte</th><th></th></tr></thead><tbody>
-   ${pendentes.map(function(r){const i=INSCR.indexOf(r);return `<tr><td>${esc((r.quando||"").slice(0,16).replace("T"," "))}</td><td>${esc(r.nome||"")}</td><td>${esc(r.tel||"")}</td><td>${esc(r.curso||"")}</td><td><span class="pill p-dour">${esc(r.tipo||"Interesse")}</span></td><td>${r.fonte?'<span class="pill p-azul">'+esc(r.fonte)+'</span>':'<span class="muted">—</span>'}</td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:4px 8px" onclick="verFicha(${i})">Ver ficha</button><button class="btn-g" style="padding:4px 8px" onclick="inscParaLead(${i})">→ Lead</button><button class="btn-o" style="padding:4px 8px" onclick="inscApagar(${i})">✕</button></td></tr>`;}).join("")||'<tr><td colspan="7" class="muted">Sem registos de quiz/catálogo por confirmar.</td></tr>'}
-   </tbody></table>
-   <details class="subdet" style="margin-top:12px"><summary>Já inscritos (contam para a conversão) — ${convertidos.length}</summary>
-   <table style="margin-top:8px"><thead><tr><th>Quando</th><th>Nome</th><th>Contacto</th><th>Curso</th><th>Fonte</th><th></th></tr></thead><tbody>
-   ${convertidos.map(function(x){return `<tr><td>${esc((x.r.quando||"").slice(0,16).replace("T"," "))}</td><td>${esc(x.r.nome||"")}</td><td>${esc(x.r.tel||"")}</td><td>${esc(x.r.curso||"")}</td><td>${x.r.fonte?'<span class="pill p-azul">'+esc(x.r.fonte)+'</span>':'<span class="muted">—</span>'}</td><td><span class="pill p-verde">Já inscrito</span> <button class="btn-o" style="padding:3px 9px" onclick="fFicha='${esc(x.f.cod)}';show('formandos')">Ficha do aluno</button></td></tr>`;}).join("")||'<tr><td colspan="6" class="muted">Ainda nenhum.</td></tr>'}
-   </tbody></table></details>
-  </div>`;
+  const _jaLead=function(tel){var k=normTel(tel);if(!k)return false;return (data.leads||[]).some(function(l){return normTel(l.tel)===k;});};
+  outrosTodos.forEach(function(r){var f=_matchFormando(r.tel);if(f)convertidosArr.push({r:r,f:f});else if(!_jaLead(r.tel))pendentesArr.push(r);});
+  taxaConv=outrosTodos.length?Math.round(convertidosArr.length/outrosTodos.length*100):0;
+  totalQC=outrosTodos.length;
  }
- return `${contactarLeadModalHTML()}<div class="sec"><h2>Leads do Quiz <span class="pill p-cinza">${L.length}</span></h2><div class="muted">Só quem respondeu ao teste de Excel — nota (/20), contacto e estado, para ligar rápido sem procurar no quadro geral de leads.</div>
-  <input id="q_ql" class="search" style="margin:8px 0" placeholder="🔍 Pesquisar por nome ou telefone…" value="${esc(qlSearch)}" oninput="qlSearch=this.value;refocusSearch('q_ql');renderDebounced()">
-  <table style="margin-top:8px"><thead><tr><th>Nome</th><th>Telefone</th><th>Nota</th><th>Curso</th><th>Estado</th><th>Data/Hora</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>${catalogoHtml}`;
+ const pendCount=carregando?"…":pendentesArr.length;
+ const convCount=carregando?"…":convertidosArr.length;
+
+ const slicer=function(id,label,count,badge){return '<button class="btn-'+(qlView===id?"p":"o")+'" style="padding:8px 14px" onclick="qlView=\''+id+'\';render()">'+esc(label)+' <span class="pill p-cinza" style="padding:1px 7px">'+count+'</span>'+(badge?' <span class="pill p-verm" style="padding:1px 6px">'+badge+'</span>':'')+'</button>';};
+ const taxaStrip='<div class="note" style="background:#EAF3DE;border-color:#c0dd97;color:#173404;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:12px 0"><b style="font-size:13px">Taxa de conversão</b><span style="font-size:22px;font-weight:700">'+(carregando?"…":taxaConv+"%")+'</span><span style="font-size:12px;margin-left:auto">'+(carregando?"a carregar…":convCount+" de "+totalQC+" já inscritos")+'</span></div>';
+
+ let corpo;
+ if(qlView==="leads"){
+  corpo='<div class="muted" style="margin-bottom:8px">Só quem respondeu ao teste de Excel — nota (/20), contacto e estado, para ligar rápido sem procurar no quadro geral de leads.</div>'
+   +'<div class="flex" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><input id="q_ql" class="search" placeholder="🔍 Pesquisar por nome ou telefone…" value="'+esc(qlSearch)+'" oninput="qlSearch=this.value;refocusSearch(\'q_ql\');renderDebounced()">'
+   +'<button class="btn-'+(qlSoNaoContactados?"p":"o")+'" style="padding:6px 10px" onclick="qlSoNaoContactados=!qlSoNaoContactados;render()">'+(qlSoNaoContactados?"A mostrar só por contactar ✓":"Só quem ainda não foi contactado")+'</button></div>'
+   +'<table><thead><tr><th>Nome</th><th>Telefone</th><th>Nota</th><th>Curso</th><th>Estado</th><th>Data/Hora</th><th></th></tr></thead><tbody>'+rowsLeads+'</tbody></table>';
+ }else if(qlView==="pend"){
+  corpo=carregando?'<div class="muted">A carregar quiz/catálogo…</div>':(inscModalHTML()+'<div class="muted" style="margin-bottom:8px">Quem respondeu ao teste de Excel ou mostrou interesse pelo catálogo e ainda não é lead nem formando. Usa "Ver ficha" para detalhes ou "→ Lead" para dar seguimento comercial (raramente precisas — o sistema já cria o lead sozinho assim que a submissão chega).</div>'
+   +'<table><thead><tr><th>Quando</th><th>Nome</th><th>Contacto</th><th>Curso</th><th>Tipo</th><th>Fonte</th><th></th></tr></thead><tbody>'
+   +(pendentesArr.map(function(r){const i=INSCR.indexOf(r);return '<tr><td>'+esc((r.quando||"").slice(0,16).replace("T"," "))+'</td><td>'+esc(r.nome||"")+'</td><td>'+esc(r.tel||"")+'</td><td>'+esc(r.curso||"")+'</td><td><span class="pill p-dour">'+esc(r.tipo||"Interesse")+'</span></td><td>'+(r.fonte?'<span class="pill p-azul">'+esc(r.fonte)+'</span>':'<span class="muted">—</span>')+'</td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:4px 8px" onclick="verFicha('+i+')">Ver ficha</button><button class="btn-g" style="padding:4px 8px" onclick="inscParaLead('+i+')">→ Lead</button><button class="btn-o" style="padding:4px 8px" onclick="inscApagar('+i+')">✕</button></td></tr>';}).join("")||'<tr><td colspan="7" class="muted">Sem registos de quiz/catálogo por confirmar.</td></tr>')
+   +'</tbody></table>');
+ }else{
+  corpo=carregando?'<div class="muted">A carregar quiz/catálogo…</div>':('<div class="muted" style="margin-bottom:8px">Quem veio do Quiz ou do Catálogo e já é formando — conta para a taxa de conversão acima.</div>'
+   +'<table><thead><tr><th>Quando</th><th>Nome</th><th>Contacto</th><th>Curso</th><th>Fonte</th><th></th></tr></thead><tbody>'
+   +(convertidosArr.map(function(x){return '<tr><td>'+esc((x.r.quando||"").slice(0,16).replace("T"," "))+'</td><td>'+esc(x.r.nome||"")+'</td><td>'+esc(x.r.tel||"")+'</td><td>'+esc(x.r.curso||"")+'</td><td>'+(x.r.fonte?'<span class="pill p-azul">'+esc(x.r.fonte)+'</span>':'<span class="muted">—</span>')+'</td><td><span class="pill p-verde">Já inscrito</span> <button class="btn-o" style="padding:3px 9px" onclick="fFicha=\''+esc(x.f.cod)+'\';show(\'formandos\')">Ficha do aluno</button></td></tr>';}).join("")||'<tr><td colspan="6" class="muted">Ainda nenhum.</td></tr>')
+   +'</tbody></table>');
+ }
+ return contactarLeadModalHTML()+'<div class="sec">'
+  +'<div class="flex" style="gap:8px;flex-wrap:wrap">'
+  +slicer("leads","Leads do Quiz",totalLeadsQuiz,novosCount?novosCount+" novos":"")
+  +slicer("pend","Quiz & Catálogo — por confirmar",pendCount,"")
+  +slicer("insc","Já inscritos",convCount,"")
+  +'</div>'
+  +taxaStrip
+  +'<div style="margin-top:6px">'+corpo+'</div>'
+  +'</div>';
 }
 
 /* B2B — Empresas (in-company) */
@@ -3643,7 +3673,13 @@ function finalizarFusaoInscricao(i){const r=Array.isArray(INSCR)&&INSCR[i];if(!r
  _marcarInscConfirmada(r);persist();inscConfirmModal=null;confCursoSel=null;
  toast("Fundido com "+dup.nome+" ("+dup.cod+")"+(alteracoes.length?" — actualizado: "+alteracoes.join(", "):" — sem novidades a preencher"));
  fFicha=dup.cod;show("formandos");}
-function inscParaLead(i){const r=Array.isArray(INSCR)&&INSCR[i];if(!r)return;const hoje=new Date().toISOString().slice(0,10);data.leads.unshift({data:hoje,ultimoMov:hoje,nome:r.nome||"",tel:r.tel||"",canal:"Landing",curso:r.curso||"",estado:r.tipo==="Pagamento"?"Inscrito":"Novo",resp:"",fonte:r.fonte||"",criadoEm:r.quando||new Date().toISOString(),notas:"Inscrição pela landing"+(r.valorPago?" · pagou "+kz(r.valorPago):"")+(r.comprovativo?" · com comprovativo":"")});persist();toast("Convertido em lead");show("leads");}
+/* L83-fix: o HVCO (autoSeguimentoInscricoes) já converte quase tudo em lead sozinho assim que chega —
+   este botão manual só devia servir de rede de segurança, nunca duplicar um lead que já existe para o
+   mesmo telefone. */
+function inscParaLead(i){const r=Array.isArray(INSCR)&&INSCR[i];if(!r)return;
+ const nt=normTel(r.tel);
+ if(nt&&(data.leads||[]).some(function(l){return normTel(l.tel)===nt;})){toast("Já existe um lead com este contacto — não foi criado outro.");show("leads");return;}
+ const hoje=new Date().toISOString().slice(0,10);data.leads.unshift({data:hoje,ultimoMov:hoje,nome:r.nome||"",tel:r.tel||"",canal:(r.tipo==="Quiz Excel"||r.origem==="Quiz")?"Quiz":"Landing",curso:r.curso||"",estado:r.tipo==="Pagamento"?"Inscrito":"Novo",resp:"",fonte:r.fonte||"",criadoEm:r.quando||new Date().toISOString(),notas:"Inscrição pela landing"+(r.valorPago?" · pagou "+kz(r.valorPago):"")+(r.comprovativo?" · com comprovativo":"")});persist();toast("Convertido em lead");show("leads");}
 function inscApagar(i){const r=Array.isArray(INSCR)&&INSCR[i];if(!r)return;if(!confirm("Apagar esta inscrição da landing? (não afeta o lead/formando já criado)"))return;var ref=_fbInscRef();if(ref&&r._key){ref.child(r._key).remove();}INSCR.splice(i,1);render();}
 
 /* PARTILHA DA LANDING */
