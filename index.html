@@ -273,7 +273,7 @@ div[style*="position:fixed"][style*="place-items:center"]>.card{resize:both;over
   </aside>
   <div id="navmask" onclick="closeNav()"></div>
   <div id="main">
-    <div class="topbar"><button class="mob-menu" onclick="toggleNav()" aria-label="Menu">☰</button><svg class="top-k" viewBox="0 0 100 100" width="30" height="30" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="48" fill="#1F3864"/><circle cx="50" cy="21" r="4" fill="#BF9000"/><text x="50" y="53" text-anchor="middle" dominant-baseline="central" font-family="Georgia,'Times New Roman',serif" font-size="52" font-weight="700" fill="#fff">K</text></svg><div style="flex:1"><h1 id="ptitle"></h1><div class="muted sub" id="psub"></div></div><span id="topclock" class="muted" style="font-size:12.5px;margin-right:10px;white-space:nowrap;font-weight:600"></span><button class="btn-o" onclick="actualizarDados()" title="Actualizar os dados sem sair da sessão" style="padding:6px 11px;font-size:12.5px;margin-right:8px">↻ Actualizar</button><button id="ocultBtn" class="btn-o" onclick="toggleOcultar()" style="padding:6px 11px;font-size:12.5px;margin-right:8px;display:inline-flex;align-items:center;gap:6px"></button><button class="tema-toggle" onclick="toggleTema()" title="Modo claro/escuro" aria-label="Modo claro/escuro"><span class="tema-track"><span class="tema-thumb"></span></span></button><span id="topavatar" title="" style="width:32px;height:32px;border-radius:50%;background-color:#2a3f6b;background-size:cover;background-position:center;display:none;margin:0 8px;border:1px solid rgba(255,255,255,.4);align-self:center"></span><button class="btn-o mob-sair" onclick="logout()">Sair</button></div>
+    <div class="topbar"><button class="mob-menu" onclick="toggleNav()" aria-label="Menu">☰</button><svg class="top-k" viewBox="0 0 100 100" width="30" height="30" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="48" fill="#1F3864"/><circle cx="50" cy="21" r="4" fill="#BF9000"/><text x="50" y="53" text-anchor="middle" dominant-baseline="central" font-family="Georgia,'Times New Roman',serif" font-size="52" font-weight="700" fill="#fff">K</text></svg><div style="flex:1"><h1 id="ptitle"></h1><div class="muted sub" id="psub"></div></div><span id="topclock" class="muted" style="font-size:12.5px;margin-right:10px;white-space:nowrap;font-weight:600"></span><button class="btn-o" onclick="actualizarDados()" title="Actualizar os dados sem sair da sessão" style="padding:6px 11px;font-size:12.5px;margin-right:8px">↻ Actualizar</button><button class="btn-o" onclick="toggleCertRapido()" title="Ver rapidamente quem já recebeu certificado" style="padding:6px 11px;font-size:12.5px;margin-right:8px">🎓 <span id="certRapidoBadge">0</span></button><button id="ocultBtn" class="btn-o" onclick="toggleOcultar()" style="padding:6px 11px;font-size:12.5px;margin-right:8px;display:inline-flex;align-items:center;gap:6px"></button><button class="tema-toggle" onclick="toggleTema()" title="Modo claro/escuro" aria-label="Modo claro/escuro"><span class="tema-track"><span class="tema-thumb"></span></span></button><span id="topavatar" title="" style="width:32px;height:32px;border-radius:50%;background-color:#2a3f6b;background-size:cover;background-position:center;display:none;margin:0 8px;border:1px solid rgba(255,255,255,.4);align-self:center"></span><button class="btn-o mob-sair" onclick="logout()">Sair</button></div>
     <div id="globalAlert" onclick="show('notas')" style="display:none;cursor:pointer;background:#fbe9e7;color:#a3311f;border-bottom:2px solid #C0392B;padding:8px 16px;font-size:13px;font-weight:700;text-align:center"></div>
     <main id="views"></main>
     <footer id="rodape" style="padding:16px 26px;margin-top:8px;color:#5b6577;font-size:13px;font-weight:600;border-top:1px solid var(--linha);background:var(--cinza);text-align:center"></footer>
@@ -480,6 +480,7 @@ if(!data.perfis.length)data.perfis.push({nome:"Ventura Camilo",funcao:"Gestor",e
  try{migrarContasBanco();}catch(e){}
  try{limparContasEnvelopeAntigas();}catch(e){}
  try{autoFecharTurmas();}catch(e){}
+ try{autoResumirPausas();}catch(e){}
  /* L33: qualquer pagamento já marcado como Bónus mas que ainda tenha prestações antigas por resolver
     (de antes de zerar) deixa de contar essas prestações para a receita — corrige de imediato quem já
     foi zerado, sem ser preciso repetir a acção. */
@@ -786,7 +787,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.5";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.8";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -871,7 +872,7 @@ function _reaplicarAccdetAbertos(){var views=document.getElementById("views");if
    lendo directamente o DOM antes de o destruir. Sem isto, editar um campo dentro de uma secção podia fechá-la
    de volta ao estado por omissão, porque o registo dependia só do evento toggle (que às vezes falha/atrasa). */
 function _capturarAccdetAbertos(){var views=document.getElementById("views");if(!views)return;[...views.querySelectorAll("details.accdet")].forEach(function(d){var txt=_accdetTxt(d);if(txt)_accdetOpen[txt]=d.open;});}
-function render(){_capturarAccdetAbertos();try{sessionStorage.setItem("ka_fficha",fFicha||"");sessionStorage.setItem("ka_fsearch",fSearch||"");}catch(e){}document.getElementById("views").innerHTML=rowEditModalHTML()+editGastoModalHTML()+cropModalHTML()+fotoGrandeModalHTML()+feedbackModalHTML()+({painel:vPainel,notificacoes:vNotificacoes,financas:vFinancas,gastos:vGastos,analytics:vAnalytics,paginas:vPaginas,quiz:vQuizPainel,quizleads:vQuizLeads,formandos:vFormandos,turmas:vTurmas,calendario:vCalendario,online:vOnline,pagamentos:vPagamentos,comprovativo:vComprovativo,leads:vLeads,carteira:vCarteira,b2b:vB2B,emailmkt:vEmailMkt,inscricoes:vInscricoes,chamadas:vChamadas,presencas:vPresencas,avaliacoes:vAvaliacoes,certificados:vCertificados,formador:vFormador,formadorespot:vFormadoresPotenciais,presencial:vPresencial,comunicados:vComunicados,notas:vNotas,chat:vChat,melhorias:vMelhorias,actividade:vActividade,rh:vRH,desempenho:vDesempenho,dados:vDados,exportar:vExportar,defs:vDefs,conteudos:vConteudos,incumprimentos:vIncumprimentos,guia:vGuia,contactos:vContactos}[current]||(()=>""))();_reaplicarAccdetAbertos();if(typeof _initOrdenar==="function")_initOrdenar();if(current==="painel"){drawChart();drawPerfChart();}if(typeof atualizarAlertaGlobal==="function")atualizarAlertaGlobal();if(_refocus){const e=document.getElementById(_refocus);if(e){e.focus();const v=e.value||"";try{e.setSelectionRange(v.length,v.length)}catch(_){}}_refocus=null;}}
+function render(){_capturarAccdetAbertos();try{sessionStorage.setItem("ka_fficha",fFicha||"");sessionStorage.setItem("ka_fsearch",fSearch||"");}catch(e){}document.getElementById("views").innerHTML=rowEditModalHTML()+editGastoModalHTML()+cropModalHTML()+fotoGrandeModalHTML()+feedbackModalHTML()+certRapidoModalHTML()+({painel:vPainel,notificacoes:vNotificacoes,financas:vFinancas,gastos:vGastos,analytics:vAnalytics,paginas:vPaginas,quiz:vQuizPainel,quizleads:vQuizLeads,formandos:vFormandos,turmas:vTurmas,calendario:vCalendario,online:vOnline,pagamentos:vPagamentos,comprovativo:vComprovativo,leads:vLeads,carteira:vCarteira,b2b:vB2B,emailmkt:vEmailMkt,inscricoes:vInscricoes,chamadas:vChamadas,presencas:vPresencas,avaliacoes:vAvaliacoes,certificados:vCertificados,formador:vFormador,formadorespot:vFormadoresPotenciais,presencial:vPresencial,comunicados:vComunicados,notas:vNotas,chat:vChat,melhorias:vMelhorias,actividade:vActividade,rh:vRH,desempenho:vDesempenho,dados:vDados,exportar:vExportar,defs:vDefs,conteudos:vConteudos,incumprimentos:vIncumprimentos,guia:vGuia,contactos:vContactos}[current]||(()=>""))();_reaplicarAccdetAbertos();if(typeof _initOrdenar==="function")_initOrdenar();if(current==="painel"){drawChart();drawPerfChart();}if(typeof atualizarAlertaGlobal==="function")atualizarAlertaGlobal();if(typeof atualizarCertBadge==="function")atualizarCertBadge();if(_refocus){const e=document.getElementById(_refocus);if(e){e.focus();const v=e.value||"";try{e.setSelectionRange(v.length,v.length)}catch(_){}}_refocus=null;}}
 
 function fin(){if(!data.financas)data.financas={saldoBanco:0,saldoData:"",gastos:[],metas:{Marketing:0,Renda:0,"Comunicação":0,Outras:0},split:{proLabore:30,operacao:40,reserva:15,investimento:10,marketing:5}};return data.financas;}
 const GASTO_CATS=["Salários","Marketing","Renda","Comunicação","Água","Detergentes","Consumíveis","Deslocação","Serviços de limpeza","Outras"];
@@ -1715,8 +1716,8 @@ function vAnalytics(){
   <div class="muted" style="margin-top:8px">Para números detalhados (origem das visitas, tempo na página), usa o Google Analytics com o código G-XXXX que puseste no catálogo e na landing.</div></div>`;}
 function vNotificacoes(){const hoje=new Date().toISOString().slice(0,10);const dow=new Date().getDay();
  const tarefas=data.notas.filter(n=>!n.feito);
- const pdsHoje=data.online.filter(o=>o.proximoPDS&&o.proximoPDS<=hoje&&o.status!=="Concluído");
- const pdsParados=data.online.filter(o=>{if(o.status==="Concluído")return false;const ref=o.ultimoPDS||"";if(!ref)return false;const diff=(new Date(hoje)-new Date(ref))/86400000;return diff>=14;});
+ const pdsHoje=data.online.filter(o=>o.proximoPDS&&o.proximoPDS<=hoje&&o.status!=="Concluído"&&o.status!=="Parado");
+ const pdsParados=data.online.filter(o=>{if(o.status==="Concluído"||o.status==="Parado")return false;const ref=o.ultimoPDS||"";if(!ref)return false;const diff=(new Date(hoje)-new Date(ref))/86400000;return diff>=14;});
  const dividas=data.formandos.filter(f=>{const p=payOf(f.cod);return p&&divida(p)>0;});
  const chamadasDia=(dow>=1&&dow<=5);const anivHoje=aniversariosProximos(0);
  const bloco=(titulo,cor,itens,pagina,vazio)=>`<div class="sec"><h2 style="cursor:pointer" onclick="show('${pagina}')">${titulo} <span class="pill ${cor}">${itens.length}</span> <span class="muted" style="font-size:12px;font-weight:400">→ abrir</span></h2>${itens.length?'<ul style="margin:6px 0 0 18px;line-height:1.7">'+itens.map(x=>'<li>'+x+'</li>').join("")+'</ul>':'<div class="muted">'+(vazio||'Nada por agora. 🎉')+'</div>'}</div>`;
@@ -2245,6 +2246,26 @@ function outrosGestaoHTML(){
  return `<div class="sec"><h2>Outros de hoje — toda a equipa <span class="muted" style="font-size:12px;font-weight:400">(só gestão)</span></h2><table><tbody>${Object.keys(porPessoa).map(function(p){return '<tr><td style="font-weight:600;white-space:nowrap;vertical-align:top;padding-right:10px">'+esc(p)+'</td><td>'+porPessoa[p].map(function(t){return esc(t);}).join('<br>')+'</td></tr>';}).join("")}</tbody></table></div>`;}
 function criarNotaAuto(txt,resp,area){if(!txt)return;if((data.notas||[]).some(function(n){return n.txt===txt&&n.resp===resp&&!n.feito;}))return;data.notas.unshift({txt:txt,resp:resp||"",area:area||"",numero:"",email:"",tel:"",prazoData:"",prazoHora:"",feito:false,comentario:"",data:new Date().toISOString().slice(0,10),criadoEm:new Date().toISOString(),pedidoPor:"Sistema (automático)"});}
 /* Item 6 (L70): 1 semana depois do fim, a turma marca-se sozinha como concluída e avisa gestora+formador+gestão a emitir certificados. Corre uma vez por carregamento, a partir de ensure(). */
+/* L84 — pausa inteligente da Turma Online: quando um aluno entra em "Parado", a duração passa a ser
+   estruturada (nº de semanas) em vez de texto livre, permitindo calcular pausaAte. Enquanto em pausa,
+   pdsFlag()/alertas ignoram-no (não aparece "PDS em atraso" nem no "Sem PDS há 2+ semanas"). Ao passar
+   a data de fim, autoResumirPausas() (chamada a partir de ensure(), logo a seguir a autoFecharTurmas())
+   devolve o aluno a "Em andamento" sozinho e empurra qualquer PDS que tenha ficado agendado dentro da
+   janela de pausa para o dia do regresso, para não se perder nem ficar "em atraso" por causa da pausa. */
+function calcPausaAte(desde,semanas){var d=new Date((desde||new Date().toISOString().slice(0,10))+"T00:00:00");d.setDate(d.getDate()+7*(+semanas||0));return d.toISOString().slice(0,10);}
+function _semanasDeTextoPausa(t){if(!t)return null;var m=String(t).match(/(\d+)/);return m?Math.max(1,+m[1]):null;}
+function autoResumirPausas(){var hoje=new Date().toISOString().slice(0,10);
+ (data.online||[]).forEach(function(o){
+  if(o.status!=="Parado")return;
+  if(!o.pausaAte){var desde=o.pausaDesde||hoje;var sem=+o.pausaSemanas||_semanasDeTextoPausa(o.pausaTempo)||2;o.pausaDesde=desde;o.pausaSemanas=sem;o.pausaAte=calcPausaAte(desde,sem);}
+  if(o.pausaAte&&hoje>=o.pausaAte){
+   o.status="Em andamento";ensurePds(o);
+   (o.pds||[]).forEach(function(p){if(p.data<hoje)p.data=hoje;});
+   syncProx(o);
+   o.pausaAte="";o.pausaSemanas=null;o.pausaDesde="";
+   criarNotaAuto((o.nome||"Aluno online")+" regressou automaticamente da pausa — PDS retomados.",(data.responsaveis&&data.responsaveis.online)||"","Académico");
+  }
+ });}
 function autoFecharTurmas(){var hoje=new Date(new Date().toDateString());var fechadas=0;
  (data.turmas||[]).forEach(function(t){
   if(t.concluida||!t.fim)return;
@@ -2918,6 +2939,27 @@ function syncCerts(){let add=0,adiados=0;data.formandos.forEach(f=>{if(data.cert
 function setCert(i,e){const c=data.certificados[i];if(!c)return;c.estado=e;if(e==="Entregue"){if(!c.data)c.data=new Date().toISOString().slice(0,10)}else c.data="";persist();toast("Certificado: "+e);render();}
 function delCert(i){if(!confirm("Remover este certificado?"))return;data.certificados.splice(i,1);persist();render()}
 
+/* L86 — janela rápida (global) para ver quem já recebeu certificado, acessível de qualquer página via botão na topbar */
+let certRapidoOpen=false,certRapidoQ="";
+function toggleCertRapido(){certRapidoOpen=!certRapidoOpen;certRapidoQ="";render();}
+function certRapidoModalHTML(){
+ if(!certRapidoOpen)return"";
+ const q=(certRapidoQ||"").toLowerCase();
+ const entregues=(data.certificados||[]).filter(function(c){return c.estado==="Entregue";});
+ const rows=entregues.filter(function(c){return !q||(c.nome||"").toLowerCase().includes(q)||(c.curso||"").toLowerCase().includes(q);}).sort(function(a,b){return (b.data||"").localeCompare(a.data||"");});
+ return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.55);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)toggleCertRapido()">
+  <div class="card" style="padding:16px;max-width:560px;width:100%;max-height:85vh;overflow:auto">
+   <div class="flex" style="align-items:center;gap:8px"><b style="color:var(--azul)">🎓 Certificados entregues</b><span class="pill p-verde">${entregues.length}</span><div class="spacer"></div><button class="btn-o" style="padding:4px 10px" onclick="toggleCertRapido()">Fechar ✕</button></div>
+   <input class="search" style="margin:10px 0" placeholder="Pesquisar por nome ou curso…" value="${esc(certRapidoQ)}" oninput="certRapidoQ=this.value;renderDebounced()">
+   <table><thead><tr><th>Nome</th><th>Curso</th><th>Data</th></tr></thead><tbody>
+   ${rows.map(function(c){return '<tr><td>'+esc(c.nome)+'</td><td>'+esc(c.curso||"—")+'</td><td>'+(fmtDataCurta(c.data)||"—")+'</td></tr>';}).join("")||'<tr><td colspan="3" class="muted">Ainda ninguém recebeu certificado.</td></tr>'}
+   </tbody></table>
+   <div class="flex" style="margin-top:12px"><div class="spacer"></div><button class="btn-p" onclick="certEstado='Entregue';toggleCertRapido();show('certificados')">Ver na página Certificados →</button></div>
+  </div>
+ </div>`;
+}
+function atualizarCertBadge(){var b=document.getElementById("certRapidoBadge");if(b)b.textContent=(data.certificados||[]).filter(function(c){return c.estado==="Entregue";}).length;}
+
 /* NOTAS / PARA RESOLVER */
 function waLink(c,txt){const d=(c||"").replace(/\D/g,"");if(!d)return"";const num=d.startsWith("244")?d:("244"+d);return"https://wa.me/"+num+"?text="+encodeURIComponent(txt)}
 function mailLink(c,txt){return"mailto:"+encodeURIComponent(c)+"?subject="+encodeURIComponent("Tarefa — Knowledge Angola")+"&body="+encodeURIComponent(txt)}
@@ -2960,38 +3002,151 @@ function editNota(i){const n=data.notas[i];if(!n)return;const t=prompt("Editar t
 
 /* TURMAS ONLINE / PDS */
 let onSearch="";let onFilter="";
-function pdsFlag(o){if(o.status==="Concluído")return{t:"Concluído",c:"p-azul"};const hoje=new Date(new Date().toDateString());
+/* L85 — estado da reorganização em separadores da Turma Online: aba activa, filtro de nível
+   (combinável com onFilter/situação) e formador seleccionado dentro da aba Formadores. */
+let onTab="acomp";let onNivel="";let onFormSel="";
+function prazoBarHTML(o){
+ if(!o.inicio)return '<span class="muted">—</span>';
+ if(o.status==='Concluído')return '<span class="pill p-azul">concluído</span>';
+ const prazoTot=+o.prazo||30;
+ const prev=addBusinessDays(o.inicio,prazoTot);
+ const f=diasUteisAte(prev);
+ const decorridos=Math.max(0,prazoTot-f);
+ const pct=Math.max(0,Math.min(100,Math.round(decorridos/prazoTot*100)));
+ const cor=f<0?"#C0392B":(f<=Math.ceil(prazoTot*0.25)?"#BF9000":"#2E7D46");
+ const lab=f<0?("em atraso "+(-f)+"d"):(f+" d.úteis");
+ return '<div style="background:#eef0f4;border-radius:5px;position:relative;height:17px;min-width:92px" title="Prevista: '+prev+' · '+prazoTot+' dias úteis no nível"><div style="position:absolute;left:0;top:0;bottom:0;background:'+cor+';border-radius:5px;width:'+pct+'%;transition:width .3s"></div><span style="position:relative;display:block;text-align:center;font-size:10.5px;line-height:17px;font-weight:700;color:'+(pct>50?"#fff":"#333")+'">'+lab+'</span></div>';
+}
+function pdsFlag(o){if(o.status==="Concluído")return{t:"Concluído",c:"p-azul"};if(o.status==="Parado")return{t:"Em pausa"+(o.pausaAte?" até "+fmtDataCurta(o.pausaAte):""),c:"p-dour"};const hoje=new Date(new Date().toDateString());
  if(o.proximoPDS){const d=new Date(o.proximoPDS);const diff=(d-hoje)/86400000;if(diff<0)return{t:"PDS em atraso",c:"p-verm"};if(diff<=7)return{t:"PDS esta semana",c:"p-dour"};return{t:"agendado",c:"p-cinza"}}
  if(o.ultimoPDS){const d=new Date(o.ultimoPDS);const diff=(hoje-d)/86400000;if(diff>21)return{t:"sem PDS há "+Math.round(diff)+"d",c:"p-verm"}}
  return{t:"sem PDS agendado",c:"p-verm"}}
-function vOnline(){const q=onSearch.toLowerCase();let rows=data.online.filter(o=>o.status!=="Transferido").filter(o=>!q||(o.nome||"").toLowerCase().includes(q)||(o.formador||"").toLowerCase().includes(q));
+function vOnline(){
+ const _tbH=(document.querySelector('.topbar')||{}).offsetHeight||64;
  const hoje=new Date(new Date().toDateString());const wk=new Date(hoje);wk.setDate(hoje.getDate()+7);
- const ativos=data.online.filter(o=>o.status!=="Transferido");
- const semPDS=ativos.filter(o=>!o.proximoPDS&&o.status!=="Concluído").length;const proximos=ativos.filter(o=>o.proximoPDS&&new Date(o.proximoPDS)>=hoje&&new Date(o.proximoPDS)<=wk).length;
- if(onFilter==='proximos')rows=rows.filter(o=>o.proximoPDS&&new Date(o.proximoPDS)>=hoje&&new Date(o.proximoPDS)<=wk);else if(onFilter==='sem')rows=rows.filter(o=>!o.proximoPDS&&o.status!=='Concluído');const filtroBanner=onFilter?`<div class="note" style="background:#eaf0fb;border-color:#c7d6f0;color:#1F3864">A mostrar: <b>${onFilter==='proximos'?'PDS nos próximos 7 dias':'Sem PDS agendado'}</b> · <a href="#" onclick="onFilter='';render();return false" style="color:#1F3864;text-decoration:underline">ver todos</a></div>`:'';const _hs=new Date().toISOString().slice(0,10);const _ag=[];const _seen={};data.online.forEach(function(o){if(o.status==="Concluído"||o.status==="Transferido")return;ensurePds(o);(o.pds||[]).forEach(function(p,pidx){var k=p.groupId?p.groupId+"|"+p.data:null;if(k&&_seen[k])return;if(k)_seen[k]=true;_ag.push({o:o,idx:pidx,data:p.data,hora:p.hora,rec:p.rec,parceiro:p.parceiro});});});_ag.sort(function(a,b){return (a.data+(a.hora||"")).localeCompare(b.data+(b.hora||""));});const agendaHtml=`<details class="sec accdet"><summary>Agenda de PDS <span class="pill p-cinza">${_ag.length}</span></summary><table><thead><tr><th>Data</th><th>Hora</th><th>Aluno</th><th>Formador</th><th></th></tr></thead><tbody>${_ag.map(function(x){var atras=x.data<_hs,hj=x.data===_hs;var oi=data.online.indexOf(x.o);return '<tr><td>'+fmtDataCurta(x.data)+' '+(atras?'<span class="pill p-verm">atraso</span>':(hj?'<span class="pill p-dour">hoje</span>':''))+'</td><td>'+esc(x.hora||"—")+'</td><td>'+esc(x.o.nome)+(x.parceiro?' 🤝 '+esc(x.parceiro):'')+(x.rec?' ♻':'')+(x.o.combinado?'<br><span class="muted" style="font-size:11px">📝 Combinado: '+esc(x.o.combinado)+'</span>':'')+'</td><td>'+esc(x.o.formador||"—")+'</td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:4px 8px" onclick="verDetalhe('+oi+')">Ver perfil</button><button class="btn-g" style="padding:4px 8px" onclick="doPDS('+oi+')">PDS feito</button><button class="btn-o" style="padding:4px 8px" onclick="naoRealizadoPDS('+oi+')">Não realizado</button><button class="btn-o" style="padding:4px 8px" onclick="editarPdsItem('+oi+','+x.idx+')">Editar</button><button class="btn-o" style="padding:4px 8px" onclick="cancelPdsItem('+oi+','+x.idx+')">Cancelar</button></td></tr>';}).join("")||'<tr><td colspan="5" class="muted">Sem PDS agendados.</td></tr>'}</tbody></table></details>`;const _real=data.online.filter(function(o){return o.ultimoPDS===_hs;});const realizadosHtml=_real.length?`<details class="sec accdet"><summary>PDS realizados hoje <span class="pill p-cinza">${_real.length}</span></summary><table><thead><tr><th>Aluno</th><th>Formador</th><th>Combinado</th></tr></thead><tbody>${_real.map(function(o){return '<tr><td>'+esc(o.nome)+'</td><td>'+esc(o.formador||"—")+'</td><td>'+(o.combinado?esc(o.combinado):'<span class="muted">—</span>')+'</td></tr>';}).join("")}</tbody></table></details>`:'';const respOnline=(data.responsaveis&&data.responsaveis.online)||"";const _pn=prazosNivel();const prazosDefsHTML=role==="admin"?('<div class="sec" style="padding:10px 16px;background:#fbfaf5;border-color:#e8dfc0"><div class="flex" style="align-items:center;gap:8px"><b style="color:var(--azul)">⚙ Definições — Prazo por nível (só Gestão)</b></div><div class="muted" style="margin-top:2px">Dias úteis por omissão para concluir cada nível. Aplica-se a quem entrar de novo ou subir de nível a partir de agora — não altera prazos já em curso.</div><div class="formgrid" style="margin-top:8px">'+NIVEIS.map(function(n){return '<div><label>'+esc(n)+'</label><input type="number" value="'+(+_pn[n]||30)+'" onchange="setPrazoNivel(\''+esc(n).replace(/\'/g,"\\'")+'\',this)"></div>';}).join("")+'</div></div>'):'';
-return `${pdsPickerHTML()}${avalModalHTML()}${naoRealModalHTML()}${transferOnlineModalHTML()}${prazosDefsHTML}${classroomOnlineDefsHTML()}<div class="sec" style="padding:10px 16px"><div class="flex" style="gap:10px;align-items:center"><label style="margin:0">Gestora responsável pela Turma Online</label>${role==="admin"?respInputHTML("resp_online",respOnline,"—")+'<button class="btn-o" style="padding:5px 12px" onclick="setRespOnline()">Guardar</button>':'<b>'+esc(respOnline||"—")+'</b>'}</div></div><div class="kpigrid" style="margin-bottom:4px">
-   <div class="kpi" style="cursor:pointer" onclick="onFilter='';render()"><div class="lab">Alunos online</div><div class="val">${ativos.length}</div></div>
-   <div class="kpi" style="cursor:pointer" onclick="onFilter='proximos';render()"><div class="lab">PDS nos próximos 7 dias</div><div class="val">${proximos}</div></div>
-   <div class="kpi ${semPDS?'alert':''}" style="cursor:pointer" onclick="onFilter='sem';render()"><div class="lab">Sem PDS agendado</div><div class="val">${semPDS}</div></div>
-   <div class="kpi"><div class="lab">Activos</div><div class="val">${ativos.filter(o=>o.status!=='Concluído'&&o.status!=='Desistência').length}</div></div>
-   <div class="kpi"><div class="lab">Concluídos</div><div class="val">${ativos.filter(o=>o.status==='Concluído').length}</div></div>
-   <div class="kpi"><div class="lab">Taxa de conclusão</div><div class="val">${(function(){var t=ativos.length,c=ativos.filter(o=>o.status==='Concluído').length,d=ativos.filter(o=>o.status==='Desistência').length;return t?Math.round(c/t*100)+'%':'—';})()}</div><div class="muted" style="font-size:11px">${ativos.filter(o=>o.status==='Desistência').length} desistência(s)</div></div></div>
-   ${(function(){var byF={};ativos.forEach(function(o){var n=o.formador||"—";byF[n]=byF[n]||{ativo:0,concl:0,tot:0};byF[n].tot++;if(o.status==="Concluído")byF[n].concl++;else if(o.status!=="Desistência")byF[n].ativo++;});var ks=Object.keys(byF).sort(function(a,b){return byF[b].tot-byF[a].tot;});if(!ks.length)return"";return '<div class="sec" style="margin-top:10px"><h2>Alunos online por formador</h2><table><thead><tr><th>Formador</th><th>Activos</th><th>Concluídos</th><th>Total</th></tr></thead><tbody>'+ks.map(function(n){return '<tr><td>'+esc(n)+'</td><td>'+byF[n].ativo+'</td><td>'+byF[n].concl+'</td><td><b>'+byF[n].tot+'</b></td></tr>';}).join("")+'</tbody></table></div>';})()}
-   ${filtroBanner}${agendaHtml}${realizadosHtml}
- 
- <div class="sec"><h2>Acompanhamento</h2>
+ const ativos=data.online.filter(function(o){return o.status!=="Transferido";});
+ const semPDS=ativos.filter(function(o){return !o.proximoPDS&&o.status!=="Concluído"&&o.status!=="Parado";}).length;
+ const proximos=ativos.filter(function(o){return o.proximoPDS&&new Date(o.proximoPDS)>=hoje&&new Date(o.proximoPDS)<=wk;}).length;
+ const concluidosCount=ativos.filter(function(o){return o.status==="Concluído";}).length;
+ const desistCount=ativos.filter(function(o){return o.status==="Desistência";}).length;
+ const activosCount=ativos.filter(function(o){return o.status!=="Concluído"&&o.status!=="Desistência";}).length;
+ const taxaConclusaoTxt=ativos.length?Math.round(concluidosCount/ativos.length*100)+'%':'—';
+ const respOnline=(data.responsaveis&&data.responsaveis.online)||"";
+ const _pn=prazosNivel();
+ const prazosDefsHTML=role==="admin"?('<div class="sec" style="padding:10px 16px;background:#fbfaf5;border-color:#e8dfc0"><div class="flex" style="align-items:center;gap:8px"><b style="color:var(--azul)">⚙ Definições — Prazo por nível (só Gestão)</b></div><div class="muted" style="margin-top:2px">Dias úteis por omissão para concluir cada nível. Aplica-se a quem entrar de novo ou subir de nível a partir de agora — não altera prazos já em curso.</div><div class="formgrid" style="margin-top:8px">'+NIVEIS.map(function(n){return '<div><label>'+esc(n)+'</label><input type="number" value="'+(+_pn[n]||30)+'" onchange="setPrazoNivel(\''+esc(n).replace(/\'/g,"\\'")+'\',this)"></div>';}).join("")+'</div></div>'):'';
+
+ /* L85: cartões-resumo (Concluídos por último), depois grelha de separadores tipo Excel — presa
+    (sticky) ao topo enquanto se percorre a página. Cada separador é a sua própria vista; não é o
+    menu lateral geral, que não se mexe. Pensado para caber bem no telemóvel (grelha auto-fit, tal
+    como .kpigrid/.formgrid já usados no resto do painel). */
+ const kpiRowHtml='<div class="kpigrid" style="margin-bottom:12px">'
+  +'<div class="kpi" style="cursor:pointer" onclick="onFilter=\'\';onTab=\'acomp\';render()"><div class="lab">Alunos online</div><div class="val">'+ativos.length+'</div></div>'
+  +'<div class="kpi" style="cursor:pointer" onclick="onFilter=\'proximos\';onTab=\'acomp\';render()"><div class="lab">PDS nos próximos 7 dias</div><div class="val">'+proximos+'</div></div>'
+  +'<div class="kpi '+(semPDS?'alert':'')+'" style="cursor:pointer" onclick="onFilter=\'sem\';onTab=\'acomp\';render()"><div class="lab">Sem PDS agendado</div><div class="val">'+semPDS+'</div></div>'
+  +'<div class="kpi"><div class="lab">Activos</div><div class="val">'+activosCount+'</div></div>'
+  +'<div class="kpi"><div class="lab">Taxa de conclusão</div><div class="val">'+taxaConclusaoTxt+'</div><div class="muted" style="font-size:11px">'+desistCount+' desistência(s)</div></div>'
+  +'<div class="kpi"><div class="lab">Concluídos</div><div class="val">'+concluidosCount+'</div></div>'
+  +'</div>';
+
+ const onTabsDef=[{id:'acomp',label:'Acompanhamento',icone:'📋'},{id:'formadores',label:'Formadores',icone:'👥'},{id:'classroom',label:'Links do Classroom',icone:'🎥'},{id:'defs',label:'Definições',icone:'⚙️'}];
+ const onTabGridHtml='<div style="position:sticky;top:'+_tbH+'px;z-index:9;background:var(--bg);padding:8px 0 10px;margin-bottom:8px"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px">'+onTabsDef.map(function(t){return '<button class="btn-'+(onTab===t.id?"p":"o")+'" style="padding:10px 12px;text-align:left" onclick="onTab=\''+t.id+'\';render()">'+t.icone+' '+esc(t.label)+'</button>';}).join("")+'</div></div>';
+
+ let corpo="";
+ if(onTab==="formadores"){
+  corpo=vOnlineFormadoresHTML(ativos);
+ }else if(onTab==="classroom"){
+  corpo=classroomOnlineDefsHTML(true);
+ }else if(onTab==="defs"){
+  corpo=prazosDefsHTML+'<div class="sec" style="padding:10px 16px"><div class="flex" style="gap:10px;align-items:center;flex-wrap:wrap"><label style="margin:0">Gestora responsável pela Turma Online</label>'+(role==="admin"?respInputHTML("resp_online",respOnline,"—")+'<button class="btn-o" style="padding:5px 12px" onclick="setRespOnline()">Guardar</button>':'<b>'+esc(respOnline||"—")+'</b>')+'</div></div>'+(role!=="admin"?'<div class="muted" style="padding:0 16px">Prazo por nível: só a Gestão pode ver e alterar.</div>':'');
+ }else{
+  corpo=vOnlineAcompanhamentoHTML(hoje,wk);
+ }
+
+ return `${pdsPickerHTML()}${avalModalHTML()}${naoRealModalHTML()}${transferOnlineModalHTML()}${kpiRowHtml}${onTabGridHtml}<div>${corpo}</div>`;
+}
+function vOnlineAcompanhamentoHTML(hoje,wk){
+ const q=onSearch.toLowerCase();
+ let rowsBase=data.online.filter(function(o){return o.status!=="Transferido"&&o.status!=="Concluído";}).filter(function(o){return !q||(o.nome||"").toLowerCase().includes(q)||(o.formador||"").toLowerCase().includes(q);});
+ const _matchSitu=function(o,id){
+  if(id==='andamento')return o.status==='Em andamento';
+  if(id==='pausa')return o.status==='Parado';
+  if(id==='sem')return !o.proximoPDS&&o.status!=='Parado';
+  if(id==='proximos')return o.proximoPDS&&new Date(o.proximoPDS)>=hoje&&new Date(o.proximoPDS)<=wk;
+  return true;
+ };
+ const situFiltros=[{id:'',label:'Todos'},{id:'andamento',label:'Em andamento'},{id:'pausa',label:'Em pausa'},{id:'sem',label:'Sem PDS agendado'}];
+ const situChipsHtml=situFiltros.map(function(f){
+  var n=rowsBase.filter(function(o){return _matchSitu(o,f.id)&&(!onNivel||o.nivel===onNivel);}).length;
+  return '<button class="btn-'+(onFilter===f.id?"p":"o")+'" style="padding:6px 12px;flex:0 0 auto" onclick="onFilter=\''+f.id+'\';render()">'+esc(f.label)+' <span class="pill p-cinza" style="padding:1px 7px">'+n+'</span></button>';
+ }).join("");
+ const nivelListFiltros=[{id:'',label:'Todos'}].concat(NIVEIS.map(function(n){return {id:n,label:n};}));
+ const nivelChipsHtml=nivelListFiltros.map(function(f){
+  var n=rowsBase.filter(function(o){return (!f.id||o.nivel===f.id)&&_matchSitu(o,onFilter);}).length;
+  return '<button class="btn-'+(onNivel===f.id?"p":"o")+'" style="padding:6px 12px;flex:0 0 auto" onclick="onNivel=\''+f.id.replace(/\'/g,"\\'")+'\';render()">'+esc(f.label)+' <span class="pill p-cinza" style="padding:1px 7px">'+n+'</span></button>';
+ }).join("");
+ let rows=rowsBase.filter(function(o){return _matchSitu(o,onFilter)&&(!onNivel||o.nivel===onNivel);});
+ const filtroBanner=onFilter==='proximos'?`<div class="note" style="background:#eaf0fb;border-color:#c7d6f0;color:#1F3864">A mostrar: <b>PDS nos próximos 7 dias</b> · <a href="#" onclick="onFilter='';render();return false" style="color:#1F3864;text-decoration:underline">ver todos</a></div>`:'';
+ const _hs=new Date().toISOString().slice(0,10);const _ag=[];const _seen={};
+ data.online.forEach(function(o){if(o.status==="Concluído"||o.status==="Transferido")return;ensurePds(o);(o.pds||[]).forEach(function(p,pidx){var k=p.groupId?p.groupId+"|"+p.data:null;if(k&&_seen[k])return;if(k)_seen[k]=true;_ag.push({o:o,idx:pidx,data:p.data,hora:p.hora,rec:p.rec,parceiro:p.parceiro});});});
+ _ag.sort(function(a,b){return (a.data+(a.hora||"")).localeCompare(b.data+(b.hora||""));});
+ const agendaHtml=`<details class="sec accdet"><summary>Agenda de PDS <span class="pill p-cinza">${_ag.length}</span></summary><table><thead><tr><th>Data</th><th>Hora</th><th>Aluno</th><th>Formador</th><th></th></tr></thead><tbody>${_ag.map(function(x){var atras=x.data<_hs,hj=x.data===_hs;var oi=data.online.indexOf(x.o);return '<tr><td>'+fmtDataCurta(x.data)+' '+(atras?'<span class="pill p-verm">atraso</span>':(hj?'<span class="pill p-dour">hoje</span>':''))+'</td><td>'+esc(x.hora||"—")+'</td><td>'+esc(x.o.nome)+(x.parceiro?' 🤝 '+esc(x.parceiro):'')+(x.rec?' ♻':'')+(x.o.combinado?'<br><span class="muted" style="font-size:11px">📝 Combinado: '+esc(x.o.combinado)+'</span>':'')+'</td><td>'+esc(x.o.formador||"—")+'</td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:4px 8px" onclick="verDetalhe('+oi+')">Ver perfil</button><button class="btn-g" style="padding:4px 8px" onclick="doPDS('+oi+')">PDS feito</button><button class="btn-o" style="padding:4px 8px" onclick="naoRealizadoPDS('+oi+')">Não realizado</button><button class="btn-o" style="padding:4px 8px" onclick="editarPdsItem('+oi+','+x.idx+')">Editar</button><button class="btn-o" style="padding:4px 8px" onclick="cancelPdsItem('+oi+','+x.idx+')">Cancelar</button></td></tr>';}).join("")||'<tr><td colspan="5" class="muted">Sem PDS agendados.</td></tr>'}</tbody></table></details>`;
+ const _real=data.online.filter(function(o){return o.ultimoPDS===_hs;});
+ const realizadosHtml=_real.length?`<details class="sec accdet"><summary>PDS realizados hoje <span class="pill p-cinza">${_real.length}</span></summary><table><thead><tr><th>Aluno</th><th>Formador</th><th>Combinado</th></tr></thead><tbody>${_real.map(function(o){return '<tr><td>'+esc(o.nome)+'</td><td>'+esc(o.formador||"—")+'</td><td>'+(o.combinado?esc(o.combinado):'<span class="muted">—</span>')+'</td></tr>';}).join("")}</tbody></table></details>`:'';
+
+ return `<div class="sec">
   <input id="q_on" class="search" placeholder="Pesquisar por nome do aluno ou do formador…" value="${esc(onSearch)}" oninput="onSearch=this.value;refocusSearch('q_on');renderDebounced()">
   ${(function(){var trans=data.online.filter(function(o){return o.status==="Transferido"&&(!q||(o.nome||"").toLowerCase().includes(q));});return trans.length?`<div class="muted" style="margin-top:6px">Transferidos (fora da lista activa): ${trans.map(function(o){return esc(o.nome)+(o.transferidoPara?' → '+esc(o.transferidoPara):'');}).join(", ")}</div>`:"";})()}
+  <div class="muted" style="font-size:12px;margin:10px 0 4px">Situação</div>
+  <div style="display:flex;gap:8px;overflow-x:auto;white-space:nowrap;padding-bottom:4px">${situChipsHtml}</div>
+  <div class="muted" style="font-size:12px;margin:8px 0 4px">Nível</div>
+  <div style="display:flex;gap:8px;overflow-x:auto;white-space:nowrap;padding-bottom:4px;margin-bottom:6px">${nivelChipsHtml}</div>
+  ${filtroBanner}
+  ${agendaHtml}${realizadosHtml}
+  <div class="muted" style="margin:8px 0 2px">Só quem ainda está em curso — os concluídos não aparecem aqui (vê o número no topo).</div>
   <table><thead><tr><th>Nome</th><th>Nível</th><th>Fase</th><th>Status</th><th>Tarefa</th><th>Aval.</th><th>PDS feitos</th><th>Prazo</th><th>Próximo PDS</th><th>Formador</th><th>Responsável (venda)</th><th>Situação</th><th></th></tr></thead><tbody>
-  ${rows.map(o=>{const i=data.online.indexOf(o);const fl=pdsFlag(o);const done=o.status==='Concluído';const nivelCell=done?'<span class="pill p-azul">Concluído</span>':(esc(o.nivel||"")+' <button class="btn-o" style="padding:1px 7px" title="Passar ao próximo nível" onclick="proxNivel('+i+')">↑</button>'+((role==="admin"||podeEditar())?' <button class="btn-o" style="padding:1px 7px" title="Gerir/reabrir nível (só Gestão)" onclick="gerirNivel('+i+')">✎</button>':''));const cellTarefa=done?'<span class="muted">—</span>':('<button class="pill '+(o.tarefa==='Sim'?'p-verde':'p-verm')+'" style="border:none;cursor:pointer" onclick="toggleOnline('+i+',&#39;tarefa&#39;)">'+(o.tarefa==='Sim'?'Sim':'Não')+'</button>');const cellAval=done?'<span class="muted">—</span>':('<button class="pill '+(o.avaliacao==='Sim'?'p-verde':'p-verm')+'" style="border:none;cursor:pointer" onclick="toggleOnline('+i+',&#39;avaliacao&#39;)">'+(o.avaliacao==='Sim'?'Sim':'Não')+'</button>');return `<tr><td>${esc(o.nome)}<br><span class="muted">${esc(o.email||"")}</span>${(function(){var _c=data.certificados.find(function(x){return x.cod===ensureOnlineCod(o);});return _c&&_c.estado&&_c.estado!=="Pendente"?'<br><span class="pill '+(_c.estado==="Entregue"?"p-verde":"p-dour")+'">Cert.: '+esc(_c.estado)+'</span>':'';})()}</td><td>${nivelCell}</td><td>${esc(o.fase||"")}</td><td><button class="pill ${o.status==='Concluído'?'p-azul':o.status==='Em andamento'?'p-verde':o.status==='Parado'?'p-dour':'p-verm'}" style="border:none;cursor:pointer" title="Mudar estado" onclick="setStatusOnline(${i})">${esc(o.status||"")}</button>${o.status==='Parado'&&o.pausaRazao?'<div class="muted" style="margin-top:2px">⏸ '+esc(o.pausaRazao)+(o.pausaTempo?' ('+esc(o.pausaTempo)+')':'')+'</div>':''}</td><td>${cellTarefa}</td><td>${cellAval}</td><td style="text-align:center">${+o.pdsFeitos||0}</td><td>${(function(){if(!o.inicio)return'<span class="muted">—</span>';if(o.status==='Concluído')return'<span class="pill p-azul">concluído</span>';const prazoTot=+o.prazo||30;const prev=addBusinessDays(o.inicio,prazoTot);const f=diasUteisAte(prev);const decorridos=Math.max(0,prazoTot-f);const pct=Math.max(0,Math.min(100,Math.round(decorridos/prazoTot*100)));const cor=f<0?"#C0392B":(f<=Math.ceil(prazoTot*0.25)?"#BF9000":"#2E7D46");const lab=f<0?("em atraso "+(-f)+"d"):(f+" d.úteis");return '<div style="background:#eef0f4;border-radius:5px;position:relative;height:17px;min-width:92px" title="Prevista: '+prev+' · '+prazoTot+' dias úteis no nível"><div style="position:absolute;left:0;top:0;bottom:0;background:'+cor+';border-radius:5px;width:'+pct+'%;transition:width .3s"></div><span style="position:relative;display:block;text-align:center;font-size:10.5px;line-height:17px;font-weight:700;color:'+(pct>50?"#fff":"#333")+'">'+lab+'</span></div>';})()} ${role==="admin"?`<button class="btn-o" style="padding:1px 6px;margin-top:3px" title="Editar prazo (só gestão)" onclick="editPrazo(${i})">✎</button>`:""}</td><td>${(function(){syncProx(o);var arr=o.pds||[];var _hs=new Date().toISOString().slice(0,10);var h=arr.map(function(p,pi){var atras=p.data<_hs,hj=p.data===_hs;return '<div style="margin:1px 0;white-space:nowrap">'+fmtDataCurta(p.data)+(p.hora?' '+esc(p.hora):'')+(p.rec?' ♻':'')+(p.parceiro?' 🤝 '+esc(p.parceiro):'')+(atras?' <span class="pill p-verm" style="padding:0 5px">atraso</span>':(hj?' <span class="pill p-dour" style="padding:0 5px">hoje</span>':''))+' <button class="btn-o" style="padding:0 5px" title="Cancelar este PDS" onclick="cancelPdsItem('+i+','+pi+')">✕</button></div>';}).join("")||'<span class="muted">—</span>';var recs=(o.recs||[]).map(function(r,ri){return '<span class="pill p-verde" style="padding:1px 6px;margin:1px 2px 0 0;display:inline-block">♻ '+DIAS_NOME[r.dia]+' '+esc(r.hora||"")+(r.parceiro?' 🤝 '+esc(r.parceiro):'')+' <a onclick="delRec('+i+','+ri+')" style="cursor:pointer">✕</a></span>';}).join("");return h+(recs?'<div style="margin-top:3px">'+recs+'</div>':'');})()}</td><td>${esc(o.formador||"")}</td><td>${o.vendedor?esc(o.vendedor):'<span class="pill p-verm" title="Sem responsável — a comissão desta venda não é atribuída a ninguém">— por definir</span>'}</td><td><span class="pill ${fl.c}">${fl.t}</span></td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:4px 8px" onclick="verDetalhe(${i})">Detalhe</button><button class="btn-g" style="padding:4px 8px" onclick="doPDS(${i})">PDS feito</button><button class="btn-o" style="padding:4px 8px" onclick="naoRealizadoPDS(${i})">Não realizado</button><button class="btn-o" style="padding:4px 8px" onclick="agendarPDS(${i})">+ PDS</button><button class="btn-o" style="padding:4px 8px" title="Enviar link da Classroom deste nível por e-mail" onclick="enviarLinkClassroomOnlineAluno(${i})">✉ Classroom</button>${rowActs('online',i)}</td></tr>`}).join("")||`<tr><td colspan="12" class="muted">Sem alunos. Importa a tua planilha em Importar/Exportar (tipo Online).</td></tr>`}
-  </tbody></table></div>`;}
+  ${rows.map(o=>{const i=data.online.indexOf(o);const fl=pdsFlag(o);const done=o.status==='Concluído';const nivelCell=done?'<span class="pill p-azul">Concluído</span>':(esc(o.nivel||"")+' <button class="btn-o" style="padding:1px 7px" title="Passar ao próximo nível" onclick="proxNivel('+i+')">↑</button>'+((role==="admin"||podeEditar())?' <button class="btn-o" style="padding:1px 7px" title="Gerir/reabrir nível (só Gestão)" onclick="gerirNivel('+i+')">✎</button>':''));const cellTarefa=done?'<span class="muted">—</span>':('<button class="pill '+(o.tarefa==='Sim'?'p-verde':'p-verm')+'" style="border:none;cursor:pointer" onclick="toggleOnline('+i+',&#39;tarefa&#39;)">'+(o.tarefa==='Sim'?'Sim':'Não')+'</button>');const cellAval=done?'<span class="muted">—</span>':('<button class="pill '+(o.avaliacao==='Sim'?'p-verde':'p-verm')+'" style="border:none;cursor:pointer" onclick="toggleOnline('+i+',&#39;avaliacao&#39;)">'+(o.avaliacao==='Sim'?'Sim':'Não')+'</button>');return `<tr><td>${esc(o.nome)}<br><span class="muted">${esc(o.email||"")}</span>${(function(){var _c=data.certificados.find(function(x){return x.cod===ensureOnlineCod(o);});return _c&&_c.estado&&_c.estado!=="Pendente"?'<br><span class="pill '+(_c.estado==="Entregue"?"p-verde":"p-dour")+'">Cert.: '+esc(_c.estado)+'</span>':'';})()}</td><td>${nivelCell}</td><td>${esc(o.fase||"")}</td><td><button class="pill ${o.status==='Concluído'?'p-azul':o.status==='Em andamento'?'p-verde':o.status==='Parado'?'p-dour':'p-verm'}" style="border:none;cursor:pointer" title="Mudar estado" onclick="setStatusOnline(${i})">${esc(o.status||"")}</button>${o.status==='Parado'?'<div class="muted" style="margin-top:2px">⏸ '+(o.pausaRazao?esc(o.pausaRazao)+' — ':'')+'até '+(o.pausaAte?fmtDataCurta(o.pausaAte):'—')+'</div>':''}</td><td>${cellTarefa}</td><td>${cellAval}</td><td style="text-align:center">${+o.pdsFeitos||0}</td><td>${prazoBarHTML(o)} ${role==="admin"?`<button class="btn-o" style="padding:1px 6px;margin-top:3px" title="Editar prazo (só gestão)" onclick="editPrazo(${i})">✎</button>`:""}</td><td>${(function(){syncProx(o);var arr=o.pds||[];var _hs=new Date().toISOString().slice(0,10);var h=arr.map(function(p,pi){var atras=p.data<_hs,hj=p.data===_hs;return '<div style="margin:1px 0;white-space:nowrap">'+fmtDataCurta(p.data)+(p.hora?' '+esc(p.hora):'')+(p.rec?' ♻':'')+(p.parceiro?' 🤝 '+esc(p.parceiro):'')+(atras?' <span class="pill p-verm" style="padding:0 5px">atraso</span>':(hj?' <span class="pill p-dour" style="padding:0 5px">hoje</span>':''))+' <button class="btn-o" style="padding:0 5px" title="Cancelar este PDS" onclick="cancelPdsItem('+i+','+pi+')">✕</button></div>';}).join("")||'<span class="muted">—</span>';var recs=(o.recs||[]).map(function(r,ri){return '<span class="pill p-verde" style="padding:1px 6px;margin:1px 2px 0 0;display:inline-block">♻ '+DIAS_NOME[r.dia]+' '+esc(r.hora||"")+(r.parceiro?' 🤝 '+esc(r.parceiro):'')+' <a onclick="delRec('+i+','+ri+')" style="cursor:pointer">✕</a></span>';}).join("");return h+(recs?'<div style="margin-top:3px">'+recs+'</div>':'');})()}</td><td>${esc(o.formador||"")}</td><td>${o.vendedor?esc(o.vendedor):'<span class="pill p-verm" title="Sem responsável — a comissão desta venda não é atribuída a ninguém">— por definir</span>'}</td><td><span class="pill ${fl.c}">${fl.t}</span></td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:4px 8px" onclick="verDetalhe(${i})">Detalhe</button><button class="btn-g" style="padding:4px 8px" onclick="doPDS(${i})">PDS feito</button><button class="btn-o" style="padding:4px 8px" onclick="naoRealizadoPDS(${i})">Não realizado</button><button class="btn-o" style="padding:4px 8px" onclick="agendarPDS(${i})">+ PDS</button><button class="btn-o" style="padding:4px 8px" title="Enviar link da Classroom deste nível por e-mail" onclick="enviarLinkClassroomOnlineAluno(${i})">✉ Classroom</button>${rowActs('online',i)}</td></tr>`}).join("")||`<tr><td colspan="12" class="muted">Sem alunos nesta situação/nível.</td></tr>`}
+  </tbody></table></div>`;
+}
+function vOnlineFormadoresHTML(ativos){
+ var byF={};
+ ativos.forEach(function(o){
+  var n=o.formador||"—";
+  if(!byF[n])byF[n]={alunos:[],ativo:0,concl:0,tot:0};
+  byF[n].alunos.push(o);byF[n].tot++;
+  if(o.status==="Concluído")byF[n].concl++;else if(o.status!=="Desistência")byF[n].ativo++;
+ });
+ var nomes=Object.keys(byF).sort(function(a,b){return byF[b].tot-byF[a].tot;});
+ if(!onFormSel||nomes.indexOf(onFormSel)<0)onFormSel=nomes[0]||"";
+ var headerHtml='<div class="flex" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><h2 style="margin:0">Formadores</h2><span class="pill p-cinza">'+nomes.length+' formador'+(nomes.length===1?"":"es")+'</span></div>';
+ var chipsHtml='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin:10px 0 16px">'+nomes.map(function(n){
+  var email=emailDoColaborador(n);
+  return '<button class="btn-'+(onFormSel===n?"p":"o")+'" style="padding:10px 12px;text-align:left" onclick="onFormSel=\''+n.replace(/\'/g,"\\'")+'\';render()"><div style="font-weight:700">'+esc(n)+'</div><div class="muted" style="font-size:11px">'+(email?esc(email)+' · ':'')+byF[n].tot+' aluno(s)</div></button>';
+ }).join("")+'</div>';
+ var sel=byF[onFormSel];
+ var listaHtml=sel?sel.alunos.slice().sort(function(a,b){return (a.nome||"").localeCompare(b.nome||"");}).map(function(o){
+  return '<div class="flex" style="justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--linha);flex-wrap:wrap"><div><b>'+esc(o.nome)+'</b><div class="muted" style="font-size:12px">'+esc(o.nivel||"—")+(o.status?' · '+esc(o.status):'')+'</div></div><div class="flex" style="gap:16px;align-items:center;flex-wrap:wrap"><div style="text-align:center;min-width:70px"><div class="muted" style="font-size:11px">PDS feitos</div><div style="font-weight:700">'+(+o.pdsFeitos||0)+'</div></div><div style="text-align:center;min-width:100px"><div class="muted" style="font-size:11px">Não realizados</div><div style="font-weight:700">'+(+o.pdsNaoRealizados||0)+'</div></div><div style="min-width:120px"><div class="muted" style="font-size:11px;text-align:center">Dias para concluir</div>'+prazoBarHTML(o)+'</div></div></div>';
+ }).join(""):"";
+ return '<div class="sec">'+headerHtml+chipsHtml+(onFormSel?('<h3 style="color:var(--azul2);font-size:14px;margin-bottom:2px">'+esc(onFormSel)+'</h3>'+(listaHtml||'<div class="muted">Sem alunos.</div>')):'<div class="muted">Sem formadores com alunos ainda.</div>')+'</div>';
+}
 function addOnline(){const nome=val("o_nome");if(!nome){toast("Falta o nome");return}const _o={nome,email:val("o_email"),contacto:val("o_contacto"),area:val("o_area"),nivel:val("o_nivel"),fase:val("o_fase"),formador:val("o_form"),inicio:val("o_inicio"),prazo:prazoPorNivel(val("o_nivel")),status:"Em andamento",valorPago:+val("o_valor")||0,tarefa:"Não",avaliacao:"Não",proximoPDS:"",ultimoPDS:"",pdsFeitos:0,recorrente:false};ensureOnlineCod(_o);data.online.push(_o);syncPagOnline(_o);persist();toast("Aluno online gravado");render();}
 function addBusinessDays(dateStr,n){if(!dateStr)return"";let d=new Date(dateStr);let c=0;while(c<(+n||0)){d.setDate(d.getDate()+1);const wd=d.getDay();if(wd!==0&&wd!==6)c++;}return d.toISOString().slice(0,10);}
 function diasUteisAte(dateStr){if(!dateStr)return null;const alvo=new Date(dateStr);alvo.setHours(0,0,0,0);let hoje=new Date(new Date().toDateString());if(alvo<hoje){let x=new Date(alvo),neg=0;while(x<hoje){x.setDate(x.getDate()+1);const wd=x.getDay();if(wd!==0&&wd!==6)neg++;}return -neg;}let d=new Date(hoje),c=0;while(d<alvo){d.setDate(d.getDate()+1);const wd=d.getDay();if(wd!==0&&wd!==6)c++;}return c;}
 function editPrazo(i){const o=data.online[i];if(!o)return;const v=prompt("Prazo em dias úteis:",o.prazo||30);if(v===null)return;o.prazo=+v||30;persist();render();}
 function toggleOnline(i,key){const o=data.online[i];if(!o)return;if(key==="recorrente")o.recorrente=!o.recorrente;else o[key]=(o[key]==="Sim")?"Não":"Sim";persist();render();}
 function setInicioProposto(i,key,el){const o=data.online[i];if(!o)return;o[key]=el.value;persist();toast("Guardado");}
-function setStatusOnline(i){const o=data.online[i];if(!o)return;const s=prompt("Estado do aluno ("+STATUS_ONLINE.join(" / ")+"):",o.status||"Em andamento");if(s===null)return;const sv=s.trim();if(STATUS_ONLINE.indexOf(sv)<0){toast("Estado inválido");return;}o.status=sv;if(sv==="Parado"){const r=prompt("Razão da pausa:",o.pausaRazao||"");if(r!==null)o.pausaRazao=r.trim();const tt=prompt("Quanto tempo fica/ficou parado? (ex.: 2 semanas)",o.pausaTempo||"");if(tt!==null)o.pausaTempo=tt.trim();if(!o.pausaDesde)o.pausaDesde=new Date().toISOString().slice(0,10);}persist();render();}
+function setStatusOnline(i){const o=data.online[i];if(!o)return;const eraParado=o.status==="Parado";const s=prompt("Estado do aluno ("+STATUS_ONLINE.join(" / ")+"):",o.status||"Em andamento");if(s===null)return;const sv=s.trim();if(STATUS_ONLINE.indexOf(sv)<0){toast("Estado inválido");return;}o.status=sv;
+ if(sv==="Parado"){
+  const r=prompt("Razão da pausa:",o.pausaRazao||"");if(r!==null)o.pausaRazao=r.trim();
+  const semP=prompt("Quantas semanas de pausa? (a agenda de PDS fica suspensa e retoma sozinha nessa data)",o.pausaSemanas||2);
+  const sem=semP===null?(+o.pausaSemanas||2):(+semP||2);
+  o.pausaSemanas=sem;o.pausaTempo="";
+  if(!o.pausaDesde)o.pausaDesde=new Date().toISOString().slice(0,10);
+  o.pausaAte=calcPausaAte(o.pausaDesde,sem);
+  toast("Pausa registada até "+fmtDataCurta(o.pausaAte)+" — os PDS ficam suspensos até lá.");
+ }else if(eraParado){
+  o.pausaAte="";o.pausaSemanas=null;o.pausaDesde="";
+ }
+ persist();render();}
 /* L78-4 — dias por nível, configuráveis pela Gestão nas Definições da própria aba Turma Online.
    Cada aluno herda o prazo do seu nível ao ser registado e o prazo reinicia (com nova data de
    início) sempre que sobe de nível — o prazo de um nível nunca "herda" dias do nível anterior. */
@@ -3021,8 +3176,11 @@ const MOTIVOS_NAO_REALIZADO=["Aluno não compareceu","Formador indisponível","R
 let naoRealEdit=null;
 function naoRealizadoPDS(i){naoRealEdit=i;render();}
 function fecharNaoReal(){naoRealEdit=null;render();}
-function confirmarNaoRealizado(){if(naoRealEdit===null)return;const o=data.online[naoRealEdit];if(!o){naoRealEdit=null;render();return;}ensurePds(o);syncProx(o);const motivo=val("nr_motivo")==="Outro"?(val("nr_outro")||"Outro"):val("nr_motivo");if(!motivo){toast("Escolhe o motivo");return;}if(!Array.isArray(o.historicoNaoRealizado))o.historicoNaoRealizado=[];o.historicoNaoRealizado.push({data:new Date().toISOString().slice(0,10),motivo:motivo,pdsData:o.pds[0]?o.pds[0].data:""});o.pdsNaoRealizados=(+o.pdsNaoRealizados||0)+1;if(o.pds.length)o.pds.shift();syncProx(o);persist();naoRealEdit=null;toast("Motivo registado no histórico");render();}
-function naoRealModalHTML(){if(naoRealEdit===null)return"";const o=data.online[naoRealEdit];if(!o)return"";return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharNaoReal()"><div class="card" style="padding:22px;width:360px;max-width:94vw"><h3 style="color:var(--azul);margin-bottom:2px">PDS não realizado</h3><div class="muted" style="margin-bottom:12px">${esc(o.nome)}${o.formador?' · '+esc(o.formador):''}</div><label>Motivo</label><select id="nr_motivo" onchange="document.getElementById('nr_outro_wrap').style.display=this.value==='Outro'?'block':'none'">${MOTIVOS_NAO_REALIZADO.map(m=>`<option>${esc(m)}</option>`).join("")}</select><div id="nr_outro_wrap" style="display:none;margin-top:8px"><label>Especifica</label><input id="nr_outro" placeholder="Descreve o motivo"></div><div class="flex" style="margin-top:14px"><button class="btn-p" onclick="confirmarNaoRealizado()">Confirmar</button><button class="btn-o" onclick="fecharNaoReal()">Cancelar</button></div></div></div>`;}
+/* L84-2: "Remarcar" substitui o antigo "Confirmar" — grava o motivo E abre logo a marcação da
+   próxima data (agendarPDS) para o mesmo aluno, num só clique, em vez de obrigar a um segundo passo
+   separado para ir procurar o botão "+ PDS" na linha do aluno. */
+function confirmarNaoRealizado(){if(naoRealEdit===null)return;const oi=naoRealEdit;const o=data.online[oi];if(!o){naoRealEdit=null;render();return;}ensurePds(o);syncProx(o);const motivo=val("nr_motivo")==="Outro"?(val("nr_outro")||"Outro"):val("nr_motivo");if(!motivo){toast("Escolhe o motivo");return;}if(!Array.isArray(o.historicoNaoRealizado))o.historicoNaoRealizado=[];o.historicoNaoRealizado.push({data:new Date().toISOString().slice(0,10),motivo:motivo,pdsData:o.pds[0]?o.pds[0].data:""});o.pdsNaoRealizados=(+o.pdsNaoRealizados||0)+1;if(o.pds.length)o.pds.shift();syncProx(o);persist();naoRealEdit=null;toast("Motivo registado — escolhe agora a nova data");agendarPDS(oi);}
+function naoRealModalHTML(){if(naoRealEdit===null)return"";const o=data.online[naoRealEdit];if(!o)return"";return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharNaoReal()"><div class="card" style="padding:22px;width:360px;max-width:94vw"><h3 style="color:var(--azul);margin-bottom:2px">PDS não realizado</h3><div class="muted" style="margin-bottom:12px">${esc(o.nome)}${o.formador?' · '+esc(o.formador):''}</div><label>Motivo</label><select id="nr_motivo" onchange="document.getElementById('nr_outro_wrap').style.display=this.value==='Outro'?'block':'none'">${MOTIVOS_NAO_REALIZADO.map(m=>`<option>${esc(m)}</option>`).join("")}</select><div id="nr_outro_wrap" style="display:none;margin-top:8px"><label>Especifica</label><input id="nr_outro" placeholder="Descreve o motivo"></div><div class="muted" style="margin-top:8px;font-size:12px">Ao remarcar, o motivo fica registado e a marcação da próxima data abre logo de seguida.</div><div class="flex" style="margin-top:14px"><button class="btn-p" onclick="confirmarNaoRealizado()">Remarcar</button><button class="btn-o" onclick="fecharNaoReal()">Cancelar</button></div></div></div>`;}
 function delRec(i,idx){var o=data.online[i];if(!o)return;ensurePds(o);var r=o.recs[idx];if(!r)return;if(!confirm("Remover a recorrência de "+DIAS_NOME[r.dia]+"? (mantém os PDS já agendados)"))return;o.recs.splice(idx,1);persist();toast("Recorrência removida");render();}
 let pdsEdit=null;let pdsEditIdx=null;
 function agendarPDS(i){var o=data.online[i];if(o&&o.status==="Parado"){toast("Aluno em pausa — tira-o da pausa para marcar PDS");return;}pdsEdit=i;pdsEditIdx=null;render();}
@@ -4137,9 +4295,11 @@ function copiarLinkClassroomOnline(nivel){var L=classroomOnlineLinks();var link=
  else{try{var ta=document.createElement("textarea");ta.value=link;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);ok();}catch(e){falhou();}}}
 function enviarLinkClassroomOnlineAluno(i){var o=data.online[i];if(!o)return;var L=classroomOnlineLinks();var link=L[o.nivel||""]||"";if(!link){toast("Define primeiro o link da Classroom do nível "+(o.nivel||"")+" (na aba Links do Classroom)");return;}
  var assunto="Google Classroom — "+(o.nivel||"")+" · Knowledge Angola";var corpo=encodeURIComponent("Olá "+(o.nome||"")+",\n\nJá podes entrar na tua turma no Google Classroom através deste link:\n"+link+"\n\nQualquer dúvida, fala connosco.\n\nAté já,\nKnowledge Angola");var to=encodeURIComponent(o.email||"");window.open("mailto:"+to+"?subject="+encodeURIComponent(assunto)+"&body="+corpo,"_blank");o.classroomInvite=new Date().toISOString().slice(0,10);persist();toast("E-mail de convite aberto no teu correio");render();}
-function classroomOnlineDefsHTML(){var L=classroomOnlineLinks();var pode=podeClassroom();return '<details class="sec accdet"><summary>Links do Classroom — Turma Online (um por nível)</summary><div class="muted" style="margin-bottom:8px">Um link fixo por nível — copia e envia ao formando, ou usa o botão ✉ na linha de cada aluno para enviar automaticamente o link do nível dele.</div>'
- +NIVEIS.map(function(n){var link=L[n]||"";return '<div class="flex" style="gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap"><b style="min-width:90px">'+esc(n)+'</b>'+(pode?'<input value="'+esc(link)+'" placeholder="Cola aqui o link da Classroom do nível '+esc(n)+'" style="max-width:360px" onchange="setClassroomOnlineLink(\''+esc(n).replace(/\'/g,"\\'")+'\',this)">':(link?'<a href="'+esc(link)+'" target="_blank" style="color:var(--azul2);text-decoration:underline">Abrir Classroom ↗</a>':'<span class="muted">Sem link ainda</span>'))+(link?'<button class="btn-o" style="padding:3px 9px" onclick="copiarLinkClassroomOnline(\''+esc(n).replace(/\'/g,"\\'")+'\')">📋 Copiar</button>':'')+'</div>';}).join("")
- +'</details>';}
+function classroomOnlineDefsHTML(standalone){var L=classroomOnlineLinks();var pode=podeClassroom();
+ var inner='<div class="muted" style="margin-bottom:8px">Um link fixo por nível — copia e envia ao formando, ou usa o botão ✉ na linha de cada aluno para enviar automaticamente o link do nível dele.</div>'
+ +NIVEIS.map(function(n){var link=L[n]||"";return '<div class="flex" style="gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap"><b style="min-width:90px">'+esc(n)+'</b>'+(pode?'<input value="'+esc(link)+'" placeholder="Cola aqui o link da Classroom do nível '+esc(n)+'" style="max-width:360px" onchange="setClassroomOnlineLink(\''+esc(n).replace(/\'/g,"\\'")+'\',this)">':(link?'<a href="'+esc(link)+'" target="_blank" style="color:var(--azul2);text-decoration:underline">Abrir Classroom ↗</a>':'<span class="muted">Sem link ainda</span>'))+(link?'<button class="btn-o" style="padding:3px 9px" onclick="copiarLinkClassroomOnline(\''+esc(n).replace(/\'/g,"\\'")+'\')">📋 Copiar</button>':'')+'</div>';}).join("");
+ if(standalone)return '<div class="sec"><h2>Links do Classroom — Turma Online (um por nível)</h2>'+inner+'</div>';
+ return '<details class="sec accdet"><summary>Links do Classroom — Turma Online (um por nível)</summary>'+inner+'</details>';}
 function faltaAjustar(cod,delta){const f=data.formandos.find(x=>x.cod===cod);if(!f)return;f.faltas=Math.max(0,(+f.faltas||0)+delta);persist();render()}
 
 /* IMPORTAR / EXPORTAR */
