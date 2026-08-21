@@ -273,7 +273,7 @@ div[style*="position:fixed"][style*="place-items:center"]>.card{resize:both;over
   </aside>
   <div id="navmask" onclick="closeNav()"></div>
   <div id="main">
-    <div class="topbar"><button class="mob-menu" onclick="toggleNav()" aria-label="Menu">☰</button><svg class="top-k" viewBox="0 0 100 100" width="30" height="30" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="48" fill="#1F3864"/><circle cx="50" cy="21" r="4" fill="#BF9000"/><text x="50" y="53" text-anchor="middle" dominant-baseline="central" font-family="Georgia,'Times New Roman',serif" font-size="52" font-weight="700" fill="#fff">K</text></svg><div style="flex:1"><h1 id="ptitle"></h1><div class="muted sub" id="psub"></div></div><span id="topclock" class="muted" style="font-size:12.5px;margin-right:10px;white-space:nowrap;font-weight:600"></span><button class="btn-o" onclick="actualizarDados()" title="Actualizar os dados sem sair da sessão" style="padding:6px 11px;font-size:12.5px;margin-right:8px">↻ Actualizar</button><button class="btn-o" onclick="toggleCertRapido()" title="Ver rapidamente quem já recebeu certificado" style="padding:6px 11px;font-size:12.5px;margin-right:8px">🎓 <span id="certRapidoBadge">0</span></button><button id="ocultBtn" class="btn-o" onclick="toggleOcultar()" style="padding:6px 11px;font-size:12.5px;margin-right:8px;display:inline-flex;align-items:center;gap:6px"></button><button class="tema-toggle" onclick="toggleTema()" title="Modo claro/escuro" aria-label="Modo claro/escuro"><span class="tema-track"><span class="tema-thumb"></span></span></button><span id="topavatar" title="" style="width:32px;height:32px;border-radius:50%;background-color:#2a3f6b;background-size:cover;background-position:center;display:none;margin:0 8px;border:1px solid rgba(255,255,255,.4);align-self:center"></span><button class="btn-o mob-sair" onclick="logout()">Sair</button></div>
+    <div class="topbar"><button class="mob-menu" onclick="toggleNav()" aria-label="Menu">☰</button><svg class="top-k" viewBox="0 0 100 100" width="30" height="30" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="48" fill="#1F3864"/><circle cx="50" cy="21" r="4" fill="#BF9000"/><text x="50" y="53" text-anchor="middle" dominant-baseline="central" font-family="Georgia,'Times New Roman',serif" font-size="52" font-weight="700" fill="#fff">K</text></svg><div style="flex:1"><h1 id="ptitle"></h1><div class="muted sub" id="psub"></div></div><span id="topclock" class="muted" style="font-size:12.5px;margin-right:10px;white-space:nowrap;font-weight:600"></span><button class="btn-o" onclick="actualizarDados()" title="Actualizar os dados sem sair da sessão" style="padding:6px 11px;font-size:12.5px;margin-right:8px">↻ Actualizar</button><button id="ocultBtn" class="btn-o" onclick="toggleOcultar()" style="padding:6px 11px;font-size:12.5px;margin-right:8px;display:inline-flex;align-items:center;gap:6px"></button><button class="tema-toggle" onclick="toggleTema()" title="Modo claro/escuro" aria-label="Modo claro/escuro"><span class="tema-track"><span class="tema-thumb"></span></span></button><span id="topavatar" title="" style="width:32px;height:32px;border-radius:50%;background-color:#2a3f6b;background-size:cover;background-position:center;display:none;margin:0 8px;border:1px solid rgba(255,255,255,.4);align-self:center"></span><button class="btn-o mob-sair" onclick="logout()">Sair</button></div>
     <div id="globalAlert" onclick="show('notas')" style="display:none;cursor:pointer;background:#fbe9e7;color:#a3311f;border-bottom:2px solid #C0392B;padding:8px 16px;font-size:13px;font-weight:700;text-align:center"></div>
     <main id="views"></main>
     <footer id="rodape" style="padding:16px 26px;margin-top:8px;color:#5b6577;font-size:13px;font-weight:600;border-top:1px solid var(--linha);background:var(--cinza);text-align:center"></footer>
@@ -308,6 +308,9 @@ function migrarNomesCursos(){var ren=CURSO_RENOME;
 function cursosLista(){var oc=(data&&data.cursosOcultos)||[];var base=CURSOS_BASE.slice();Object.keys((data&&data.precos)||{}).forEach(function(c){if(base.indexOf(c)<0)base.push(c);});return base.filter(function(c){return oc.indexOf(c)<0;});}
 function podeCursos(){return role==="admin"||(currentUser&&currentUser.gereCursos===true);}
 function podeEmailMkt(){return role==="admin"||(currentUser&&currentUser.gereEmailMkt===true);}
+/* L87: autorização delegável (interruptor por pessoa em Permissões) para atribuir/mudar o
+   formador de um aluno na Turma Online, sem ter de ser Gestão. */
+function podeAtribuirFormador(){return role==="admin"||(currentUser&&currentUser.podeAtribuirFormador===true);}
 function emailMktLista(){
  var rows=[];
  (data.formandos||[]).forEach(function(f){if(!f.email)return;var t=turmaByCod(f.turma);rows.push({nome:f.nome||"",email:f.email,tel:f.tel||"",turma:(t&&t.curso)||f.curso||"",data:(f.data||f.criadoEm||"").slice(0,10)});});
@@ -481,6 +484,7 @@ if(!data.perfis.length)data.perfis.push({nome:"Ventura Camilo",funcao:"Gestor",e
  try{limparContasEnvelopeAntigas();}catch(e){}
  try{autoFecharTurmas();}catch(e){}
  try{autoResumirPausas();}catch(e){}
+ try{repararRecorrenciasOrfas();}catch(e){}
  /* L33: qualquer pagamento já marcado como Bónus mas que ainda tenha prestações antigas por resolver
     (de antes de zerar) deixa de contar essas prestações para a receita — corrige de imediato quem já
     foi zerado, sem ser preciso repetir a acção. */
@@ -787,7 +791,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.8";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.9";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -872,7 +876,7 @@ function _reaplicarAccdetAbertos(){var views=document.getElementById("views");if
    lendo directamente o DOM antes de o destruir. Sem isto, editar um campo dentro de uma secção podia fechá-la
    de volta ao estado por omissão, porque o registo dependia só do evento toggle (que às vezes falha/atrasa). */
 function _capturarAccdetAbertos(){var views=document.getElementById("views");if(!views)return;[...views.querySelectorAll("details.accdet")].forEach(function(d){var txt=_accdetTxt(d);if(txt)_accdetOpen[txt]=d.open;});}
-function render(){_capturarAccdetAbertos();try{sessionStorage.setItem("ka_fficha",fFicha||"");sessionStorage.setItem("ka_fsearch",fSearch||"");}catch(e){}document.getElementById("views").innerHTML=rowEditModalHTML()+editGastoModalHTML()+cropModalHTML()+fotoGrandeModalHTML()+feedbackModalHTML()+certRapidoModalHTML()+({painel:vPainel,notificacoes:vNotificacoes,financas:vFinancas,gastos:vGastos,analytics:vAnalytics,paginas:vPaginas,quiz:vQuizPainel,quizleads:vQuizLeads,formandos:vFormandos,turmas:vTurmas,calendario:vCalendario,online:vOnline,pagamentos:vPagamentos,comprovativo:vComprovativo,leads:vLeads,carteira:vCarteira,b2b:vB2B,emailmkt:vEmailMkt,inscricoes:vInscricoes,chamadas:vChamadas,presencas:vPresencas,avaliacoes:vAvaliacoes,certificados:vCertificados,formador:vFormador,formadorespot:vFormadoresPotenciais,presencial:vPresencial,comunicados:vComunicados,notas:vNotas,chat:vChat,melhorias:vMelhorias,actividade:vActividade,rh:vRH,desempenho:vDesempenho,dados:vDados,exportar:vExportar,defs:vDefs,conteudos:vConteudos,incumprimentos:vIncumprimentos,guia:vGuia,contactos:vContactos}[current]||(()=>""))();_reaplicarAccdetAbertos();if(typeof _initOrdenar==="function")_initOrdenar();if(current==="painel"){drawChart();drawPerfChart();}if(typeof atualizarAlertaGlobal==="function")atualizarAlertaGlobal();if(typeof atualizarCertBadge==="function")atualizarCertBadge();if(_refocus){const e=document.getElementById(_refocus);if(e){e.focus();const v=e.value||"";try{e.setSelectionRange(v.length,v.length)}catch(_){}}_refocus=null;}}
+function render(){_capturarAccdetAbertos();try{sessionStorage.setItem("ka_fficha",fFicha||"");sessionStorage.setItem("ka_fsearch",fSearch||"");}catch(e){}document.getElementById("views").innerHTML=rowEditModalHTML()+editGastoModalHTML()+cropModalHTML()+fotoGrandeModalHTML()+feedbackModalHTML()+certRapidoModalHTML()+({painel:vPainel,notificacoes:vNotificacoes,financas:vFinancas,gastos:vGastos,analytics:vAnalytics,paginas:vPaginas,quiz:vQuizPainel,quizleads:vQuizLeads,formandos:vFormandos,turmas:vTurmas,calendario:vCalendario,online:vOnline,pagamentos:vPagamentos,comprovativo:vComprovativo,leads:vLeads,carteira:vCarteira,b2b:vB2B,emailmkt:vEmailMkt,inscricoes:vInscricoes,chamadas:vChamadas,presencas:vPresencas,avaliacoes:vAvaliacoes,certificados:vCertificados,formador:vFormador,formadorespot:vFormadoresPotenciais,presencial:vPresencial,comunicados:vComunicados,notas:vNotas,chat:vChat,melhorias:vMelhorias,actividade:vActividade,rh:vRH,desempenho:vDesempenho,dados:vDados,exportar:vExportar,defs:vDefs,conteudos:vConteudos,incumprimentos:vIncumprimentos,guia:vGuia,contactos:vContactos}[current]||(()=>""))();_reaplicarAccdetAbertos();if(typeof _initOrdenar==="function")_initOrdenar();if(current==="painel"){drawChart();drawPerfChart();}if(typeof atualizarAlertaGlobal==="function")atualizarAlertaGlobal();if(_refocus){const e=document.getElementById(_refocus);if(e){e.focus();const v=e.value||"";try{e.setSelectionRange(v.length,v.length)}catch(_){}}_refocus=null;}}
 
 function fin(){if(!data.financas)data.financas={saldoBanco:0,saldoData:"",gastos:[],metas:{Marketing:0,Renda:0,"Comunicação":0,Outras:0},split:{proLabore:30,operacao:40,reserva:15,investimento:10,marketing:5}};return data.financas;}
 const GASTO_CATS=["Salários","Marketing","Renda","Comunicação","Água","Detergentes","Consumíveis","Deslocação","Serviços de limpeza","Outras"];
@@ -2958,8 +2962,6 @@ function certRapidoModalHTML(){
   </div>
  </div>`;
 }
-function atualizarCertBadge(){var b=document.getElementById("certRapidoBadge");if(b)b.textContent=(data.certificados||[]).filter(function(c){return c.estado==="Entregue";}).length;}
-
 /* NOTAS / PARA RESOLVER */
 function waLink(c,txt){const d=(c||"").replace(/\D/g,"");if(!d)return"";const num=d.startsWith("244")?d:("244"+d);return"https://wa.me/"+num+"?text="+encodeURIComponent(txt)}
 function mailLink(c,txt){return"mailto:"+encodeURIComponent(c)+"?subject="+encodeURIComponent("Tarefa — Knowledge Angola")+"&body="+encodeURIComponent(txt)}
@@ -3028,6 +3030,10 @@ function vOnline(){
  const semPDS=ativos.filter(function(o){return !o.proximoPDS&&o.status!=="Concluído"&&o.status!=="Parado";}).length;
  const proximos=ativos.filter(function(o){return o.proximoPDS&&new Date(o.proximoPDS)>=hoje&&new Date(o.proximoPDS)<=wk;}).length;
  const concluidosCount=ativos.filter(function(o){return o.status==="Concluído";}).length;
+ /* L87-2: quantos dos já concluídos já receberam mesmo o certificado (estado "Entregue" em
+    data.certificados, cruzado pelo código do aluno). Mostrado dentro de Definições — deixou de
+    haver um botão global no topo (L87-3). */
+ const entreguesConcl=ativos.filter(function(o){return o.status==="Concluído";}).filter(function(o){var c=data.certificados.find(function(x){return x.cod===ensureOnlineCod(o);});return c&&c.estado==="Entregue";}).length;
  const desistCount=ativos.filter(function(o){return o.status==="Desistência";}).length;
  const activosCount=ativos.filter(function(o){return o.status!=="Concluído"&&o.status!=="Desistência";}).length;
  const taxaConclusaoTxt=ativos.length?Math.round(concluidosCount/ativos.length*100)+'%':'—';
@@ -3057,24 +3063,31 @@ function vOnline(){
  }else if(onTab==="classroom"){
   corpo=classroomOnlineDefsHTML(true);
  }else if(onTab==="defs"){
-  corpo=prazosDefsHTML+'<div class="sec" style="padding:10px 16px"><div class="flex" style="gap:10px;align-items:center;flex-wrap:wrap"><label style="margin:0">Gestora responsável pela Turma Online</label>'+(role==="admin"?respInputHTML("resp_online",respOnline,"—")+'<button class="btn-o" style="padding:5px 12px" onclick="setRespOnline()">Guardar</button>':'<b>'+esc(respOnline||"—")+'</b>')+'</div></div>'+(role!=="admin"?'<div class="muted" style="padding:0 16px">Prazo por nível: só a Gestão pode ver e alterar.</div>':'');
+  const _certResumoHTML='<div class="sec" style="padding:10px 16px"><div class="flex" style="align-items:center;gap:10px;flex-wrap:wrap"><b style="color:var(--azul)">🎓 Certificados dos concluídos</b><span class="pill '+(concluidosCount&&entreguesConcl===concluidosCount?'p-verde':'p-dour')+'">'+entreguesConcl+' de '+concluidosCount+' já recebidos</span><div class="spacer"></div><button class="btn-o" onclick="toggleCertRapido()">Ver quem já recebeu</button></div></div>';
+  const _formadoresByName={};ativos.forEach(function(o){var n=o.formador||"—";if(n==="—")return;if(!_formadoresByName[n])_formadoresByName[n]=0;_formadoresByName[n]++;});
+  const _formNomes=Object.keys(_formadoresByName).sort();
+  const _formadoresDefHTML=role==="admin"?('<div class="sec" style="padding:10px 16px"><b style="color:var(--azul)">Formadores na Turma Online</b><div class="muted" style="margin-top:2px">Desvincular só remove a ligação à Turma Online — o colaborador continua a existir e pode dar aulas presenciais. Os alunos que tinha ficam com o campo Formador em branco (usa "Atribuir formador" na Acompanhamento para reatribuir).</div><div style="margin-top:8px">'+(_formNomes.length?_formNomes.map(function(n){return '<div class="flex" style="justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--linha)"><div>'+esc(n)+' <span class="muted">('+_formadoresByName[n]+' aluno(s))</span></div><button class="btn-o" style="padding:3px 9px" onclick="desvincularFormadorOnline(\''+n.replace(/\'/g,"\\'")+'\')">Desvincular</button></div>';}).join(""):'<div class="muted">Sem formadores com alunos activos na Turma Online.</div>')+'</div></div>'):'';
+  corpo=prazosDefsHTML+'<div class="sec" style="padding:10px 16px"><div class="flex" style="gap:10px;align-items:center;flex-wrap:wrap"><label style="margin:0">Gestora responsável pela Turma Online</label>'+(role==="admin"?respInputHTML("resp_online",respOnline,"—")+'<button class="btn-o" style="padding:5px 12px" onclick="setRespOnline()">Guardar</button>':'<b>'+esc(respOnline||"—")+'</b>')+'</div></div>'+_certResumoHTML+_formadoresDefHTML+(role!=="admin"?'<div class="muted" style="padding:0 16px">Prazo por nível e formadores: só a Gestão pode ver e alterar.</div>':'');
  }else{
   corpo=vOnlineAcompanhamentoHTML(hoje,wk);
  }
 
- return `${pdsPickerHTML()}${avalModalHTML()}${naoRealModalHTML()}${transferOnlineModalHTML()}${kpiRowHtml}${onTabGridHtml}<div>${corpo}</div>`;
+ return `${pdsPickerHTML()}${avalModalHTML()}${naoRealModalHTML()}${transferOnlineModalHTML()}${atribuirFormadorModalHTML()}${kpiRowHtml}${onTabGridHtml}<div>${corpo}</div>`;
 }
 function vOnlineAcompanhamentoHTML(hoje,wk){
  const q=onSearch.toLowerCase();
- let rowsBase=data.online.filter(function(o){return o.status!=="Transferido"&&o.status!=="Concluído";}).filter(function(o){return !q||(o.nome||"").toLowerCase().includes(q)||(o.formador||"").toLowerCase().includes(q);});
+ /* L87-7: rowsBase deixou de excluir Concluído por defeito — quem quiser vê-los através do
+    chip "Concluídos" abaixo (a vista "Todos" continua a escondê-los, tal como já era). */
+ let rowsBase=data.online.filter(function(o){return o.status!=="Transferido";}).filter(function(o){return !q||(o.nome||"").toLowerCase().includes(q)||(o.formador||"").toLowerCase().includes(q);});
  const _matchSitu=function(o,id){
   if(id==='andamento')return o.status==='Em andamento';
   if(id==='pausa')return o.status==='Parado';
-  if(id==='sem')return !o.proximoPDS&&o.status!=='Parado';
+  if(id==='sem')return !o.proximoPDS&&o.status!=='Parado'&&o.status!=='Concluído';
+  if(id==='concluido')return o.status==='Concluído';
   if(id==='proximos')return o.proximoPDS&&new Date(o.proximoPDS)>=hoje&&new Date(o.proximoPDS)<=wk;
-  return true;
+  return o.status!=='Concluído';
  };
- const situFiltros=[{id:'',label:'Todos'},{id:'andamento',label:'Em andamento'},{id:'pausa',label:'Em pausa'},{id:'sem',label:'Sem PDS agendado'}];
+ const situFiltros=[{id:'',label:'Todos'},{id:'andamento',label:'Em andamento'},{id:'pausa',label:'Em pausa'},{id:'sem',label:'Sem PDS agendado'},{id:'concluido',label:'Concluídos'}];
  const situChipsHtml=situFiltros.map(function(f){
   var n=rowsBase.filter(function(o){return _matchSitu(o,f.id)&&(!onNivel||o.nivel===onNivel);}).length;
   return '<button class="btn-'+(onFilter===f.id?"p":"o")+'" style="padding:6px 12px;flex:0 0 auto" onclick="onFilter=\''+f.id+'\';render()">'+esc(f.label)+' <span class="pill p-cinza" style="padding:1px 7px">'+n+'</span></button>';
@@ -3102,9 +3115,9 @@ function vOnlineAcompanhamentoHTML(hoje,wk){
   <div style="display:flex;gap:8px;overflow-x:auto;white-space:nowrap;padding-bottom:4px;margin-bottom:6px">${nivelChipsHtml}</div>
   ${filtroBanner}
   ${agendaHtml}${realizadosHtml}
-  <div class="muted" style="margin:8px 0 2px">Só quem ainda está em curso — os concluídos não aparecem aqui (vê o número no topo).</div>
+  <div class="muted" style="margin:8px 0 2px">${onFilter==='concluido'?'A mostrar quem já concluiu — usa o chip &quot;Todos&quot; para voltar a escondê-los.':'Concluídos ficam escondidos por defeito — usa o chip &quot;Concluídos&quot; acima para os ver (com o estado do certificado por aluno).'}</div>
   <table><thead><tr><th>Nome</th><th>Nível</th><th>Fase</th><th>Status</th><th>Tarefa</th><th>Aval.</th><th>PDS feitos</th><th>Prazo</th><th>Próximo PDS</th><th>Formador</th><th>Responsável (venda)</th><th>Situação</th><th></th></tr></thead><tbody>
-  ${rows.map(o=>{const i=data.online.indexOf(o);const fl=pdsFlag(o);const done=o.status==='Concluído';const nivelCell=done?'<span class="pill p-azul">Concluído</span>':(esc(o.nivel||"")+' <button class="btn-o" style="padding:1px 7px" title="Passar ao próximo nível" onclick="proxNivel('+i+')">↑</button>'+((role==="admin"||podeEditar())?' <button class="btn-o" style="padding:1px 7px" title="Gerir/reabrir nível (só Gestão)" onclick="gerirNivel('+i+')">✎</button>':''));const cellTarefa=done?'<span class="muted">—</span>':('<button class="pill '+(o.tarefa==='Sim'?'p-verde':'p-verm')+'" style="border:none;cursor:pointer" onclick="toggleOnline('+i+',&#39;tarefa&#39;)">'+(o.tarefa==='Sim'?'Sim':'Não')+'</button>');const cellAval=done?'<span class="muted">—</span>':('<button class="pill '+(o.avaliacao==='Sim'?'p-verde':'p-verm')+'" style="border:none;cursor:pointer" onclick="toggleOnline('+i+',&#39;avaliacao&#39;)">'+(o.avaliacao==='Sim'?'Sim':'Não')+'</button>');return `<tr><td>${esc(o.nome)}<br><span class="muted">${esc(o.email||"")}</span>${(function(){var _c=data.certificados.find(function(x){return x.cod===ensureOnlineCod(o);});return _c&&_c.estado&&_c.estado!=="Pendente"?'<br><span class="pill '+(_c.estado==="Entregue"?"p-verde":"p-dour")+'">Cert.: '+esc(_c.estado)+'</span>':'';})()}</td><td>${nivelCell}</td><td>${esc(o.fase||"")}</td><td><button class="pill ${o.status==='Concluído'?'p-azul':o.status==='Em andamento'?'p-verde':o.status==='Parado'?'p-dour':'p-verm'}" style="border:none;cursor:pointer" title="Mudar estado" onclick="setStatusOnline(${i})">${esc(o.status||"")}</button>${o.status==='Parado'?'<div class="muted" style="margin-top:2px">⏸ '+(o.pausaRazao?esc(o.pausaRazao)+' — ':'')+'até '+(o.pausaAte?fmtDataCurta(o.pausaAte):'—')+'</div>':''}</td><td>${cellTarefa}</td><td>${cellAval}</td><td style="text-align:center">${+o.pdsFeitos||0}</td><td>${prazoBarHTML(o)} ${role==="admin"?`<button class="btn-o" style="padding:1px 6px;margin-top:3px" title="Editar prazo (só gestão)" onclick="editPrazo(${i})">✎</button>`:""}</td><td>${(function(){syncProx(o);var arr=o.pds||[];var _hs=new Date().toISOString().slice(0,10);var h=arr.map(function(p,pi){var atras=p.data<_hs,hj=p.data===_hs;return '<div style="margin:1px 0;white-space:nowrap">'+fmtDataCurta(p.data)+(p.hora?' '+esc(p.hora):'')+(p.rec?' ♻':'')+(p.parceiro?' 🤝 '+esc(p.parceiro):'')+(atras?' <span class="pill p-verm" style="padding:0 5px">atraso</span>':(hj?' <span class="pill p-dour" style="padding:0 5px">hoje</span>':''))+' <button class="btn-o" style="padding:0 5px" title="Cancelar este PDS" onclick="cancelPdsItem('+i+','+pi+')">✕</button></div>';}).join("")||'<span class="muted">—</span>';var recs=(o.recs||[]).map(function(r,ri){return '<span class="pill p-verde" style="padding:1px 6px;margin:1px 2px 0 0;display:inline-block">♻ '+DIAS_NOME[r.dia]+' '+esc(r.hora||"")+(r.parceiro?' 🤝 '+esc(r.parceiro):'')+' <a onclick="delRec('+i+','+ri+')" style="cursor:pointer">✕</a></span>';}).join("");return h+(recs?'<div style="margin-top:3px">'+recs+'</div>':'');})()}</td><td>${esc(o.formador||"")}</td><td>${o.vendedor?esc(o.vendedor):'<span class="pill p-verm" title="Sem responsável — a comissão desta venda não é atribuída a ninguém">— por definir</span>'}</td><td><span class="pill ${fl.c}">${fl.t}</span></td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:4px 8px" onclick="verDetalhe(${i})">Detalhe</button><button class="btn-g" style="padding:4px 8px" onclick="doPDS(${i})">PDS feito</button><button class="btn-o" style="padding:4px 8px" onclick="naoRealizadoPDS(${i})">Não realizado</button><button class="btn-o" style="padding:4px 8px" onclick="agendarPDS(${i})">+ PDS</button><button class="btn-o" style="padding:4px 8px" title="Enviar link da Classroom deste nível por e-mail" onclick="enviarLinkClassroomOnlineAluno(${i})">✉ Classroom</button>${rowActs('online',i)}</td></tr>`}).join("")||`<tr><td colspan="12" class="muted">Sem alunos nesta situação/nível.</td></tr>`}
+  ${rows.map(o=>{const i=data.online.indexOf(o);const fl=pdsFlag(o);const done=o.status==='Concluído';const nivelCell=done?'<span class="pill p-azul">Concluído</span>':(esc(o.nivel||"")+' <button class="btn-o" style="padding:1px 7px" title="Passar ao próximo nível" onclick="proxNivel('+i+')">↑</button>'+((role==="admin"||podeEditar())?' <button class="btn-o" style="padding:1px 7px" title="Gerir/reabrir nível (só Gestão)" onclick="gerirNivel('+i+')">✎</button>':''));const cellTarefa=done?'<span class="muted">—</span>':('<button class="pill '+(o.tarefa==='Sim'?'p-verde':'p-verm')+'" style="border:none;cursor:pointer" onclick="toggleOnline('+i+',&#39;tarefa&#39;)">'+(o.tarefa==='Sim'?'Sim':'Não')+'</button>');const cellAval=done?'<span class="muted">—</span>':('<button class="pill '+(o.avaliacao==='Sim'?'p-verde':'p-verm')+'" style="border:none;cursor:pointer" onclick="toggleOnline('+i+',&#39;avaliacao&#39;)">'+(o.avaliacao==='Sim'?'Sim':'Não')+'</button>');return `<tr><td>${esc(o.nome)}<br><span class="muted">${esc(o.email||"")}</span>${(function(){var _c=data.certificados.find(function(x){return x.cod===ensureOnlineCod(o);});return _c&&_c.estado&&_c.estado!=="Pendente"?'<br><span class="pill '+(_c.estado==="Entregue"?"p-verde":"p-dour")+'">Cert.: '+esc(_c.estado)+'</span>':'';})()}</td><td>${nivelCell}</td><td>${esc(o.fase||"")}</td><td><button class="pill ${o.status==='Concluído'?'p-azul':o.status==='Em andamento'?'p-verde':o.status==='Parado'?'p-dour':'p-verm'}" style="border:none;cursor:pointer" title="Mudar estado" onclick="setStatusOnline(${i})">${esc(o.status||"")}</button>${o.status==='Parado'?'<div class="muted" style="margin-top:2px">⏸ '+(o.pausaRazao?esc(o.pausaRazao)+' — ':'')+'até '+(o.pausaAte?fmtDataCurta(o.pausaAte):'—')+'</div>':''}</td><td>${cellTarefa}</td><td>${cellAval}</td><td style="text-align:center">${+o.pdsFeitos||0}</td><td>${prazoBarHTML(o)} ${role==="admin"?`<button class="btn-o" style="padding:1px 6px;margin-top:3px" title="Editar prazo (só gestão)" onclick="editPrazo(${i})">✎</button>`:""}</td><td>${(function(){syncProx(o);var arr=o.pds||[];var _hs=new Date().toISOString().slice(0,10);var h=arr.map(function(p,pi){var atras=p.data<_hs,hj=p.data===_hs;return '<div style="margin:1px 0;white-space:nowrap">'+fmtDataCurta(p.data)+(p.hora?' '+esc(p.hora):'')+(p.rec?' ♻':'')+(p.parceiro?' 🤝 '+esc(p.parceiro):'')+(atras?' <span class="pill p-verm" style="padding:0 5px">atraso</span>':(hj?' <span class="pill p-dour" style="padding:0 5px">hoje</span>':''))+' <button class="btn-o" style="padding:0 5px" title="Cancelar este PDS" onclick="cancelPdsItem('+i+','+pi+')">✕</button></div>';}).join("")||'<span class="muted">—</span>';var recs=(o.recs||[]).map(function(r,ri){return '<span class="pill p-verde" style="padding:1px 6px;margin:1px 2px 0 0;display:inline-block">♻ '+DIAS_NOME[r.dia]+' '+esc(r.hora||"")+(r.parceiro?' 🤝 '+esc(r.parceiro):'')+' <a onclick="delRec('+i+','+ri+')" style="cursor:pointer">✕</a></span>';}).join("");return h+(recs?'<div style="margin-top:3px">'+recs+'</div>':'');})()}</td><td>${esc(o.formador||"")}</td><td>${o.vendedor?esc(o.vendedor):'<span class="pill p-verm" title="Sem responsável — a comissão desta venda não é atribuída a ninguém">— por definir</span>'}</td><td><span class="pill ${fl.c}">${fl.t}</span></td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:4px 8px" onclick="verDetalhe(${i})">Detalhe</button><button class="btn-g" style="padding:4px 8px" onclick="doPDS(${i})">PDS feito</button><button class="btn-o" style="padding:4px 8px" onclick="naoRealizadoPDS(${i})">Não realizado</button><button class="btn-o" style="padding:4px 8px" onclick="agendarPDS(${i})">+ PDS</button><button class="btn-o" style="padding:4px 8px" title="Enviar link da Classroom deste nível por e-mail" onclick="enviarLinkClassroomOnlineAluno(${i})">✉ Classroom</button>${podeAtribuirFormador()?`<button class="btn-o" style="padding:4px 8px" title="Atribuir/mudar formador" onclick="abrirAtribuirFormador(${i})">🔁 Formador</button>`:""}${role==="admin"?`<button class="btn-o" style="padding:4px 8px;color:var(--verm)" title="Eliminar aluno (só Gestão)" onclick="delOnline(${i})">🗑</button>`:""}${rowActs('online',i)}</td></tr>`}).join("")||`<tr><td colspan="12" class="muted">Sem alunos nesta situação/nível.</td></tr>`}
   </tbody></table></div>`;
 }
 function vOnlineFormadoresHTML(ativos){
@@ -3164,6 +3177,28 @@ function proxNivel(i){const o=data.online[i];if(!o)return;const nivel=o.nivel||"
 function gerirNivel(i){if(!(role==="admin"||podeEditar())){toast("Só a Gestão ou colaborador autorizado");return;}var o=data.online[i];if(!o)return;var nv=prompt("Definir/reabrir nível ("+NIVEIS.join(" / ")+"):",o.nivel||NIVEIS[0]);if(nv===null)return;nv=nv.trim();if(NIVEIS.indexOf(nv)<0){toast("Nível inválido");return;}o.nivel=nv;if(o.status==="Concluído"&&NIVEIS.indexOf(nv)<NIVEIS.length-1){o.status="Em andamento";}persist();toast("Nível definido: "+nv);render();}
 function ensurePds(o){if(!Array.isArray(o.pds)){o.pds=[];if(o.proximoPDS)o.pds.push({data:o.proximoPDS,hora:o.proximoHora||"19:30",rec:!!o.recorrente});}if(!Array.isArray(o.recs)){o.recs=[];if(o.recorrente&&o.proximoPDS){o.recs.push({dia:new Date(o.proximoPDS).getDay(),hora:o.proximoHora||"19:30"});}}return o;}
 function syncProx(o){ensurePds(o);o.pds.sort(function(a,b){return (a.data+(a.hora||"")).localeCompare(b.data+(b.hora||""));});if(o.pds.length){o.proximoPDS=o.pds[0].data;o.proximoHora=o.pds[0].hora||"";}else{o.proximoPDS="";o.proximoHora="";}}
+function _proximaDataDia(baseISO,wd){var d=new Date(baseISO+"T00:00:00");for(var k=0;k<8;k++){if(d.getDay()===wd)return d.toISOString().slice(0,10);d.setDate(d.getDate()+1);}return baseISO;}
+/* L87-5: reparação única, ao carregar — cobre alunos que já tinham este problema antes da
+   correcção no marcarPds(): um "dia" de recorrência (recs[]) sem nenhuma ocorrência futura
+   concreta em pds[]. Só acrescenta o que falta, nunca duplica (verifica sempre se já existe
+   uma ocorrência futura desse dia da semana antes de criar). */
+function repararRecorrenciasOrfas(){
+ var hoje=new Date().toISOString().slice(0,10);
+ (data.online||[]).forEach(function(o){
+  if(o.status==="Transferido"||o.status==="Concluído")return;
+  ensurePds(o);
+  var mudou=false;
+  (o.recs||[]).forEach(function(r){
+   var temFutura=(o.pds||[]).some(function(p){return p.rec&&p.data>=hoje&&new Date(p.data+"T00:00:00").getDay()===r.dia;});
+   if(!temFutura){
+    var nd=_proximaDataDia(hoje,r.dia);
+    o.pds.push({data:nd,hora:r.hora||"19:30",rec:true,groupId:r.groupId||null,parceiro:r.parceiro||null});
+    mudou=true;
+   }
+  });
+  if(mudou)syncProx(o);
+ });
+}
 function marcarUmPDS(o,idx){idx=idx||0;ensurePds(o);var pds=o.pds[idx];o.ultimoPDS=new Date().toISOString().slice(0,10);o.pdsFeitos=(+o.pdsFeitos||0)+1;
  if(pds){o.pds.splice(idx,1);if(pds.rec){var wd=new Date(pds.data).getDay();var recMatch=(o.recs||[]).find(function(r){return r.dia===wd;});if(recMatch){var nd=new Date(pds.data);nd.setDate(nd.getDate()+7);o.pds.push({data:nd.toISOString().slice(0,10),hora:pds.hora,rec:true,groupId:recMatch.groupId||null,parceiro:recMatch.parceiro||null});}}}
  syncProx(o);}
@@ -3176,11 +3211,18 @@ const MOTIVOS_NAO_REALIZADO=["Aluno não compareceu","Formador indisponível","R
 let naoRealEdit=null;
 function naoRealizadoPDS(i){naoRealEdit=i;render();}
 function fecharNaoReal(){naoRealEdit=null;render();}
-/* L84-2: "Remarcar" substitui o antigo "Confirmar" — grava o motivo E abre logo a marcação da
-   próxima data (agendarPDS) para o mesmo aluno, num só clique, em vez de obrigar a um segundo passo
-   separado para ir procurar o botão "+ PDS" na linha do aluno. */
-function confirmarNaoRealizado(){if(naoRealEdit===null)return;const oi=naoRealEdit;const o=data.online[oi];if(!o){naoRealEdit=null;render();return;}ensurePds(o);syncProx(o);const motivo=val("nr_motivo")==="Outro"?(val("nr_outro")||"Outro"):val("nr_motivo");if(!motivo){toast("Escolhe o motivo");return;}if(!Array.isArray(o.historicoNaoRealizado))o.historicoNaoRealizado=[];o.historicoNaoRealizado.push({data:new Date().toISOString().slice(0,10),motivo:motivo,pdsData:o.pds[0]?o.pds[0].data:""});o.pdsNaoRealizados=(+o.pdsNaoRealizados||0)+1;if(o.pds.length)o.pds.shift();syncProx(o);persist();naoRealEdit=null;toast("Motivo registado — escolhe agora a nova data");agendarPDS(oi);}
-function naoRealModalHTML(){if(naoRealEdit===null)return"";const o=data.online[naoRealEdit];if(!o)return"";return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharNaoReal()"><div class="card" style="padding:22px;width:360px;max-width:94vw"><h3 style="color:var(--azul);margin-bottom:2px">PDS não realizado</h3><div class="muted" style="margin-bottom:12px">${esc(o.nome)}${o.formador?' · '+esc(o.formador):''}</div><label>Motivo</label><select id="nr_motivo" onchange="document.getElementById('nr_outro_wrap').style.display=this.value==='Outro'?'block':'none'">${MOTIVOS_NAO_REALIZADO.map(m=>`<option>${esc(m)}</option>`).join("")}</select><div id="nr_outro_wrap" style="display:none;margin-top:8px"><label>Especifica</label><input id="nr_outro" placeholder="Descreve o motivo"></div><div class="muted" style="margin-top:8px;font-size:12px">Ao remarcar, o motivo fica registado e a marcação da próxima data abre logo de seguida.</div><div class="flex" style="margin-top:14px"><button class="btn-p" onclick="confirmarNaoRealizado()">Remarcar</button><button class="btn-o" onclick="fecharNaoReal()">Cancelar</button></div></div></div>`;}
+/* L84-2/L87-4: 3 acções distintas neste modal (antes só havia "Remarcar"):
+   - Confirmar: regista o motivo (fica no histórico e conta para "PDS não realizados"), sem
+     forçar logo a escolha de nova data — para quando ainda não se sabe quando será o próximo.
+   - Remarcar: regista o motivo E abre logo a marcação da próxima data (agendarPDS), num só
+     clique — comportamento que já existia.
+   - Cancelar: cancela mesmo o PDS agendado (reaproveita cancelPdsItem, com o aviso de Google
+     Calendar), sem registar motivo nenhum — para quando o PDS nunca devia ter ficado marcado. */
+function _registarPdsNaoRealizado(oi){const o=data.online[oi];if(!o)return false;ensurePds(o);syncProx(o);const motivo=val("nr_motivo")==="Outro"?(val("nr_outro")||"Outro"):val("nr_motivo");if(!motivo){toast("Escolhe o motivo");return false;}if(!Array.isArray(o.historicoNaoRealizado))o.historicoNaoRealizado=[];o.historicoNaoRealizado.push({data:new Date().toISOString().slice(0,10),motivo:motivo,pdsData:o.pds[0]?o.pds[0].data:""});o.pdsNaoRealizados=(+o.pdsNaoRealizados||0)+1;if(o.pds.length)o.pds.shift();syncProx(o);persist();return true;}
+function confirmarNaoRealizado(){if(naoRealEdit===null)return;const oi=naoRealEdit;if(!_registarPdsNaoRealizado(oi))return;naoRealEdit=null;toast("Motivo registado — escolhe agora a nova data");agendarPDS(oi);}
+function confirmarSemRemarcar(){if(naoRealEdit===null)return;const oi=naoRealEdit;if(!_registarPdsNaoRealizado(oi))return;naoRealEdit=null;toast("Motivo registado.");render();}
+function cancelarPdsNaoRealizado(){if(naoRealEdit===null)return;const oi=naoRealEdit;ensurePds(data.online[oi]||{});cancelPdsItem(oi,0);naoRealEdit=null;render();}
+function naoRealModalHTML(){if(naoRealEdit===null)return"";const o=data.online[naoRealEdit];if(!o)return"";return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharNaoReal()"><div class="card" style="padding:22px;width:360px;max-width:94vw"><h3 style="color:var(--azul);margin-bottom:2px">PDS não realizado</h3><div class="muted" style="margin-bottom:12px">${esc(o.nome)}${o.formador?' · '+esc(o.formador):''}</div><label>Motivo</label><select id="nr_motivo" onchange="document.getElementById('nr_outro_wrap').style.display=this.value==='Outro'?'block':'none'">${MOTIVOS_NAO_REALIZADO.map(m=>`<option>${esc(m)}</option>`).join("")}</select><div id="nr_outro_wrap" style="display:none;margin-top:8px"><label>Especifica</label><input id="nr_outro" placeholder="Descreve o motivo"></div><div class="muted" style="margin-top:8px;font-size:12px">Confirmar regista o motivo sem remarcar já. Remarcar regista o motivo e abre logo a nova data. Cancelar cancela mesmo o PDS agendado (sem registar motivo).</div><div class="flex" style="margin-top:14px;flex-wrap:wrap;gap:6px"><button class="btn-o" onclick="confirmarSemRemarcar()">Confirmar</button><button class="btn-p" onclick="confirmarNaoRealizado()">Remarcar</button><button class="btn-o" style="color:var(--verm)" onclick="cancelarPdsNaoRealizado()">Cancelar PDS</button></div></div></div>`;}
 function delRec(i,idx){var o=data.online[i];if(!o)return;ensurePds(o);var r=o.recs[idx];if(!r)return;if(!confirm("Remover a recorrência de "+DIAS_NOME[r.dia]+"? (mantém os PDS já agendados)"))return;o.recs.splice(idx,1);persist();toast("Recorrência removida");render();}
 let pdsEdit=null;let pdsEditIdx=null;
 function agendarPDS(i){var o=data.online[i];if(o&&o.status==="Parado"){toast("Aluno em pausa — tira-o da pausa para marcar PDS");return;}pdsEdit=i;pdsEditIdx=null;render();}
@@ -3213,9 +3255,19 @@ function marcarPds(){if(pdsEdit===null)return;const o=data.online[pdsEdit];if(!o
  o.pds.push(pdsEntry);
  var compEntry=null;
  if(comp){ensurePds(comp);compEntry={data:dd,hora:hh,rec:recCk,groupId:groupId,parceiro:o.nome,duracao:durMin};comp.pds.push(compEntry);}
- if(recCk){diasCk.forEach(function(wd){
+ if(recCk){var _wdPrincipal=new Date(dd).getDay();diasCk.forEach(function(wd){
    if(!o.recs.some(r=>r.dia===wd&&(r.hora||"")===hh))o.recs.push({dia:wd,hora:hh,groupId:compInRec?groupId:null,parceiro:compInRec&&comp?comp.nome:null});
    if(comp&&compInRec&&!comp.recs.some(r=>r.dia===wd&&(r.hora||"")===hh))comp.recs.push({dia:wd,hora:hh,groupId:groupId,parceiro:o.nome});
+   /* L87-5: sem isto, um 2º/3º dia da semana escolhido aqui ficava só gravado como "padrão" em
+      recs[] mas nunca ganhava uma ocorrência concreta em pds[] — por isso não aparecia na Agenda
+      de PDS nem em "PDS de hoje", apesar de já existir correctamente no Google Calendar (que tem
+      a série recorrente completa desde o início, com todos os dias escolhidos). Cria já a próxima
+      ocorrência de cada dia extra, para o painel ficar tão certo como o Calendar. */
+   if(wd!==_wdPrincipal){
+    var _nd=_proximaDataDia(dd,wd);
+    if(!o.pds.some(function(p){return p.data===_nd&&(p.hora||"")===hh;}))o.pds.push({data:_nd,hora:hh,rec:true,groupId:compInRec?groupId:null,parceiro:compInRec&&comp?comp.nome:null});
+    if(comp&&compInRec&&!comp.pds.some(function(p){return p.data===_nd&&(p.hora||"")===hh;}))comp.pds.push({data:_nd,hora:hh,rec:true,groupId:groupId,parceiro:o.nome});
+   }
  });}
  syncProx(o);if(comp)syncProx(comp);
  persist();
@@ -3234,7 +3286,34 @@ function pdsPickerHTML(){if(pdsEdit===null)return"";const o=data.online[pdsEdit]
   <label style="margin-top:10px;display:flex;align-items:center;gap:8px;font-weight:600"><input type="checkbox" id="pds_rec" onchange="document.getElementById('pds_dias_wrap').style.display=this.checked?'block':'none'"> Repetir semanalmente</label>
   <div id="pds_dias_wrap" style="display:none;margin-top:6px"><div class="muted" style="margin-bottom:4px">Em que dias da semana? (ex.: Terça e Quinta)</div><div style="display:flex;flex-wrap:wrap;gap:8px">${DIAS_NOME.map(function(nm,d){return '<label style="font-weight:400;display:flex;gap:4px;align-items:center;margin:0"><input type="checkbox" class="pds_dia" value="'+d+'" '+(d===wd0?"checked":"")+' style="width:auto"> '+nm+'</label>';}).join("")}</div><label style="margin-top:8px;display:flex;gap:6px;align-items:center;font-weight:400"><input type="checkbox" id="pds_comp_rec" checked style="width:auto"> Incluir parceiro na recorrência (próximas sessões)</label><div class="muted" style="margin-top:2px">Só se aplica se juntaste alguém acima. Se desligares, o parceiro só fica marcado nesta primeira sessão — as seguintes ficam só para ${esc(o.nome)}.</div></div>`}
   <div class="flex" style="margin-top:14px"><button class="btn-p" onclick="marcarPds()">${editando?"Guardar":"Marcar"}</button><button class="btn-o" onclick="cancelPds()">Cancelar</button></div></div></div>`;}
-function delOnline(i){if(!confirm("Remover este aluno online?"))return;data.online.splice(i,1);persist();render()}
+/* L87-6: antes só fazia data.online.splice — se o aluno tinha PDS agendados com evento no
+   Google Calendar, esse evento ficava órfão (o aluno já não existia no painel, mas continuava
+   a receber/gerar convite). Agora cancela primeiro cada PDS com gcalRef, só depois remove o
+   registo. Restrito à Gestão. */
+function delOnline(i){const o=data.online[i];if(!o)return;if(role!=="admin"){toast("Só a gestão pode eliminar um aluno");return;}if(!confirm("Eliminar "+(o.nome||"este aluno")+" da Turma Online? Cancela também os PDS já agendados no Google Calendar."))return;ensurePds(o);(o.pds||[]).forEach(function(p){if(p.gcalRef)filaCancelarCalendario(p.gcalRef,"PDS — "+o.nome);});data.online.splice(i,1);persist();toast("Aluno eliminado da Turma Online");render()}
+/* L87-1: "eliminar formador" na Turma Online = só remove a ligação (não apaga o colaborador,
+   que continua a existir e pode dar aulas presenciais). Os alunos ficam com Formador em branco;
+   a atribuição de um novo formador faz-se depois com "Atribuir formador" (L87-1b). */
+function desvincularFormadorOnline(nome){
+ if(role!=="admin"){toast("Só a gestão");return;}
+ var alunos=data.online.filter(function(o){return o.formador===nome&&o.status!=="Transferido";});
+ if(!alunos.length){toast("Este formador já não tem alunos na Turma Online");return;}
+ if(!confirm('Desvincular "'+nome+'" da Turma Online? '+alunos.length+' aluno(s) ficam com o campo Formador em branco. O colaborador continua a existir e pode continuar a dar aulas presenciais.'))return;
+ alunos.forEach(function(o){o.formador="";});
+ persist();toast("Formador desvinculado — "+alunos.length+" aluno(s) actualizado(s)");render();
+}
+/* L87-1b: atribuir/mudar o formador de um aluno — acesso à Gestão + a quem a Gestão autorizar
+   (interruptor "Pode atribuir formador" em Permissões, ver podeAtribuirFormador()). */
+let atribFormEdit=null;
+function abrirAtribuirFormador(i){if(!podeAtribuirFormador()){toast("Sem autorização para atribuir formador — pede à Gestão para activar em Permissões");return;}atribFormEdit=i;render();}
+function fecharAtribuirFormador(){atribFormEdit=null;render();}
+function salvarAtribuirFormador(){if(atribFormEdit===null)return;if(!podeAtribuirFormador()){toast("Sem autorização");return;}var o=data.online[atribFormEdit];if(!o){atribFormEdit=null;render();return;}var novo=(val("af_form")||"").trim();o.formador=novo;persist();toast(novo?("Formador atribuído: "+novo):"Formador removido (fica em branco)");atribFormEdit=null;render();}
+function atribuirFormadorModalHTML(){
+ if(atribFormEdit===null)return"";
+ var o=data.online[atribFormEdit];if(!o)return"";
+ var pessoas=[...new Set([...(data.perfis||[]).map(function(p){return p.nome;}),...pessoasKA()])].filter(Boolean).filter(function(n){return !estaArquivado(n);}).sort();
+ return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharAtribuirFormador()"><div class="card" style="padding:22px;width:360px;max-width:94vw"><h3 style="color:var(--azul);margin-bottom:2px">Atribuir formador</h3><div class="muted" style="margin-bottom:12px">${esc(o.nome)}${o.formador?' · actual: '+esc(o.formador):' · sem formador atribuído'}</div><label>Novo formador</label><select id="af_form"><option value="">— em branco —</option>${pessoas.map(function(n){return '<option '+(n===o.formador?"selected":"")+'>'+esc(n)+'</option>';}).join("")}</select><div class="flex" style="margin-top:14px"><button class="btn-p" onclick="salvarAtribuirFormador()">Guardar</button><button class="btn-o" onclick="fecharAtribuirFormador()">Cancelar</button></div></div></div>`;
+}
 let onDetail=null;
 function verDetalhe(i){onDetail=i;render();}
 function fecharDetalhe(){onDetail=null;render();}
@@ -4645,7 +4724,7 @@ function addPerfil(){const nome=val("pf_nome");if(!nome){toast("Falta o nome");r
 let permEdit=null;
 function editPerms(i){permEdit=i;render();}
 function fecharPerms(){permEdit=null;render();}
-function savePerms(){const p=data.perfis[permEdit];if(!p){permEdit=null;render();return;}const _checked=[...document.querySelectorAll('.pm_aba:checked')].map(c=>c.value);p.bloqueadas=TEAM_ABAS.filter(function(id){return _checked.indexOf(id)<0;});const ex=document.getElementById('pm_export');p.podeExportar=ex?ex.checked:true;const ed=document.getElementById('pm_edit');p.podeEditar=ed?ed.checked:false;const pv=document.getElementById('pm_presenca');p.vePresenca=pv?pv.checked:false;const pl=document.getElementById('pm_landing');p.gereLanding=pl?pl.checked:false;const pc=document.getElementById('pm_carteira');p.gereCarteira=pc?pc.checked:false;const pcu=document.getElementById('pm_cursos');p.gereCursos=pcu?pcu.checked:false;const pb2=document.getElementById('pm_b2b');p.gereB2B=pb2?pb2.checked:false;const pem=document.getElementById('pm_emailmkt');p.gereEmailMkt=pem?pem.checked:false;persist();permEdit=null;toast("Permissões guardadas");render();}
+function savePerms(){const p=data.perfis[permEdit];if(!p){permEdit=null;render();return;}const _checked=[...document.querySelectorAll('.pm_aba:checked')].map(c=>c.value);p.bloqueadas=TEAM_ABAS.filter(function(id){return _checked.indexOf(id)<0;});const ex=document.getElementById('pm_export');p.podeExportar=ex?ex.checked:true;const ed=document.getElementById('pm_edit');p.podeEditar=ed?ed.checked:false;const pv=document.getElementById('pm_presenca');p.vePresenca=pv?pv.checked:false;const pl=document.getElementById('pm_landing');p.gereLanding=pl?pl.checked:false;const pc=document.getElementById('pm_carteira');p.gereCarteira=pc?pc.checked:false;const pcu=document.getElementById('pm_cursos');p.gereCursos=pcu?pcu.checked:false;const pb2=document.getElementById('pm_b2b');p.gereB2B=pb2?pb2.checked:false;const pem=document.getElementById('pm_emailmkt');p.gereEmailMkt=pem?pem.checked:false;const paf=document.getElementById('pm_atribform');p.podeAtribuirFormador=paf?paf.checked:false;persist();permEdit=null;toast("Permissões guardadas");render();}
 function permModalHTML(){if(permEdit===null)return"";const p=data.perfis[permEdit];if(!p)return"";const bloq=Array.isArray(p.bloqueadas)?p.bloqueadas:[];const chk=id=>bloq.indexOf(id)<0?"checked":"";
  return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharPerms()"><div class="card" style="padding:22px;width:470px;max-width:94vw;max-height:88vh;overflow:auto"><div class="flex"><h2 style="color:var(--azul)">Permissões — ${esc(p.nome)}</h2><div class="spacer"></div><button class="btn-o" style="padding:4px 10px" onclick="fecharPerms()">Fechar ✕</button></div>
   <div class="muted" style="margin:2px 0 12px">Escolhe que abas esta pessoa vê — desmarca só as que queres restringir. Abas novas que a Knowledge Angola venha a ganhar aparecem já marcadas por defeito. A gestão vê sempre tudo.</div>
@@ -4658,6 +4737,7 @@ function permModalHTML(){if(permEdit===null)return"";const p=data.perfis[permEdi
   <label style="margin-top:10px;display:flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" id="pm_cursos" ${p.gereCursos===true?"checked":""} style="width:auto"> Pode gerir cursos e preços (criar/editar/remover, com motivo registado)</label>
   <label style="margin-top:10px;display:flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" id="pm_b2b" ${p.gereB2B===true?"checked":""} style="width:auto"> Pode ver a aba Empresas (B2B)</label>
   <label style="margin-top:10px;display:flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" id="pm_emailmkt" ${p.gereEmailMkt===true?"checked":""} style="width:auto"> Pode ver a Base de E-mails (nome, e-mail, contacto e turma dos formandos)</label>
+  <label style="margin-top:10px;display:flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" id="pm_atribform" ${p.podeAtribuirFormador===true?"checked":""} style="width:auto"> Pode atribuir/mudar o formador de um aluno na Turma Online</label>
   <div class="row-actions"><button class="btn-p" onclick="savePerms()">Guardar permissões</button></div></div></div>`;}
 function editarPerfil(i){if(role!=="admin"){toast("Só a gestão");return;}var p=data.perfis[i];if(!p)return;var nome=prompt("Nome:",p.nome||"");if(nome===null)return;var email=prompt("E-mail:",p.email||"");if(email===null)return;var id=prompt("ID de entrada:",p.id||"");if(id===null)return;var func=prompt("Função (Assistente / Formador / Gestora de Formação / Gestor):",p.funcao||"");if(func===null)return;var cats=prompt("Categorias que acumula (por vírgula):",p.categorias||"");if(cats===null)return;p.nome=nome.trim();p.email=email.trim();p.id=id.trim();p.funcao=func.trim();p.categorias=cats.trim();persist();syncAutorizados();toast("Perfil actualizado");render();}
 function delPerfil(i){if(role!=="admin"){toast("Só a gestão");return;}var p=data.perfis[i];if(!p)return;if(!confirm("Remover o perfil de "+(p.nome||"")+"? (pessoa deixa de entrar no sistema)"))return;if(p.nome&&confirm("Arquivar também "+p.nome+" para sair das listas de todas as abas?")){var a=arquivados();if(a.indexOf(p.nome)<0)a.push(p.nome);}data.perfis.splice(i,1);persist();syncAutorizados();toast("Perfil removido");render()}
