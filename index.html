@@ -144,6 +144,27 @@ tr:hover td{background:#fafbfe}
  .topbar{flex-wrap:wrap;row-gap:6px}
  #ocultBtn span{display:none}
  .topbar h1{flex:1 0 55%}
+ /* L112-B1: no telemóvel o cabeçalho fixo das tabelas deixa de ser fixo. Num ecrã pequeno ele não
+    chegava a colar-se ao topo — ficava preso a meio, por cima das linhas, e tapava justamente o
+    que se estava a tentar ler. Num telefone rola-se pouco de cada vez, por isso o cabeçalho fixo
+    tira mais do que dá. No computador continua tudo como estava. */
+ .stickyhead,.stickyhead-on{position:static!important;top:auto!important}
+ /* L112-B2/B3: tabelas marcadas com .tbl-movel deixam de ser tabelas no telemóvel — cada linha
+    passa a ser um cartão empilhado, com o nome do campo à frente do valor (lido do atributo
+    data-l de cada célula). Assim o conteúdo ajusta-se à largura do ecrã, sem arrastar para o lado
+    e sem nomes cortados. No computador continua a ser a tabela normal. */
+ .tbl-movel thead{display:none}
+ .tbl-movel,.tbl-movel tbody,.tbl-movel tr,.tbl-movel td{display:block;width:auto}
+ .tbl-movel tr{border:1px solid var(--linha);border-radius:12px;padding:10px 12px;margin-bottom:10px;background:#fff}
+ html[data-theme="dark"] .tbl-movel tr{background:#1a2130}
+ .tbl-movel td{border:none!important;padding:3px 0!important;text-align:left!important}
+ .tbl-movel td[data-l]:before{content:attr(data-l);display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:#8892a6;margin-bottom:1px}
+ .tbl-movel td:empty{display:none}
+ .tbl-movel td.cel-nome{font-size:15px;font-weight:700;color:var(--azul);padding-bottom:6px!important;margin-bottom:4px;border-bottom:1px solid var(--linha)!important}
+ .tbl-movel td.cel-nome:before{display:none}
+ .tbl-movel td.cel-accoes{display:flex!important;flex-wrap:wrap;gap:6px;margin-top:8px;padding-top:8px!important;border-top:1px solid var(--linha)!important}
+ .tbl-movel td.cel-accoes:before{display:none}
+ .tbl-movel .cel-lado{display:inline-block!important;width:48%;vertical-align:top}
 }
 @page{size:A4;margin:0}
 @media print{html,body{background:#fff!important}body *{visibility:hidden}#compdoc,#compdoc *,#recdoc,#recdoc *{visibility:visible}#compdoc,#recdoc{position:absolute!important;left:0;top:0;width:100%;background:#fff!important;border:none!important;border-radius:0!important;margin:0!important;padding:8mm 13mm!important;font-size:11.5px!important;line-height:1.35!important;box-shadow:none!important}
@@ -884,7 +905,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.34";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.35";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -969,7 +990,7 @@ function buildNav(){
  if(current&&items.indexOf(current)>=0){[...nav.querySelectorAll("details.navgrp")].forEach(function(d){if([...d.querySelectorAll(".navbtn")].some(function(b){return b.dataset.id===current;}))d.open=true;});show(current);}
  else if(first)show(first);
 }
-function _aplicarAba(id){current=id;try{sessionStorage.setItem("ka_current",id);}catch(e){}[...document.querySelectorAll('.navbtn')].forEach(b=>b.classList.toggle("active",b.dataset.id===id));
+function _aplicarAba(id){current=id;_scrollAoTopo=true;try{sessionStorage.setItem("ka_current",id);}catch(e){}[...document.querySelectorAll('.navbtn')].forEach(b=>b.classList.toggle("active",b.dataset.id===id));
  document.getElementById("ptitle").textContent=PAGES[id][0];document.getElementById("psub").textContent=PAGES[id][1];var _a=document.getElementById("app");if(_a)_a.classList.remove("navopen");if(typeof updateTopAvatar==="function")updateTopAvatar();atualizarBackBtn();render()}
 function show(id){if(current&&current!==id){_abaHist.push(current);if(_abaHist.length>15)_abaHist.shift();try{sessionStorage.setItem("ka_hist",JSON.stringify(_abaHist));}catch(e){}}_aplicarAba(id);}
 /* Volta à aba anterior da pilha (pode repetir-se, tal como o botão "‹" do iPhone). Ao contrário
@@ -994,6 +1015,77 @@ function _capturarAccdetAbertos(){var views=document.getElementById("views");if(
 /* L101-2/4: ver comentário junto de .stickyhead/.stickyhead-on no <style> — mede as alturas
    REAIS depois do DOM já ter sido actualizado (requestAnimationFrame), em vez de um valor
    calculado durante a própria construção da HTML (que ficava um render atrasado). */
+/* L112-A2: o painel é todo reconstruído a cada gravação (render() reescreve o conteúdo do zero).
+   Isso fazia o ecrã saltar para o topo sempre que se marcava um dia/horário no perfil do formador,
+   ou se tocava em qualquer botão que grave — obrigando a rolar tudo outra vez para baixo, a cada
+   clique. Agora guarda-se a posição antes de reconstruir e repõe-se logo a seguir.
+   Guarda-se também a posição DENTRO das janelas que rolam por dentro (marcadas com data-rolar),
+   como o modal do perfil do formador — senão o salto acontecia lá dentro, mesmo com a página
+   parada. Mudar de aba continua a levar ao topo, que é o comportamento certo (_scrollAoTopo). */
+/* L112-A3: os campos de hora do navegador mostram AM/PM ou 24h consoante o idioma do aparelho —
+   no telemóvel do Ventura continuavam a aparecer "08:00 AM / 05:30 PM" mesmo depois de se ter
+   tentado forçar 24h pelo atributo de idioma (L108-6). Como isso não é controlável de forma
+   fiável, o campo passa a ser duas listas: Hora (00–23) e Minutos (de 5 em 5). Mostram exactamente
+   o mesmo em qualquer telefone ou computador, e no telemóvel abrem a lista nativa, que é mais
+   fácil de acertar do que o relógio.
+   A conversão é feita aqui, depois de o ecrã ser desenhado: cada campo de hora que exista passa a
+   estar escondido (mas continua a existir, com o mesmo id e o mesmo valor "HH:MM"), e ao lado ficam
+   as duas listas que o preenchem. Assim nenhum dos sítios que lê ou grava horas precisou de ser
+   alterado — e não fica nenhum campo esquecido por converter. */
+function _horaOpcoes(sel,ate,passo,largura){
+ var o="";
+ for(var i=0;i<=ate;i+=passo){var v=(i<10?"0":"")+i;o+='<option value="'+v+'"'+(v===sel?" selected":"")+">"+v+"</option>";}
+ return o;
+}
+function _upgradeCamposHora(){
+ var lista;try{lista=document.querySelectorAll('input[type="time"]');}catch(e){return;}
+ [].forEach.call(lista,function(inp){
+  var v=(inp.value||"").match(/^(\d{2}):(\d{2})$/);
+  var hh=v?v[1]:"",mm=v?v[2]:"";
+  /* Horas já gravadas com minutos fora dos 5 em 5 (ex.: 10:58) são aproximadas ao valor mais
+     próximo da lista. Faz-se pelo total de minutos do dia para o arredondamento poder subir de
+     hora (10:58 → 11:00) em vez de saltar para trás; nunca passa das 23:55. */
+  if(v){
+   var _tot=(+hh)*60+Math.round((+mm)/5)*5;
+   if(_tot>1435)_tot=1435;
+   hh=("0"+Math.floor(_tot/60)).slice(-2);
+   mm=("0"+(_tot%60)).slice(-2);
+  }
+  var wrap=document.createElement("span");
+  wrap.className="hm-campo";
+  wrap.style.cssText="display:inline-flex;gap:4px;align-items:center;vertical-align:middle";
+  var sh=document.createElement("select");
+  var sm=document.createElement("select");
+  sh.className="hm-sel";sm.className="hm-sel";
+  sh.innerHTML='<option value="">--</option>'+_horaOpcoes(hh,23,1);
+  sm.innerHTML='<option value="">--</option>'+_horaOpcoes(mm,55,5);
+  if(inp.disabled){sh.disabled=true;sm.disabled=true;}
+  var sep=document.createElement("span");sep.textContent=":";sep.style.opacity=".6";
+  var aplicar=function(){
+   var h=sh.value,m=sm.value;
+   inp.value=(h&&m)?(h+":"+m):"";
+   try{inp.dispatchEvent(new Event("change",{bubbles:true}));}
+   catch(e){if(typeof inp.onchange==="function")inp.onchange.call(inp);}
+  };
+  sh.onchange=aplicar;sm.onchange=aplicar;
+  inp.parentNode.insertBefore(wrap,inp);
+  wrap.appendChild(sh);wrap.appendChild(sep);wrap.appendChild(sm);
+  inp.type="hidden";
+  wrap.appendChild(inp);
+ });
+}
+var _scrollAoTopo=false,_scrollJanela=0,_scrollInternos={};
+function _guardarScroll(){
+ _scrollJanela=window.pageYOffset||document.documentElement.scrollTop||0;
+ try{[].forEach.call(document.querySelectorAll("[data-rolar]"),function(el){_scrollInternos[el.getAttribute("data-rolar")]=el.scrollTop;});}catch(e){}
+}
+function _reporScroll(){
+ requestAnimationFrame(function(){
+  try{[].forEach.call(document.querySelectorAll("[data-rolar]"),function(el){var k=el.getAttribute("data-rolar");if(_scrollInternos[k]!=null)el.scrollTop=_scrollInternos[k];});}catch(e){}
+  if(_scrollAoTopo){_scrollAoTopo=false;_scrollInternos={};window.scrollTo(0,0);}
+  else if(_scrollJanela)window.scrollTo(0,_scrollJanela);
+ });
+}
 function _syncStickyOffsets(){
  requestAnimationFrame(function(){
   var tb=(document.querySelector('.topbar')||{}).offsetHeight||64;
@@ -1005,7 +1097,7 @@ function _syncStickyOffsets(){
   root.setProperty('--st-sec',sec+'px');
  });
 }
-function render(){_capturarAccdetAbertos();try{sessionStorage.setItem("ka_fficha",fFicha||"");sessionStorage.setItem("ka_fsearch",fSearch||"");}catch(e){}document.getElementById("views").innerHTML=rowEditModalHTML()+editGastoModalHTML()+cropModalHTML()+fotoGrandeModalHTML()+feedbackModalHTML()+certRapidoModalHTML()+tarefasDoDiaBarraHTML()+({painel:vPainel,notificacoes:vNotificacoes,financas:vFinancas,gastos:vGastos,analytics:vAnalytics,paginas:vPaginas,quiz:vQuizPainel,quizleads:vQuizLeads,formandos:vFormandos,turmas:vTurmas,calendario:vCalendario,online:vOnline,pagamentos:vPagamentos,comprovativo:vComprovativo,leads:vLeads,carteira:vCarteira,b2b:vB2B,emailmkt:vEmailMkt,inscricoes:vInscricoes,chamadas:vChamadas,presencas:vPresencas,avaliacoes:vAvaliacoes,certificados:vCertificados,formador:vFormador,formadorespot:vFormadoresPotenciais,presencial:vPresencial,comunicados:vComunicados,notas:vNotas,chat:vChat,melhorias:vMelhorias,actividade:vActividade,rh:vRH,desempenho:vDesempenho,dados:vDados,exportar:vExportar,defs:vDefs,conteudos:vConteudos,incumprimentos:vIncumprimentos,guia:vGuia,contactos:vContactos,tarefasdia:vTarefasDia}[current]||(()=>""))();_reaplicarAccdetAbertos();if(typeof _initOrdenar==="function")_initOrdenar();if(current==="painel"){drawChart();drawPerfChart();}if(typeof atualizarAlertaGlobal==="function")atualizarAlertaGlobal();if(_refocus){const e=document.getElementById(_refocus);if(e){e.focus();const v=e.value||"";try{e.setSelectionRange(v.length,v.length)}catch(_){}}_refocus=null;}_syncStickyOffsets();}
+function render(){_capturarAccdetAbertos();_guardarScroll();try{sessionStorage.setItem("ka_fficha",fFicha||"");sessionStorage.setItem("ka_fsearch",fSearch||"");}catch(e){}document.getElementById("views").innerHTML=rowEditModalHTML()+editGastoModalHTML()+cropModalHTML()+fotoGrandeModalHTML()+feedbackModalHTML()+certRapidoModalHTML()+tarefasDoDiaBarraHTML()+({painel:vPainel,notificacoes:vNotificacoes,financas:vFinancas,gastos:vGastos,analytics:vAnalytics,paginas:vPaginas,quiz:vQuizPainel,quizleads:vQuizLeads,formandos:vFormandos,turmas:vTurmas,calendario:vCalendario,online:vOnline,pagamentos:vPagamentos,comprovativo:vComprovativo,leads:vLeads,carteira:vCarteira,b2b:vB2B,emailmkt:vEmailMkt,inscricoes:vInscricoes,chamadas:vChamadas,presencas:vPresencas,avaliacoes:vAvaliacoes,certificados:vCertificados,formador:vFormador,formadorespot:vFormadoresPotenciais,presencial:vPresencial,comunicados:vComunicados,notas:vNotas,chat:vChat,melhorias:vMelhorias,actividade:vActividade,rh:vRH,desempenho:vDesempenho,dados:vDados,exportar:vExportar,defs:vDefs,conteudos:vConteudos,incumprimentos:vIncumprimentos,guia:vGuia,contactos:vContactos,tarefasdia:vTarefasDia}[current]||(()=>""))();_reaplicarAccdetAbertos();if(typeof _initOrdenar==="function")_initOrdenar();if(current==="painel"){drawChart();drawPerfChart();}if(typeof atualizarAlertaGlobal==="function")atualizarAlertaGlobal();if(_refocus){const e=document.getElementById(_refocus);if(e){e.focus();const v=e.value||"";try{e.setSelectionRange(v.length,v.length)}catch(_){}}_refocus=null;}_syncStickyOffsets();_upgradeCamposHora();_reporScroll();}
 
 function fin(){if(!data.financas)data.financas={saldoBanco:0,saldoData:"",gastos:[],metas:{Marketing:0,Renda:0,"Comunicação":0,Outras:0},split:{proLabore:30,operacao:40,reserva:15,investimento:10,marketing:5}};return data.financas;}
 const GASTO_CATS=["Salários","Marketing","Renda","Comunicação","Água","Detergentes","Consumíveis","Deslocação","Serviços de limpeza","Outras"];
@@ -3724,8 +3816,8 @@ function vOnlineAcompanhamentoHTML(hoje,wk,theadTop){
   ${formDispBanner}
   ${agendaHtml}${realizadosHtml}
   <div class="muted" style="margin:8px 0 2px">${onFilter==='concluido'?'A mostrar quem já concluiu — usa o chip &quot;Todos&quot; para voltar a escondê-los.':'Concluídos ficam escondidos por defeito — usa o chip &quot;Concluídos&quot; acima para os ver (com o estado do certificado por aluno).'}</div>
-  <table><thead><tr>${['Nome','Nível','Fase','Status','Tarefa','Aval.','PDS feitos','Prazo','Próximo PDS','Formador','Situação',''].map(function(h){return '<th class="stickyhead-on">'+h+'</th>';}).join('')}</tr></thead><tbody>
-  ${rows.map(o=>{const i=data.online.indexOf(o);const fl=pdsFlag(o);const done=o.status==='Concluído';const nivelCell=done?'<span class="pill p-azul">Concluído</span>':(esc(o.nivel||"")+' <button class="btn-o" style="padding:1px 7px" title="Passar ao próximo nível" onclick="proxNivel('+i+')">↑</button>'+((role==="admin"||podeEditar())?' <button class="btn-o" style="padding:1px 7px" title="Gerir/reabrir nível (só Gestão)" onclick="gerirNivel('+i+')">✎</button>':''));const cellTarefa=done?'<span class="muted">—</span>':('<button class="pill '+(o.tarefa==='Sim'?'p-verde':'p-verm')+'" style="border:none;cursor:pointer" onclick="toggleOnline('+i+',&#39;tarefa&#39;)">'+(o.tarefa==='Sim'?'Sim':'Não')+'</button>');const cellAval=done?'<span class="muted">—</span>':('<button class="pill '+(o.avaliacao==='Sim'?'p-verde':'p-verm')+'" style="border:none;cursor:pointer" onclick="toggleOnline('+i+',&#39;avaliacao&#39;)">'+(o.avaliacao==='Sim'?'Sim':'Não')+'</button>');return `<tr><td>${esc(o.nome)}<br><span class="muted">${esc(o.email||"")}</span>${done?'<br>'+certPillOnlineHTML(o,true):''}</td><td>${nivelCell}</td><td>${esc(o.fase||"")}</td><td><button class="pill ${o.status==='Concluído'?'p-azul':o.status==='Em andamento'?'p-verde':o.status==='Parado'?'p-dour':'p-verm'}" style="border:none;cursor:pointer" title="Mudar estado" onclick="setStatusOnline(${i})">${esc(o.status||"")}</button>${o.status==='Parado'?'<div class="muted" style="margin-top:2px">⏸ '+(o.pausaRazao?esc(o.pausaRazao)+' — ':'')+'até '+(o.pausaAte?fmtDataCurta(o.pausaAte):'—')+'</div>':''}</td><td>${cellTarefa}</td><td>${cellAval}</td><td style="text-align:center">${+o.pdsFeitos||0}</td><td>${prazoBarHTML(o)} ${podeEditarPrazo()?`<button class="btn-o" style="padding:1px 6px;margin-top:3px" title="Conceder mais dias (Gestão, Gestora de Formação ou Formador)" onclick="abrirEditarPrazo(${i})">✎</button>`:""}</td><td>${(function(){syncProx(o);var arr=o.pds||[];var _hs=_dISO(new Date());var h=arr.map(function(p,pi){var atras=p.data<_hs,hj=p.data===_hs;return '<div style="margin:1px 0;white-space:nowrap">'+fmtDataCurta(p.data)+(p.hora?' '+esc(p.hora):'')+(p.rec?' ♻':'')+(p.parceiro?' 🤝 '+esc(p.parceiro):'')+(atras?' <span class="pill p-verm" style="padding:0 5px">atraso</span>':(hj?' <span class="pill p-dour" style="padding:0 5px">hoje</span>':''))+' <button class="btn-o" style="padding:0 5px" title="Cancelar este PDS" onclick="cancelPdsItem('+i+','+pi+')">✕</button></div>';}).join("")||'<span class="muted">—</span>';var recs=(o.recs||[]).map(function(r,ri){return '<span class="pill p-verde" style="padding:1px 6px;margin:1px 2px 0 0;display:inline-block">♻ '+DIAS_NOME[r.dia]+' '+esc(r.hora||"")+(r.parceiro?' 🤝 '+esc(r.parceiro):'')+' <a onclick="delRec('+i+','+ri+')" style="cursor:pointer">✕</a></span>';}).join("");return h+(recs?'<div style="margin-top:3px">'+recs+'</div>':'');})()}</td><td>${esc(o.formador||"")}</td><td><span class="pill ${fl.c}">${fl.t}</span></td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:4px 8px" onclick="verDetalhe(${i})">Detalhe</button><button class="btn-g" style="padding:4px 8px" onclick="doPDS(${i})">PDS feito</button><button class="btn-o" style="padding:4px 8px" onclick="agendarPDS(${i})">Marcar PDS</button><span style="position:relative;display:inline-block"><button class="btn-o" style="padding:4px 8px" title="Trocar formador / Editar / Eliminar" onclick="toggleOnDefMenu(${i})">⚙️ Definições</button>${onDefMenuHTML(i,done)}</span></td></tr>`}).join("")||`<tr><td colspan="12" class="muted">Sem alunos nesta situação/nível.</td></tr>`}
+  <table class="tbl-movel"><thead><tr>${['Nome','Nível','Fase','Status','Tarefa','Aval.','PDS feitos','Prazo','Próximo PDS','Formador','Situação',''].map(function(h){return '<th class="stickyhead-on">'+h+'</th>';}).join('')}</tr></thead><tbody>
+  ${rows.map(o=>{const i=data.online.indexOf(o);const fl=pdsFlag(o);const done=o.status==='Concluído';const nivelCell=done?'<span class="pill p-azul">Concluído</span>':(esc(o.nivel||"")+' <button class="btn-o" style="padding:1px 7px" title="Passar ao próximo nível" onclick="proxNivel('+i+')">↑</button>'+((role==="admin"||podeEditar())?' <button class="btn-o" style="padding:1px 7px" title="Gerir/reabrir nível (só Gestão)" onclick="gerirNivel('+i+')">✎</button>':''));const cellTarefa=done?'<span class="muted">—</span>':('<button class="pill '+(o.tarefa==='Sim'?'p-verde':'p-verm')+'" style="border:none;cursor:pointer" onclick="toggleOnline('+i+',&#39;tarefa&#39;)">'+(o.tarefa==='Sim'?'Sim':'Não')+'</button>');const cellAval=done?'<span class="muted">—</span>':('<button class="pill '+(o.avaliacao==='Sim'?'p-verde':'p-verm')+'" style="border:none;cursor:pointer" onclick="toggleOnline('+i+',&#39;avaliacao&#39;)">'+(o.avaliacao==='Sim'?'Sim':'Não')+'</button>');return `<tr><td class="cel-nome">${esc(o.nome)}<br><span class="muted">${esc(o.email||"")}</span>${done?'<br>'+certPillOnlineHTML(o,true):''}</td><td data-l="Nível" class="cel-lado">${nivelCell}</td><td data-l="Fase" class="cel-lado">${esc(o.fase||"")}</td><td data-l="Estado"><button class="pill ${o.status==='Concluído'?'p-azul':o.status==='Em andamento'?'p-verde':o.status==='Parado'?'p-dour':'p-verm'}" style="border:none;cursor:pointer" title="Mudar estado" onclick="setStatusOnline(${i})">${esc(o.status||"")}</button>${o.status==='Parado'?'<div class="muted" style="margin-top:2px">⏸ '+(o.pausaRazao?esc(o.pausaRazao)+' — ':'')+'até '+(o.pausaAte?fmtDataCurta(o.pausaAte):'—')+'</div>':''}</td><td data-l="Tarefa" class="cel-lado">${cellTarefa}</td><td data-l="Avaliação" class="cel-lado">${cellAval}</td><td data-l="PDS feitos" class="cel-lado" style="text-align:center">${+o.pdsFeitos||0}</td><td data-l="Prazo">${prazoBarHTML(o)} ${podeEditarPrazo()?`<button class="btn-o" style="padding:1px 6px;margin-top:3px" title="Conceder mais dias (Gestão, Gestora de Formação ou Formador)" onclick="abrirEditarPrazo(${i})">✎</button>`:""}</td><td data-l="Próximo PDS">${(function(){syncProx(o);var arr=o.pds||[];var _hs=_dISO(new Date());var h=arr.map(function(p,pi){var atras=p.data<_hs,hj=p.data===_hs;return '<div style="margin:1px 0;white-space:nowrap">'+fmtDataCurta(p.data)+(p.hora?' '+esc(p.hora):'')+(p.rec?' ♻':'')+(p.parceiro?' 🤝 '+esc(p.parceiro):'')+(atras?' <span class="pill p-verm" style="padding:0 5px">atraso</span>':(hj?' <span class="pill p-dour" style="padding:0 5px">hoje</span>':''))+' <button class="btn-o" style="padding:0 5px" title="Cancelar este PDS" onclick="cancelPdsItem('+i+','+pi+')">✕</button></div>';}).join("")||'<span class="muted">—</span>';var recs=(o.recs||[]).map(function(r,ri){return '<span class="pill p-verde" style="padding:1px 6px;margin:1px 2px 0 0;display:inline-block">♻ '+DIAS_NOME[r.dia]+' '+esc(r.hora||"")+(r.parceiro?' 🤝 '+esc(r.parceiro):'')+' <a onclick="delRec('+i+','+ri+')" style="cursor:pointer">✕</a></span>';}).join("");return h+(recs?'<div style="margin-top:3px">'+recs+'</div>':'');})()}</td><td data-l="Formador" class="cel-lado">${esc(o.formador||"")}</td><td data-l="Situação" class="cel-lado"><span class="pill ${fl.c}">${fl.t}</span></td><td class="flex cel-accoes" style="gap:5px"><button class="btn-o" style="padding:4px 8px" onclick="verDetalhe(${i})">Detalhe</button><button class="btn-g" style="padding:4px 8px" onclick="doPDS(${i})">PDS feito</button><button class="btn-o" style="padding:4px 8px" onclick="agendarPDS(${i})">Marcar PDS</button><span style="position:relative;display:inline-block"><button class="btn-o" style="padding:4px 8px" title="Trocar formador / Editar / Eliminar" onclick="toggleOnDefMenu(${i})">⚙️ Definições</button>${onDefMenuHTML(i,done)}</span></td></tr>`}).join("")||`<tr><td colspan="12" class="muted">Sem alunos nesta situação/nível.</td></tr>`}
   </tbody></table></div>`;
 }
 function vOnlineFormadoresHTML(ativos){
@@ -4406,7 +4498,35 @@ function abrirFormadorPerfil(nome){
  formadorPerfilVerValor=false;render();
 }
 function fecharFormadorPerfil(){formadorPerfilEditNome=null;formadorPerfilBuffer=null;formadorPerfilVerValor=false;render();}
-function onFormadorPerfilFoto(inp){var f=inp.files&&inp.files[0];if(!f||!formadorPerfilBuffer)return;var r=new FileReader();r.onload=function(e){formadorPerfilBuffer.foto=e.target.result;render();};r.readAsDataURL(f);}
+/* L112-A1: ao escolher a foto abre-se logo o ajuste (enquadrar o rosto), em vez de entrar como
+   veio do ficheiro. Guarda-se primeiro o que já está escrito no ecrã, porque abrir o ajuste
+   reconstrói o painel e sem isso perder-se-ia o que ainda não foi gravado. */
+function onFormadorPerfilFoto(inp){
+ var f=inp.files&&inp.files[0];if(!f||!formadorPerfilBuffer)return;
+ var r=new FileReader();
+ r.onload=function(e){
+  var img=new Image();
+  img.onload=function(){
+   _capturarFormadorPerfilVisivel();
+   formadorPerfilBuffer.foto=e.target.result;
+   _crop={arr:"__formadorBuffer",idx:0,src:e.target.result,natW:img.width,natH:img.height,zoom:1,x:50,y:50};
+   render();
+  };
+  img.src=e.target.result;
+ };
+ r.readAsDataURL(f);
+}
+function ajustarFotoFormadorPerfil(){
+ if(!formadorPerfilBuffer||!formadorPerfilBuffer.foto){toast("Ainda não há foto para ajustar — carrega uma primeiro");return;}
+ var src=formadorPerfilBuffer.foto;
+ var img=new Image();
+ img.onload=function(){
+  _capturarFormadorPerfilVisivel();
+  _crop={arr:"__formadorBuffer",idx:0,src:src,natW:img.width,natH:img.height,zoom:1,x:50,y:50};
+  render();
+ };
+ img.src=src;
+}
 function toggleFormadorPerfilDia(dia){
  if(!formadorPerfilBuffer)return;
  if(!Array.isArray(formadorPerfilBuffer.diasContratados))formadorPerfilBuffer.diasContratados=[];
@@ -4419,6 +4539,36 @@ function setFormadorPerfilHorario(dia,campo,el){
  if(!formadorPerfilBuffer.horarioPorDia||typeof formadorPerfilBuffer.horarioPorDia!=="object")formadorPerfilBuffer.horarioPorDia={};
  if(!formadorPerfilBuffer.horarioPorDia[dia])formadorPerfilBuffer.horarioPorDia[dia]={inicio:"08:00",fim:"17:00"};
  formadorPerfilBuffer.horarioPorDia[dia][campo]=el.value;
+}
+/* L112-A5: a opção "Sem termo" (e o selo "Exclusivamente Formador") não se conseguiam desmarcar.
+   Ambas chamavam render() directamente: o ecrã era reconstruído a partir do rascunho do perfil, que
+   ainda tinha o valor ANTIGO — logo, a caixa voltava a aparecer marcada e parecia que o clique não
+   fazia nada. Pior: como o ecrã era reconstruído, tudo o que já tivesse sido escrito nos outros
+   campos (nome, e-mail, qualificação, resumo, datas, valor) e ainda não estivesse gravado
+   perdia-se sem aviso.
+   Agora, antes de reconstruir, guarda-se no rascunho tudo o que está visível no ecrã e só depois se
+   troca a opção. Nada se perde e as caixas alternam normalmente. */
+function _capturarFormadorPerfilVisivel(){
+ var b=formadorPerfilBuffer;if(!b)return;
+ var g=function(id){var e=document.getElementById(id);return e?e.value:null;};
+ var c=function(id){var e=document.getElementById(id);return e?!!e.checked:null;};
+ var v;
+ if((v=g("fp_nome"))!==null)b.nome=(v||"").trim();
+ if((v=g("fp_email"))!==null)b.email=(v||"").trim();
+ if((v=g("fp_qualif"))!==null)b.qualificacao=(v||"").trim();
+ if((v=g("fp_resumo"))!==null)b.resumo=(v||"").trim();
+ if((v=c("fp_jafoialuno"))!==null)b.jaFoiAluno=v;
+ if((v=g("fp_ini"))!==null)b.contratoInicio=v;
+ if((v=g("fp_fim"))!==null)b.contratoFim=v;
+ if((v=g("fp_valortipo"))!==null)b.valorTipo=v;
+ if((v=g("fp_valorkz"))!==null)b.valorKz=+v||0;
+ if((v=c("fp_presencial"))!==null)b.acessoPresencial=v;
+}
+function toggleFormadorPerfilOpcao(campo,el){
+ if(!formadorPerfilBuffer)return;
+ _capturarFormadorPerfilVisivel();
+ formadorPerfilBuffer[campo]=!!(el&&el.checked);
+ render();
 }
 function pedirVerValorContratoFormador(){if(podeVerValorContratoFormador()){formadorPerfilVerValor=true;render();}}
 function salvarFormadorPerfil(){
@@ -4657,7 +4807,11 @@ function buscarFormadorDisponivelHTML(){
    +'<button class="btn-o" style="padding:4px 10px;margin-top:8px" onclick="limparDispBusca()">‹ Voltar à lista de formadores</button></div>';
  }
  return '<div class="sec" style="padding:10px 16px;margin-bottom:12px"><b style="color:var(--azul)">🔎 Procurar formador disponível</b><div class="muted" style="margin-top:2px;font-size:12px">Escolhe um dia e uma hora para ver quem está livre para dar suporte.</div>'
-  +'<div class="flex" style="gap:8px;margin-top:8px;flex-wrap:wrap;align-items:flex-end"><div><label style="font-size:12px">Dia</label><input type="date" value="'+esc(dispBuscaData)+'" onchange="setDispBusca(\'data\',this);render()"></div><div><label style="font-size:12px">Hora</label><input type="time" lang="pt-PT" value="'+esc(dispBuscaHora)+'" onchange="setDispBusca(\'hora\',this);render()"></div><button class="btn" style="padding:6px 12px" onclick="pesquisarDispBusca()">🔎 Pesquisar disponibilidade</button></div>'
+  /* L112-A4: escolher o dia (ou a hora) já não reconstrói o ecrã. Era isso que, no telemóvel,
+     fechava o painel de escolha a meio: mal se escolhia a data, o campo era destruído e criado de
+     novo, e a pessoa era atirada para fora antes de conseguir escolher a hora. Os valores ficam
+     guardados na mesma; o ecrã só se actualiza quando se carrega em "Pesquisar disponibilidade". */
+  +'<div class="flex" style="gap:8px;margin-top:8px;flex-wrap:wrap;align-items:flex-end"><div><label style="font-size:12px">Dia</label><input type="date" value="'+esc(dispBuscaData)+'" onchange="setDispBusca(\'data\',this)"></div><div><label style="font-size:12px">Hora</label><input type="time" lang="pt-PT" value="'+esc(dispBuscaHora)+'" onchange="setDispBusca(\'hora\',this)"></div><button class="btn" style="padding:6px 12px" onclick="pesquisarDispBusca()">🔎 Pesquisar disponibilidade</button></div>'
   +resultado+'</div>';
 }
 /* ---- Modal: Gravar/Editar Perfil do Formador ---- */
@@ -4675,7 +4829,7 @@ function formadorPerfilModalHTML(){
  var valorHtml=formadorPerfilVerValor
   ?('<div class="flex" style="gap:8px;flex-wrap:wrap"><div><label>Tipo</label><select id="fp_valortipo"><option value="mes" '+(b.valorTipo==="mes"?"selected":"")+'>Valor / mês</option><option value="hora" '+(b.valorTipo==="hora"?"selected":"")+'>Valor / hora</option></select></div><div><label>Valor (Kz)</label><input id="fp_valorkz" type="number" min="0" value="'+esc(String(b.valorKz||0))+'"></div></div>')
   :('<button class="btn-o" onclick="pedirVerValorContratoFormador()">🔒 Ver/editar valor do contrato</button><div class="muted" style="font-size:11.5px;margin-top:4px">Só a Gestão, ou quem a Gestão autorizar com o código, vê ou altera este valor.</div>');
- return '<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharFormadorPerfil()"><div class="card" style="padding:22px;width:620px;max-width:96vw;max-height:90vh;overflow:auto">'
+ return '<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharFormadorPerfil()"><div class="card" data-rolar="perfilFormador" style="padding:22px;width:620px;max-width:96vw;max-height:90vh;overflow:auto">'
   +'<div class="flex"><h2 style="color:var(--azul)">'+(formadorPerfilEditNome?"Editar":"Novo")+' perfil de formador</h2><div class="spacer"></div><button class="btn-o" style="padding:4px 10px" onclick="fecharFormadorPerfil()">Fechar ✕</button></div>'
   +'<div class="grid2" style="margin-top:10px">'
   +'<div><label>Nome</label><input id="fp_nome" value="'+esc(b.nome)+'" placeholder="Nome completo"></div>'
@@ -4683,15 +4837,15 @@ function formadorPerfilModalHTML(){
   +'<div><label>Qualificação académica</label><input id="fp_qualif" value="'+esc(b.qualificacao)+'"></div>'
   +'<div><label>Já foi nosso aluno?</label><label style="display:flex;align-items:center;gap:6px;margin-top:6px"><input id="fp_jafoialuno" type="checkbox" '+(b.jaFoiAluno?"checked":"")+'> Sim</label></div>'
   +'<div style="grid-column:1/-1"><label>Breve resumo / qualificações</label><textarea id="fp_resumo" rows="2" style="width:100%">'+esc(b.resumo)+'</textarea></div>'
-  +'<div style="grid-column:1/-1"><label>Foto</label><input type="file" accept="image/*" onchange="onFormadorPerfilFoto(this)">'+(b.foto?'<img src="'+b.foto+'" style="height:60px;border-radius:8px;margin-top:6px;display:block">':'')+'</div>'
+  +'<div style="grid-column:1/-1"><label>Foto</label><input type="file" accept="image/*" onchange="onFormadorPerfilFoto(this)">'+(b.foto?('<div class="flex" style="gap:8px;align-items:center;margin-top:6px"><img src="'+b.foto+'" style="width:60px;height:60px;object-fit:cover;border-radius:50%;border:1px solid var(--linha)"><button class="btn-o" style="padding:4px 10px" onclick="ajustarFotoFormadorPerfil()">🔍 Ajustar / cortar</button></div>'):'')+'</div>'
   +'</div>'
   +'<div style="margin-top:14px"><b style="color:var(--azul)">Horário e dias contratados</b><div class="muted" style="font-size:12px;margin-bottom:6px">Pode variar por dia (ex.: Seg-Qua 8h-17h, Sex só 8h-12h).</div>'+diasHtml+'</div>'
-  +'<div style="margin-top:14px"><b style="color:var(--azul)">Duração do contrato</b><div class="flex" style="gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap"><label style="display:flex;gap:6px;align-items:center"><input id="fp_semtermo" type="checkbox" '+(b.contratoSemTermo?"checked":"")+' onchange="render()"> Sem termo</label>'
+  +'<div style="margin-top:14px"><b style="color:var(--azul)">Duração do contrato</b><div class="flex" style="gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap"><label style="display:flex;gap:6px;align-items:center"><input id="fp_semtermo" type="checkbox" '+(b.contratoSemTermo?"checked":"")+' onchange="toggleFormadorPerfilOpcao(\'contratoSemTermo\',this)"> Sem termo</label>'
   +(b.contratoSemTermo?"":('<div><label style="font-size:12px">Início</label><input id="fp_ini" type="date" value="'+esc(b.contratoInicio)+'"></div><div><label style="font-size:12px">Fim</label><input id="fp_fim" type="date" value="'+esc(b.contratoFim)+'"></div>'))
   +'</div></div>'
   +'<div style="margin-top:14px"><b style="color:var(--azul)">Valor do contrato</b><div style="margin-top:6px">'+valorHtml+'</div></div>'
   +'<div style="margin-top:14px"><b style="color:var(--azul)">Acesso ao painel</b>'
-  +'<div class="flex" style="gap:14px;margin-top:6px;flex-wrap:wrap"><label style="display:flex;gap:6px;align-items:center"><input id="fp_exclusivo" type="checkbox" '+(b.exclusivoFormador?"checked":"")+' onchange="render()"> Exclusivamente Formador</label>'
+  +'<div class="flex" style="gap:14px;margin-top:6px;flex-wrap:wrap"><label style="display:flex;gap:6px;align-items:center"><input id="fp_exclusivo" type="checkbox" '+(b.exclusivoFormador?"checked":"")+' onchange="toggleFormadorPerfilOpcao(\'exclusivoFormador\',this)"> Exclusivamente Formador</label>'
   +(b.exclusivoFormador?('<label style="display:flex;gap:6px;align-items:center"><input id="fp_presencial" type="checkbox" '+(b.acessoPresencial?"checked":"")+'> Também vê Turmas Presenciais</label>'):"")+'</div>'
   +'<div class="muted" style="font-size:11.5px;margin-top:4px">Com o selo activo, esta pessoa só vê a Turma Online (e Presenciais, se marcado) ao entrar com este e-mail — nada mais do painel. Sem o selo, mantém o acesso que a Gestão já lhe deu.</div></div>'
   +'<div class="flex" style="gap:8px;margin-top:18px;justify-content:flex-end">'+(formadorPerfilEditNome?'<button class="btn-o" style="border-color:#c0392b;color:#c0392b" onclick="apagarFormadorPerfil(\''+formadorPerfilEditNome.replace(/'/g,"\\'")+'\')">Apagar perfil</button>':"")+'<button class="btn" onclick="salvarFormadorPerfil()">Gravar perfil do formador</button></div>'
@@ -6539,8 +6693,18 @@ function _cropCalc(box){var sc=Math.max(box/_crop.natW,box/_crop.natH)*(_crop.zo
 function cropPreview(){var el=document.getElementById("cropprev");if(!el)return;var c=_cropCalc(240);el.style.backgroundImage="url("+_crop.src+")";el.style.backgroundRepeat="no-repeat";el.style.backgroundSize=c.dw+"px "+c.dh+"px";el.style.backgroundPosition=c.dx+"px "+c.dy+"px";}
 function setCrop(k,v){_crop[k]=+v;cropPreview();}
 function fecharCrop(){_crop.idx=-1;render();}
-function salvarCrop(){var p=(data[_crop.arr]||[])[_crop.idx];if(!p){fecharCrop();return;}var box=240;var cv=document.createElement("canvas");cv.width=box;cv.height=box;var img=new Image();img.onload=function(){var c=_cropCalc(box);var ctx=cv.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,box,box);ctx.drawImage(img,c.dx,c.dy,c.dw,c.dh);p.foto=cv.toDataURL("image/jpeg",0.85);persist();_crop.idx=-1;toast("Foto guardada");render();};img.src=_crop.src;}
-function cropModalHTML(){if(_crop.idx<0)return"";var p=(data[_crop.arr]||[])[_crop.idx]||{};var c=_cropCalc(240);return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.55);display:grid;place-items:center;z-index:120;padding:16px" onclick="if(event.target===this)fecharCrop()"><div class="card" style="padding:20px;width:320px;max-width:94vw"><div class="flex"><b style="color:var(--azul)">Ajustar foto — ${esc(p.nome||"")}</b><div class="spacer"></div><button class="btn-o" style="padding:4px 10px" onclick="fecharCrop()">✕</button></div>
+/* L112-A1: a ferramenta de ajuste da foto (zoom + posição, com corte redondo) já existia para a
+   equipa e para os formandos, mas a foto do formador entrava directa, sem ajuste — ficava o que
+   saísse do ficheiro, muitas vezes com o rosto de lado ou pequeno. Passa a usar a mesma
+   ferramenta. Como o perfil do formador ainda é um rascunho enquanto não se carrega em "Gravar
+   perfil", o alvo do corte pode ser esse rascunho em vez de um registo já gravado — é o que este
+   "__formadorBuffer" identifica. */
+function _cropAlvo(){
+ if(_crop.arr==="__formadorBuffer")return formadorPerfilBuffer||null;
+ return (data[_crop.arr]||[])[_crop.idx]||null;
+}
+function salvarCrop(){var p=_cropAlvo();if(!p){fecharCrop();return;}var box=240;var cv=document.createElement("canvas");cv.width=box;cv.height=box;var img=new Image();img.onload=function(){var c=_cropCalc(box);var ctx=cv.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,box,box);ctx.drawImage(img,c.dx,c.dy,c.dw,c.dh);p.foto=cv.toDataURL("image/jpeg",0.85);if(_crop.arr!=="__formadorBuffer")persist();_crop.idx=-1;toast(_crop.arr==="__formadorBuffer"?"Foto ajustada — falta Gravar o perfil":"Foto guardada");render();};img.src=_crop.src;}
+function cropModalHTML(){if(_crop.idx<0)return"";var p=_cropAlvo()||{};var c=_cropCalc(240);return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.55);display:grid;place-items:center;z-index:120;padding:16px" onclick="if(event.target===this)fecharCrop()"><div class="card" style="padding:20px;width:320px;max-width:94vw"><div class="flex"><b style="color:var(--azul)">Ajustar foto — ${esc(p.nome||"")}</b><div class="spacer"></div><button class="btn-o" style="padding:4px 10px" onclick="fecharCrop()">✕</button></div>
   <div style="display:grid;place-items:center;margin:14px 0"><div id="cropprev" style="width:240px;height:240px;border-radius:50%;border:2px solid var(--linha);background:#eef1f7 url(${_crop.src}) no-repeat;background-size:${c.dw}px ${c.dh}px;background-position:${c.dx}px ${c.dy}px"></div></div>
   <div class="muted" style="font-size:12px">Zoom</div><input type="range" min="1" max="3" step="0.02" value="${_crop.zoom}" oninput="setCrop('zoom',this.value)" style="width:100%">
   <div class="muted" style="font-size:12px">Horizontal</div><input type="range" min="0" max="100" value="${_crop.x}" oninput="setCrop('x',this.value)" style="width:100%">
