@@ -804,7 +804,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.16";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.17";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -3537,9 +3537,14 @@ function marcarPds(){if(pdsEdit===null)return;const o=data.online[pdsEdit];if(!o
  var groupId=comp?("g"+Date.now()):null;
  var compInRec=comp?((document.getElementById("pds_comp_rec")||{checked:true}).checked):false;
  var pdsEntry={data:dd,hora:hh,rec:recCk,groupId:groupId,parceiro:comp?comp.nome:null,duracao:durMin};
- o.pds.push(pdsEntry);
+ /* Correcção (grave): faltava aqui a verificação de duplicado que já existia para os "dias extra"
+    da recorrência (linhas abaixo) — sem ela, um clique duplo em "Marcar" (ou um reenvio do
+    formulário) criava dois PDS iguais (mesma data e hora) para o mesmo aluno, que depois
+    apareciam ambos na Agenda de PDS. Agora só grava se ainda não existir um PDS com esta
+    data+hora para este aluno. */
+ if(!o.pds.some(function(p){return p.data===dd&&(p.hora||"")===hh;}))o.pds.push(pdsEntry);
  var compEntry=null;
- if(comp){ensurePds(comp);compEntry={data:dd,hora:hh,rec:recCk,groupId:groupId,parceiro:o.nome,duracao:durMin};comp.pds.push(compEntry);}
+ if(comp){ensurePds(comp);compEntry={data:dd,hora:hh,rec:recCk,groupId:groupId,parceiro:o.nome,duracao:durMin};if(!comp.pds.some(function(p){return p.data===dd&&(p.hora||"")===hh;}))comp.pds.push(compEntry);}
  if(recCk){var _wdPrincipal=new Date(dd).getDay();diasCk.forEach(function(wd){
    if(!o.recs.some(r=>r.dia===wd&&(r.hora||"")===hh))o.recs.push({dia:wd,hora:hh,groupId:compInRec?groupId:null,parceiro:compInRec&&comp?comp.nome:null});
    if(comp&&compInRec&&!comp.recs.some(r=>r.dia===wd&&(r.hora||"")===hh))comp.recs.push({dia:wd,hora:hh,groupId:groupId,parceiro:o.nome});
