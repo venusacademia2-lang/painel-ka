@@ -847,7 +847,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.30";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.31";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -1901,6 +1901,18 @@ function atualizarAlertaGlobal(){
  if(currentUser&&(currentUser.departamento==="Marketing e Vendas"||role==="admin")){
   var porTransferir=(Array.isArray(INSCR)?INSCR:[]).filter(function(r){return r.tipo==="Pagamento"&&!r.confirmada;});
   if(porTransferir.length){partes.push(porTransferir.length+" registo(s) da landing à espera de transferência/confirmação");destino="inscricoes";}
+ }
+ /* L106: certificados emitidos da Turma Online por resolver o contacto com o formando — visível
+    à Gestora de Formação e à Gestão na íntegra; cada Formador só vê a contagem dos seus próprios
+    alunos. Persistente: só sai da lista quando o contacto fica resolvido (presencial combinado, ou
+    a captura do e-mail enviado fica anexada) — marcar apenas "liguei ao formando" não chega. */
+ if(typeof certContactosPendentes==="function"){
+  var listaCertContacto=certContactosPendentes();
+  if(listaCertContacto.length){
+   var ehGestoraFormCert=me&&typeof gestoraOnlineNome==="function"&&me===gestoraOnlineNome();
+   var meusCertContacto=(role==="admin"||ehGestoraFormCert)?listaCertContacto:(me?listaCertContacto.filter(function(x){return x.o.formador===me;}):[]);
+   if(meusCertContacto.length){partes.push(meusCertContacto.length+" certificado(s) emitido(s) por resolver o contacto com o formando");destino="online";}
+  }
  }
  if(!partes.length){el.style.display="none";return;}
  el.textContent="⚠️ "+partes.join(" · ")+" — clica para ver.";
@@ -3148,6 +3160,98 @@ function msgPausaCancelado(){return (data.comp&&data.comp.msgPausaCancelado)||"O
 function setPausaCancMsg(el){if(!podeDefsOnline()){toast("Sem autorização");return;}if(!data.comp)data.comp={};data.comp.msgPausaCancelado=el.value;persist();toast("Mensagem guardada");}
 function msgPausaRegresso(){return (data.comp&&data.comp.msgPausaRegresso)||"Olá {nome}, a tua pausa está quase a terminar! No dia {data} às {hora} terás o teu próximo Ponto de Situação. Até lá!";}
 function setPausaRegressoMsg(el){if(!podeDefsOnline()){toast("Sem autorização");return;}if(!data.comp)data.comp={};data.comp.msgPausaRegresso=el.value;persist();toast("Mensagem guardada");}
+/* L106: certificado emitido (Turma Online) mas ainda por entregar — a Gestora de Formação tem de
+   ligar ao formando a avisar, registar o que ficou combinado (levantar presencialmente ou receber
+   por e-mail) e, se for por e-mail, anexar obrigatoriamente a captura do e-mail enviado antes do
+   caso se dar como resolvido. Tudo isto fica registado em data.certificados[i] (o mesmo registo já
+   usado para Pendente/Emitido/Entregue) e visível a quem pode ver este aluno (podeVerCertContacto).
+   Reaproveita a mesma permissão podeDefsOnline() para a frase e o e-mail em cópia serem
+   configuráveis, tal como todos os outros textos automáticos deste painel. */
+function msgCertContactoEmail(){return (data.comp&&data.comp.msgCertContactoEmail)||"Caro(a) {nome}, é com muito gosto que enviamos, em anexo, o teu certificado de conclusão da formação na Knowledge Angola. Parabéns mais uma vez pela tua conquista!\n\nCom os melhores cumprimentos,\nKnowledge Angola";}
+function setCertContactoMsg(el){if(!podeDefsOnline()){toast("Sem autorização");return;}if(!data.comp)data.comp={};data.comp.msgCertContactoEmail=el.value;persist();toast("Mensagem guardada");}
+function emailCCCert(){return (data.comp&&data.comp.emailCCCert)||"venusacademia2@gmail.com";}
+function setEmailCCCert(el){if(!podeDefsOnline()){toast("Sem autorização");return;}if(!data.comp)data.comp={};data.comp.emailCCCert=(el.value||"").trim();persist();toast("E-mail em cópia guardado");}
+function fraseCertContactoEmail(o){return msgCertContactoEmail().replace(/\{nome\}/g,(o&&o.nome)||"");}
+function copiarFraseCertContacto(ci){var c=data.certificados[ci];if(!c)return;var o=data.online.find(function(x){return ensureOnlineCod(x)===c.cod;});var t=fraseCertContactoEmail(o);
+ function ok(){toast("Frase copiada");}function falhou(){toast("Não foi possível copiar — selecciona e copia manualmente");}
+ if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(ok).catch(falhou);}
+ else{try{var ta=document.createElement("textarea");ta.value=t;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);ok();}catch(e){falhou();}}
+}
+/* Visível apenas à Gestora de Formação, ao Formador do próprio aluno, e à Gestão — não a toda a
+   equipa, tal como pedido. */
+function podeVerCertContacto(o){
+ if(role==="admin")return true;
+ var me=(currentUser&&currentUser.nome)||"";
+ if(!me)return false;
+ if(typeof gestoraOnlineNome==="function"&&me===gestoraOnlineNome())return true;
+ if(o&&o.formador===me)return true;
+ return false;
+}
+function certContactosPendentes(){
+ var out=[];
+ (data.online||[]).forEach(function(o){
+  var info=certInfoOnline(o);
+  if(info&&info.c.estado==="Emitido"&&!info.c.contactoResolvido)out.push({o:o,oi:data.online.indexOf(o),ci:info.idx,c:info.c});
+ });
+ return out;
+}
+function marcarLigueiFormando(ci){
+ var c=data.certificados[ci];if(!c)return;
+ c.contactoLigado=true;c.contactoQuem=(currentUser&&currentUser.nome)||role;c.contactoQuando=new Date().toISOString();
+ if(!Array.isArray(c.contactoHist))c.contactoHist=[];
+ c.contactoHist.push({tipo:"ligacao",quando:c.contactoQuando,quem:c.contactoQuem});
+ persist();toast("Registado: ligaste ao formando");render();
+}
+function combinarCertContacto(ci,tipo){
+ var c=data.certificados[ci];if(!c)return;
+ c.contactoCombinado=tipo;
+ if(!Array.isArray(c.contactoHist))c.contactoHist=[];
+ c.contactoHist.push({tipo:tipo==="Presencial"?"combinado_presencial":"combinado_email",quando:new Date().toISOString(),quem:(currentUser&&currentUser.nome)||role});
+ if(tipo==="Presencial"){c.contactoResolvido=true;c.contactoResolvidoQuando=new Date().toISOString();toast("Registado: vai levantar presencialmente");}
+ else{toast("Combinado: enviar por e-mail — falta anexar a captura depois de enviares");}
+ persist();render();
+}
+function onCertContactoCaptura(ci,inp){
+ var f=inp.files&&inp.files[0];if(!f)return;
+ var c=data.certificados[ci];if(!c)return;
+ var r=new FileReader();
+ r.onload=function(e){
+  c.contactoCapturaEmail=e.target.result;
+  c.contactoResolvido=true;c.contactoResolvidoQuando=new Date().toISOString();
+  if(!Array.isArray(c.contactoHist))c.contactoHist=[];
+  c.contactoHist.push({tipo:"captura_anexada",quando:c.contactoResolvidoQuando,quem:(currentUser&&currentUser.nome)||role});
+  persist();toast("Captura anexada — caso fechado");render();
+ };
+ r.readAsDataURL(f);
+}
+function certContactoHTML(ci,o){
+ var c=data.certificados[ci];if(!c)return"";
+ if(c.estado!=="Emitido")return"";
+ if(!podeVerCertContacto(o))return"";
+ if(c.contactoResolvido){
+  var resumo=c.contactoCombinado==="Presencial"?"vai levantar presencialmente":"enviado por e-mail (captura anexada)";
+  return '<div class="muted" style="margin-top:4px;font-size:11.5px">✅ Contacto resolvido — '+esc(resumo)+(c.contactoQuem?' · '+esc(c.contactoQuem):'')+'</div>';
+ }
+ var box='<div style="margin-top:6px;padding:8px 10px;background:#fff7e6;border:1px solid #f0d999;border-radius:8px;font-size:12.5px">';
+ if(!c.contactoLigado){
+  box+='<div style="margin-bottom:6px">📞 Certificado emitido — falta ligar ao formando a avisar.</div>'
+     +'<button class="btn-p" style="padding:4px 10px" onclick="marcarLigueiFormando('+ci+')">Liguei ao formando?</button>';
+ }else if(!c.contactoCombinado){
+  box+='<div class="muted" style="margin-bottom:6px">Ligou '+esc(c.contactoQuem||"")+' em '+fmtDataCurta((c.contactoQuando||"").slice(0,10))+'.</div>'
+     +'<div style="margin-bottom:6px;font-weight:600">O que ficou combinado?</div>'
+     +'<div class="flex" style="gap:8px;flex-wrap:wrap"><button class="btn-o" style="padding:4px 10px" onclick="combinarCertContacto('+ci+',\'Presencial\')">Vai levantar presencialmente</button><button class="btn-o" style="padding:4px 10px" onclick="combinarCertContacto('+ci+',\'Email\')">Vai receber por e-mail</button></div>';
+ }else if(c.contactoCombinado==="Email"&&!c.contactoCapturaEmail){
+  var frase=fraseCertContactoEmail(o);
+  box+='<div style="margin-bottom:6px"><b>Copia esta frase e envia por e-mail ao formando, lembra-te de anexar o certificado:</b></div>'
+     +'<textarea readonly style="width:100%;font-size:12px;margin-bottom:6px" rows="3">'+esc(frase)+'</textarea>'
+     +'<div class="flex" style="gap:8px;margin-bottom:8px"><button class="btn-o" style="padding:4px 10px" onclick="copiarFraseCertContacto('+ci+')">📋 Copiar frase</button></div>'
+     +'<div class="muted" style="margin-bottom:6px">⚠️ Não te esqueças de pôr sempre em cópia (CC): <b>'+esc(emailCCCert())+'</b></div>'
+     +'<div style="margin-bottom:4px">Depois de enviares, anexa aqui a captura de ecrã do e-mail enviado (obrigatório para fechar este caso):</div>'
+     +'<input type="file" accept="image/*" onchange="onCertContactoCaptura('+ci+',this)">';
+ }
+ box+='</div>';
+ return box;
+}
 function sigStart(evt){var cv=document.getElementById("sigCanvas");if(!cv)return;cv._sigDrawing=true;sigDraw(evt,true);}
 function sigMove(evt){var cv=document.getElementById("sigCanvas");if(!cv||!cv._sigDrawing)return;sigDraw(evt,false);}
 function sigEnd(){var cv=document.getElementById("sigCanvas");if(cv)cv._sigDrawing=false;}
@@ -3254,7 +3358,7 @@ function toggleCertEntregue(i,el){
    índice em data.certificados). */
 function certPillOnlineHTML(o){var oi=data.online.indexOf(o);var info=certInfoOnline(o);
  if(!info)return'<span class="pill p-verm" style="cursor:pointer" title="Clica para gerar o certificado" onclick="gerarCertOnline('+oi+')">Cert.: por gerar</span>';
- return certPerguntasHTML(info.idx);}
+ return certPerguntasHTML(info.idx)+certContactoHTML(info.idx,o);}
 
 /* L86 — janela rápida (global) para ver quem já recebeu certificado, acessível de qualquer página via botão na topbar */
 let certRapidoOpen=false,certRapidoQ="";
@@ -3453,7 +3557,15 @@ function vOnline(){
    +'<div class="formgrid" style="margin-top:6px"><div style="grid-column:1/-1"><textarea id="msg_pausa_canc" rows="3" onchange="setPausaCancMsg(this)">'+esc(msgPausaCancelado())+'</textarea></div></div>'
    +'<div class="muted" style="margin-top:10px">Aviso de regresso — enviado 2 dias antes do fim da pausa, quando o sistema já marcou sozinho a 1ª sessão de regresso. Usa <code>{nome}</code>, <code>{data}</code> e <code>{hora}</code>.</div>'
    +'<div class="formgrid" style="margin-top:6px"><div style="grid-column:1/-1"><textarea id="msg_pausa_regresso" rows="3" onchange="setPausaRegressoMsg(this)">'+esc(msgPausaRegresso())+'</textarea></div></div></div>'):'';
-  corpo=prazosDefsHTML+'<div class="sec" style="padding:10px 16px"><div class="flex" style="gap:10px;align-items:center;flex-wrap:wrap"><label style="margin:0">Gestora responsável pela Turma Online</label>'+(role==="admin"?respInputHTML("resp_online",respOnline,"—")+'<button class="btn-o" style="padding:5px 12px" onclick="setRespOnline()">Guardar</button>':'<b>'+esc(respOnline||"—")+'</b>')+'</div></div>'+_gestoraHistHTML+_formadoresDefHTML+_msgsHTML+_prazoAlertaHTML+_prazoExtHTML+_semPdsHTML+_nuncaPdsHTML+_entregaCertMsgHTML+_pausaMsgsHTML+_pdsHorarioHTML+(role!=="admin"&&!podeDefsOnline()?'<div class="muted" style="padding:0 16px">Prazo por nível, formadores e mensagens: só a Gestão (ou quem for autorizado) pode ver e alterar.</div>':'');
+  /* L106: frase padrão que a Gestora copia ao combinar o envio do certificado por e-mail, e o
+     e-mail interno a pôr sempre em cópia (CC) — ambos configuráveis pela Gestão e por quem a
+     Gestão autorizar, tal como as restantes mensagens automáticas desta página. */
+  const _certContactoMsgsHTML=podeDefsOnline()?('<div class="sec" style="padding:10px 16px"><b style="color:var(--azul)">🎓 Contacto de certificado emitido</b>'
+   +'<div class="muted" style="margin-top:2px">Frase que a Gestora de Formação copia para enviar por e-mail ao formando, junto com o certificado em anexo. Usa <code>{nome}</code>.</div>'
+   +'<div class="formgrid" style="margin-top:6px"><div style="grid-column:1/-1"><textarea id="msg_cert_contacto" rows="3" onchange="setCertContactoMsg(this)">'+esc(msgCertContactoEmail())+'</textarea></div></div>'
+   +'<div class="muted" style="margin-top:10px">E-mail a pôr sempre em cópia (CC) ao enviar o certificado por e-mail.</div>'
+   +'<div class="formgrid" style="margin-top:6px"><div><input id="cc_cert" value="'+esc(emailCCCert())+'" onchange="setEmailCCCert(this)"></div></div></div>'):'';
+  corpo=prazosDefsHTML+'<div class="sec" style="padding:10px 16px"><div class="flex" style="gap:10px;align-items:center;flex-wrap:wrap"><label style="margin:0">Gestora responsável pela Turma Online</label>'+(role==="admin"?respInputHTML("resp_online",respOnline,"—")+'<button class="btn-o" style="padding:5px 12px" onclick="setRespOnline()">Guardar</button>':'<b>'+esc(respOnline||"—")+'</b>')+'</div></div>'+_gestoraHistHTML+_formadoresDefHTML+_msgsHTML+_prazoAlertaHTML+_prazoExtHTML+_semPdsHTML+_nuncaPdsHTML+_entregaCertMsgHTML+_pausaMsgsHTML+_certContactoMsgsHTML+_pdsHorarioHTML+(role!=="admin"&&!podeDefsOnline()?'<div class="muted" style="padding:0 16px">Prazo por nível, formadores e mensagens: só a Gestão (ou quem for autorizado) pode ver e alterar.</div>':'');
  }else{
   corpo=vOnlineAcompanhamentoHTML(hoje,wk,_theadTop);
  }
