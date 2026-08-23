@@ -824,7 +824,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.22";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.23";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -3504,32 +3504,103 @@ function analisePdsHorarios(){
  return {porHora:porHora,porDia:porDia,total:total,melhorHora:melhorHora,melhorDia:melhorDia};
 }
 function podeEditarPrazo(){return role==="admin"||(currentUser&&/gestora de forma|formador/i.test(((currentUser.funcao||"")+" "+(currentUser.categorias||""))));}
+/* L99: dentro de quem pode editar o prazo, distingue-se a Gestora de Formação (pedido fica
+   pendente de autorização do Formador) do Formador/Gestão (continuam a aplicar de imediato,
+   exactamente como antes). */
+function souGestoraFormacaoLogada(){return !!(currentUser&&/gestora de forma/i.test(((currentUser.funcao||"")+" "+(currentUser.categorias||""))));}
+function souFormadorDoAluno(o){return !!(o&&currentUser&&currentUser.nome&&o.formador===currentUser.nome);}
+function podeAutorizarPedidoPrazo(o){return role==="admin"||souFormadorDoAluno(o);}
 function msgPrazoExtensao(){return (data.comp&&data.comp.msgPrazoExtensao)||"Olá {nome}! O prazo do teu nível actual na Knowledge Angola foi alargado em {dias} dia(s) útil(eis) — tens agora até mais tempo para concluíres com calma.";}
 function setPrazoExtensaoMsg(el){if(!podeDefsOnline()){toast("Sem autorização");return;}if(!data.comp)data.comp={};data.comp.msgPrazoExtensao=el.value;persist();toast("Mensagem guardada");}
 let prazoEdit=null;
 function abrirEditarPrazo(i){if(!podeEditarPrazo()){toast("Sem autorização para alterar o prazo");return;}prazoEdit=i;render();}
 function fecharEditarPrazo(){prazoEdit=null;render();}
+function _aplicarPrazo(o,add,quem){
+ var antigo=+o.prazo||30;var novo=Math.max(1,antigo+add);
+ if(!Array.isArray(o.historicoPrazo))o.historicoPrazo=[];
+ o.historicoPrazo.unshift({de:antigo,para:novo,dias:add,quem:quem,quando:new Date().toISOString()});
+ o.prazo=novo;
+ if(o.email){
+  var corpo=msgPrazoExtensao().replace(/\{nome\}/g,o.nome||"").replace(/\{dias\}/g,String(Math.abs(add))).replace(/\n/g,"<br>");
+  filaEmail(o.email,"O teu prazo foi actualizado — Knowledge Angola",corpo);
+ }
+ return {antigo:antigo,novo:novo};
+}
 function salvarEditarPrazo(){
  if(prazoEdit===null)return;var o=data.online[prazoEdit];if(!o){prazoEdit=null;render();return;}
  if(!podeEditarPrazo()){toast("Sem autorização");prazoEdit=null;render();return;}
  var add=+val("ep_dias")||0;
  if(!add){toast("Indica quantos dias adicionar");return;}
- var antigo=+o.prazo||30;var novo=Math.max(1,antigo+add);
- if(!Array.isArray(o.historicoPrazo))o.historicoPrazo=[];
- o.historicoPrazo.unshift({de:antigo,para:novo,dias:add,quem:(currentUser&&currentUser.nome)||role,quando:new Date().toISOString()});
- o.prazo=novo;persist();
- if(o.email){
-  var diasTxt=add+(Math.abs(add)===1?" dia útil":" dias úteis");
-  var corpo=msgPrazoExtensao().replace(/\{nome\}/g,o.nome||"").replace(/\{dias\}/g,String(Math.abs(add))).replace(/\n/g,"<br>");
-  filaEmail(o.email,"O teu prazo foi actualizado — Knowledge Angola",corpo);
+ var quem=(currentUser&&currentUser.nome)||role;
+ /* L99-1: pedido da Gestora de Formação fica pendente de autorização do Formador — Gestão e o
+    próprio Formador continuam a aplicar de imediato, como sempre. Só um pedido pendente de
+    cada vez por aluno. */
+ if(souGestoraFormacaoLogada()&&role!=="admin"){
+  if(o.pedidoPrazo){toast("Já há um pedido pendente para este aluno — aguarda a resposta do formador");return;}
+  o.pedidoPrazo={dias:add,quem:quem,quando:new Date().toISOString()};
+  persist();
+  if(o.formador)criarNotaAuto("Pedido de mais "+(add>0?"+":"")+add+" dia(s) de prazo para "+(o.nome||"aluno")+" (pedido por "+quem+") — autorizar/recusar na ficha do aluno (Turma Online).",o.formador,"Académico");
+  toast("Pedido enviado ao formador para autorização");
+  prazoEdit=null;render();return;
  }
- toast("Prazo actualizado: "+antigo+" → "+novo+" dias úteis"+(o.email?" · e-mail enviado":""));
+ var r=_aplicarPrazo(o,add,quem);
+ persist();
+ toast("Prazo actualizado: "+r.antigo+" → "+r.novo+" dias úteis"+(o.email?" · e-mail enviado":""));
  prazoEdit=null;render();
+}
+/* L99-4: autorizar aplica mesmo o prazo (usa a mesma função _aplicarPrazo do caso directo) e
+   envia o e-mail já existente ao aluno; recusar não mexe no prazo, fica registado, e notifica
+   quem pediu (Gestora de Formação) e a Gestão — só na recusa, autorizar não gera aviso extra. */
+function autorizarPedidoPrazo(i){
+ var o=data.online[i];if(!o||!o.pedidoPrazo)return;
+ if(!podeAutorizarPedidoPrazo(o)){toast("Só o formador deste aluno (ou a Gestão) pode autorizar");return;}
+ var ped=o.pedidoPrazo;
+ var r=_aplicarPrazo(o,+ped.dias||0,ped.quem);
+ if(!Array.isArray(o.historicoPedidosPrazo))o.historicoPedidosPrazo=[];
+ o.historicoPedidosPrazo.unshift({dias:ped.dias,pedidoPor:ped.quem,pedidoQuando:ped.quando,estado:"Autorizado",resolvidoPor:(currentUser&&currentUser.nome)||role,resolvidoQuando:new Date().toISOString()});
+ o.pedidoPrazo=null;
+ persist();
+ toast("Pedido autorizado — prazo: "+r.antigo+" → "+r.novo+" dias úteis"+(o.email?" · e-mail enviado":""));
+ render();
+}
+function recusarPedidoPrazo(i){
+ var o=data.online[i];if(!o||!o.pedidoPrazo)return;
+ if(!podeAutorizarPedidoPrazo(o)){toast("Só o formador deste aluno (ou a Gestão) pode recusar");return;}
+ var ped=o.pedidoPrazo;
+ if(!Array.isArray(o.historicoPedidosPrazo))o.historicoPedidosPrazo=[];
+ o.historicoPedidosPrazo.unshift({dias:ped.dias,pedidoPor:ped.quem,pedidoQuando:ped.quando,estado:"Recusado",resolvidoPor:(currentUser&&currentUser.nome)||role,resolvidoQuando:new Date().toISOString()});
+ o.pedidoPrazo=null;
+ persist();
+ var txtRecusa="O formador recusou o pedido de +"+ped.dias+" dia(s) de prazo para "+(o.nome||"aluno")+" (Turma Online).";
+ if(ped.quem)criarNotaAuto(txtRecusa,ped.quem,"Académico");
+ criarNotaAuto(txtRecusa,"","Direcção Geral");
+ toast("Pedido recusado — a Gestora de Formação e a Gestão foram avisadas");
+ render();
+}
+/* Aviso reutilizável (ficha do aluno + modal de prazo): mostra o pedido pendente, com botões
+   Autorizar/Recusar só para quem pode decidir (o formador do aluno, ou a Gestão); para quem só
+   pode ver, mostra a informação sem botões. */
+function pedidoPrazoBannerHTML(o,i){
+ if(!o||!o.pedidoPrazo)return"";
+ var p=o.pedidoPrazo;
+ var pode=podeAutorizarPedidoPrazo(o);
+ return '<div class="note" style="background:#FFF7E6;border-color:#e8d9ad;color:#8a6200;margin:10px 0">'
+  +'<b>Pedido de prazo pendente:</b> +'+esc(String(p.dias))+' dia(s) útil(eis), pedido por '+esc(p.quem||"—")+' em '+fmtDataCurta((p.quando||"").slice(0,10))+'.'
+  +(pode?('<div class="flex" style="gap:8px;margin-top:8px"><button class="btn-g" style="padding:4px 10px" onclick="autorizarPedidoPrazo('+i+')">Autorizar</button><button class="btn-o" style="padding:4px 10px" onclick="recusarPedidoPrazo('+i+')">Recusar</button></div>'):'<div style="margin-top:4px;font-size:12.5px">A aguardar autorização do formador ('+esc(o.formador||"—")+').</div>')
+  +'</div>';
 }
 function editarPrazoModalHTML(){
  if(prazoEdit===null)return"";
  var o=data.online[prazoEdit];if(!o)return"";
- return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharEditarPrazo()"><div class="card" style="padding:22px;width:380px;max-width:94vw"><h3 style="color:var(--azul);margin-bottom:2px">Conceder mais dias</h3><div class="muted" style="margin-bottom:12px">${esc(o.nome)} · prazo actual: ${+o.prazo||30} dias úteis</div><label>Dias a adicionar (usa negativo para reduzir)</label><input id="ep_dias" type="number" value="5" style="width:100%"><div class="muted" style="margin-top:6px;font-size:12px">${o.email?"O aluno recebe um e-mail automático a avisar.":"Este aluno não tem e-mail registado — não é possível avisar por e-mail."}</div><div class="flex" style="margin-top:14px"><button class="btn-p" onclick="salvarEditarPrazo()">Guardar</button><button class="btn-o" onclick="fecharEditarPrazo()">Cancelar</button></div>${(o.historicoPrazo&&o.historicoPrazo.length)?`<div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--linha)"><b style="font-size:12px;color:var(--azul2)">Histórico</b>${o.historicoPrazo.map(function(h){return '<div class="muted" style="padding:4px 0;border-bottom:1px solid var(--linha);font-size:12px">'+fmtDataCurta((h.quando||"").slice(0,10))+' — '+h.de+' → '+h.para+' dias ('+esc(h.quem)+')</div>';}).join("")}</div>`:""}</div></div>`;
+ var souGestora=souGestoraFormacaoLogada()&&role!=="admin";
+ var botaoTxt=(souGestora&&!o.pedidoPrazo)?"Pedir autorização ao formador":"Guardar";
+ return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharEditarPrazo()"><div class="card" style="padding:22px;width:380px;max-width:94vw"><h3 style="color:var(--azul);margin-bottom:2px">Conceder mais dias</h3><div class="muted" style="margin-bottom:12px">${esc(o.nome)} · prazo actual: ${+o.prazo||30} dias úteis</div>
+  ${pedidoPrazoBannerHTML(o,prazoEdit)}
+  ${o.pedidoPrazo?"":`<label>Dias a adicionar (usa negativo para reduzir)</label><input id="ep_dias" type="number" value="5" style="width:100%"><div class="muted" style="margin-top:6px;font-size:12px">${souGestora?"Fica pendente até o formador autorizar.":(o.email?"O aluno recebe um e-mail automático a avisar.":"Este aluno não tem e-mail registado — não é possível avisar por e-mail.")}</div><div class="flex" style="margin-top:14px"><button class="btn-p" onclick="salvarEditarPrazo()">${botaoTxt}</button><button class="btn-o" onclick="fecharEditarPrazo()">Cancelar</button></div>`}
+  ${o.pedidoPrazo?`<div class="flex" style="margin-top:14px"><button class="btn-o" onclick="fecharEditarPrazo()">Fechar</button></div>`:""}
+  ${(o.historicoPrazo&&o.historicoPrazo.length)?`<div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--linha)"><b style="font-size:12px;color:var(--azul2)">Histórico</b>${o.historicoPrazo.map(function(h){return '<div class="muted" style="padding:4px 0;border-bottom:1px solid var(--linha);font-size:12px">'+fmtDataCurta((h.quando||"").slice(0,10))+' — '+h.de+' → '+h.para+' dias ('+esc(h.quem)+')</div>';}).join("")}</div>`:""}
+  ${(o.historicoPedidosPrazo&&o.historicoPedidosPrazo.length)?`<div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--linha)"><b style="font-size:12px;color:var(--azul2)">Histórico de pedidos</b>${o.historicoPedidosPrazo.map(function(h){return '<div class="muted" style="padding:4px 0;border-bottom:1px solid var(--linha);font-size:12px">'+fmtDataCurta((h.pedidoQuando||"").slice(0,10))+' — +'+h.dias+' dia(s), pedido por '+esc(h.pedidoPor)+' — <b>'+esc(h.estado)+'</b> por '+esc(h.resolvidoPor)+'</div>';}).join("")}</div>`:""}
+  </div></div>`;
 }
 function toggleOnline(i,key){const o=data.online[i];if(!o)return;if(key==="recorrente")o.recorrente=!o.recorrente;else o[key]=(o[key]==="Sim")?"Não":"Sim";persist();render();}
 /* L97-4: "Início proposto"/"Horário proposto" só podem ser definidos por Gestão, Formador ou
@@ -4138,6 +4209,7 @@ function avalModalHTML(){if(onDetail===null)return"";const o=data.online[onDetai
    <div class="kpi ${(+o.pdsNaoRealizados||0)?'alert':''}" style="cursor:default"><div class="lab">PDS não realizados</div><div class="val">${+o.pdsNaoRealizados||0}</div></div>
    <div class="kpi" style="cursor:default"><div class="lab">Status</div><div class="val" style="font-size:18px">${esc(o.status||"—")}</div></div>
   </div>
+  ${pedidoPrazoBannerHTML(o,onDetail)}
   ${o.inicio
    ?`<div class="muted" style="margin-top:12px;font-size:12px">Início proposto</div><div style="font-weight:600">${esc(formatarDataExtensa(o.inicio))}${o.horarioProposto?' · '+esc(o.horarioProposto):''}</div><div class="muted" style="margin-top:2px;font-size:12px">Só aparece no comprovativo. Já está definido — para mudar, usa "Mais opções" mais abaixo.</div>`
    :(podeEditarPrazo()
