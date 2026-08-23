@@ -71,7 +71,11 @@ main{padding:24px 26px;max-width:1320px;width:100%}
 .sec{background:#fff;border:1px solid var(--linha);border-radius:14px;padding:18px;margin-top:18px;box-shadow:var(--sombra);overflow-x:auto}
 .sec h2{font-size:17px;color:var(--azul);margin-bottom:2px;font-family:Georgia,'Times New Roman',serif;font-weight:700;display:inline-block;border-bottom:2px solid var(--dour);padding-bottom:3px}
 .sec .muted{margin-bottom:14px}
-table{width:100%;border-collapse:collapse;font-size:13px}
+/* L104: border-collapse:collapse quebra o fundo dos cabeçalhos "sticky" (bug conhecido do Chrome/
+   Blink) — o texto das linhas de baixo aparece a "passar por trás" do cabeçalho fixo ao rolar.
+   As bordas aqui são todas por célula (border-bottom em th,td), não pelo <table>, por isso mudar
+   para separate/border-spacing:0 não muda o visual — só corrige o cabeçalho fixo. */
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
 th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--linha)}
 th{color:#7b869c;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px}
 tr:hover td{background:#fafbfe}
@@ -842,7 +846,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.27";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.28";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
