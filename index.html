@@ -847,7 +847,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.31";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.32";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -1914,6 +1914,13 @@ function atualizarAlertaGlobal(){
    if(meusCertContacto.length){partes.push(meusCertContacto.length+" certificado(s) emitido(s) por resolver o contacto com o formando");destino="online";}
   }
  }
+ /* L107: auditoria de Tarefas do Dia com meta mensurável — visível só à Gestão e a quem for
+    autorizado a atribuir Tarefas do Dia (mesma permissão). Um único alerta persistente por caso;
+    fecha-se na própria página Tarefas do Dia. */
+ if(typeof podeAtribuirTarefasDoDia==="function"&&podeAtribuirTarefasDoDia()&&typeof tarefasMetaIncumprimentosOntem==="function"){
+  var incMetaGlobal=tarefasMetaIncumprimentosOntem();
+  if(incMetaGlobal.length){partes.push(incMetaGlobal.length+" meta(s) de tarefa do dia não cumprida(s) ontem");destino="tarefasdia";}
+ }
  if(!partes.length){el.style.display="none";return;}
  el.textContent="⚠️ "+partes.join(" · ")+" — clica para ver.";
  el.onclick=function(){show(destino);};
@@ -2901,10 +2908,13 @@ function _keyAlertaEquipa(tipo,nome,ref){return tipo+"|"+nome+"|"+ref;}
    lead-parado: chave é a identidade do lead (tel/nome), não os dias em atraso — fica fechado mesmo
    que os dias continuem a subir, até haver um contacto novo que mude ultimoMov (aí o alerta deixa
    de ser gerado de qualquer forma, porque a condição deixa de se verificar). */
-function alertasEquipaGestao(){if(role!=="admin")return [];var ont=_diaUtilAnterior();var mesAtual=new Date().toISOString().slice(0,7);var fechados=data.alertasFechados||{};var out=[];
+/* L107: o alerta "meta" antigo (falha na meta fixa de chamadas do dia) foi retirado daqui —
+   substituído pela auditoria de Tarefas do Dia com meta mensurável (tarefasMetaIncumprimentosOntem,
+   visível em Tarefas do Dia + banner global), para não haver dois avisos diferentes sobre a mesma
+   coisa. O aviso pessoal (alertaMetaOntem, mostrado à própria pessoa) mantém-se — é um lembrete
+   amigável, não um alerta de gestão. */
+function alertasEquipaGestao(){if(role!=="admin")return [];var mesAtual=new Date().toISOString().slice(0,7);var fechados=data.alertasFechados||{};var out=[];
  colaboradoresComMeta().filter(temMetaPropria).forEach(function(n){
-  var sm=statusMetaDia(n,ont);
-  if(sm.util&&!sm.cumpriuChamadas){var k=_keyAlertaEquipa("meta",n,ont);if(!fechados[k])out.push({nome:n,tipo:"meta",txt:"não cumpriu a meta de "+ont+" ("+sm.feitas+"/"+sm.meta+")",key:k});}
   var d=desempenhoPorColaborador(n);
   if((d.chamadasMes||0)>0&&(d.vendas||0)===0){var k2=_keyAlertaEquipa("conversao",n,mesAtual);if(!fechados[k2])out.push({nome:n,tipo:"conversao",txt:"tem "+d.chamadasMes+" chamadas este mês e ainda 0 vendas — conversão fraca",key:k2});}
  });
@@ -6145,6 +6155,68 @@ function editPerfilDep(i){var p=data.perfis[i];if(!p)return;var deps=Object.keys
    uma data futura, ou a repetir em dias da semana escolhidos ("vou repetir sempre que necessário").
    O estado de "feito" reinicia todos os dias (guardado por dia, tarefa e pessoa). */
 function podeAtribuirTarefasDoDia(){return role==="admin"||(currentUser&&currentUser.podeAtribuirTarefas===true);}
+/* L107: meta mensurável opcional numa Tarefa do Dia (geral ou específica) — em vez de confiar na
+   palavra de quem marca "feito", o sistema confirma sozinho a partir de um registo já existente
+   no painel (chamadas registadas, ou conteúdos/vídeos com o link preenchido). Pensado para se
+   estender facilmente a mais fontes mais tarde — basta acrescentar um caso a metaContagemFeita e
+   ao próprio fonte em METATAREFA_FONTES. Reaproveita a mesma permissão podeAtribuirTarefasDoDia()
+   para quem pode configurar/ver a auditoria — Gestão e quem a Gestão autorizar. */
+var METATAREFA_FONTES=["chamadas"].concat((typeof CONTEUDO_TIPOS!=="undefined"?CONTEUDO_TIPOS:[]).map(function(t){return "conteudo:"+t;}));
+function metaFonteLabel(fonte){
+ if(fonte==="chamadas")return "Chamadas registadas";
+ if(fonte&&fonte.indexOf("conteudo:")===0)return fonte.slice(9)+" com link preenchido";
+ return fonte||"";
+}
+function metaContagemFeita(fonte,pessoa,dataISO){
+ if(fonte==="chamadas")return chamadasDoDia(pessoa,dataISO);
+ if(fonte&&fonte.indexOf("conteudo:")===0){
+  var tipo=fonte.slice(9);
+  return (data.conteudos||[]).filter(function(c){return c.responsavel===pessoa&&c.tipo===tipo&&c.dataProducao===dataISO&&!!(c.link&&c.link.trim());}).length;
+ }
+ return 0;
+}
+function metaSelectHTML(idPrefix,valorFonte){
+ return '<select id="'+idPrefix+'_metafonte"><option value="">— sem meta mensurável —</option>'+METATAREFA_FONTES.map(function(f){return '<option value="'+esc(f)+'" '+(valorFonte===f?"selected":"")+'>'+esc(metaFonteLabel(f))+'</option>';}).join("")+'</select>';
+}
+function _pessoasDoDept(dep){return (data.perfis||[]).filter(function(p){return p.departamento===dep;}).map(function(p){return p.nome;}).filter(Boolean);}
+/* Verifica só depois das 10h (tal como pedido), e só o dia de ontem — um único alerta por
+   pessoa+tarefa+dia, guardado na mesma data.alertasFechados já usada pelos outros alertas da
+   equipa, para poder fechar-se sem voltar a aparecer. */
+function tarefasMetaIncumprimentosOntem(){
+ var agora=new Date().toTimeString().slice(0,5);
+ if(agora<"10:00")return [];
+ var d=new Date();d.setDate(d.getDate()-1);var ontemISO=d.toISOString().slice(0,10);
+ var dow=new Date(ontemISO+"T00:00:00").getDay();
+ var fechados=data.alertasFechados||{};
+ var out=[];
+ (data.tarefasGerais||[]).forEach(function(t){
+  if(t.activa===false||!t.meta||!t.meta.fonte||!(+t.meta.alvo>0))return;
+  _pessoasDoDept(t.departamento).forEach(function(pessoa){
+   var feitas=metaContagemFeita(t.meta.fonte,pessoa,ontemISO);
+   if(feitas<+t.meta.alvo){
+    var k=_keyAlertaEquipa("metatarefa",pessoa,t.id+"|"+ontemISO);
+    if(!fechados[k])out.push({pessoa:pessoa,texto:t.texto,fonte:t.meta.fonte,alvo:+t.meta.alvo,feitas:feitas,dia:ontemISO,key:k});
+   }
+  });
+ });
+ (data.tarefasEspecificas||[]).forEach(function(t){
+  if(t.activa===false||!t.meta||!t.meta.fonte||!(+t.meta.alvo>0))return;
+  var aplicava=t.repetir?(Array.isArray(t.dias)&&t.dias.indexOf(dow)>=0):(t.data===ontemISO);
+  if(!aplicava)return;
+  var feitas=metaContagemFeita(t.meta.fonte,t.pessoa,ontemISO);
+  if(feitas<+t.meta.alvo){
+   var k=_keyAlertaEquipa("metatarefa",t.pessoa,t.id+"|"+ontemISO);
+   if(!fechados[k])out.push({pessoa:t.pessoa,texto:t.texto,fonte:t.meta.fonte,alvo:+t.meta.alvo,feitas:feitas,dia:ontemISO,key:k});
+  }
+ });
+ return out;
+}
+function fecharAlertaMetaTarefa(key){
+ if(!podeAtribuirTarefasDoDia())return;
+ if(!data.alertasFechados)data.alertasFechados={};
+ data.alertasFechados[key]={quando:new Date().toISOString(),por:(currentUser&&currentUser.nome)||role};
+ persist();toast("Alerta fechado");render();
+}
 function tarefasGeraisDoDept(dep){return (data.tarefasGerais||[]).filter(function(t){return t.activa!==false&&t.departamento===dep;});}
 function tarefasEspecificasHojeDe(pessoa,dataISO){
  var dow=new Date(dataISO+"T00:00:00").getDay();
@@ -6172,10 +6244,20 @@ function tarefasDoDiaBarraHTML(){
  var gerais=meuDep?tarefasGeraisDoDept(meuDep):[];
  var especificas=tarefasEspecificasHojeDe(me,hoje);
  if(!gerais.length&&!especificas.length)return"";
+ /* L107: tarefas com meta mensurável confirmam-se sozinhas a partir do registo real (chamadas,
+    conteúdos…) — não têm caixa de marcar, mostram sempre "feitas/alvo" a actualizar sozinho. */
+ var _tarefaCumprida=function(t,tipo){
+  if(t.meta&&t.meta.fonte&&+t.meta.alvo>0)return metaContagemFeita(t.meta.fonte,me,hoje)>=+t.meta.alvo;
+  return _tarefaDiaFeita(t.id,tipo,me,hoje);
+ };
  var total=gerais.length+especificas.length;
- var feitas=gerais.filter(function(t){return _tarefaDiaFeita(t.id,"geral",me,hoje);}).length+especificas.filter(function(t){return _tarefaDiaFeita(t.id,"especifica",me,hoje);}).length;
+ var feitas=gerais.filter(function(t){return _tarefaCumprida(t,"geral");}).length+especificas.filter(function(t){return _tarefaCumprida(t,"especifica");}).length;
  var meEsc=esc(me).replace(/'/g,"\\'");
  var linha=function(t,tipo){
+  if(t.meta&&t.meta.fonte&&+t.meta.alvo>0){
+   var feitasM=metaContagemFeita(t.meta.fonte,me,hoje);var alvoM=+t.meta.alvo;var cumpriuM=feitasM>=alvoM;
+   return '<div style="padding:5px 0"><div style="display:flex;align-items:center;gap:8px">'+esc(t.texto)+' <span class="pill '+(cumpriuM?"p-verde":"p-dour")+'">'+feitasM+'/'+alvoM+'</span>'+(tipo==="especifica"?' <span class="pill p-dour" style="font-size:9.5px">atribuída</span>':'')+'</div><div class="muted" style="font-size:11px">'+esc(metaFonteLabel(t.meta.fonte))+' — actualiza sozinho, não precisas de marcar.</div></div>';
+  }
   var feito=_tarefaDiaFeita(t.id,tipo,me,hoje);
   return '<label style="display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer'+(feito?';opacity:.55;text-decoration:line-through':'')+'"><input type="checkbox" '+(feito?"checked":"")+' onchange="toggleTarefaDia(\''+t.id+'\',\''+tipo+'\',\''+meEsc+'\')" style="width:auto"> '+esc(t.texto)+(tipo==="especifica"?' <span class="pill p-dour" style="font-size:9.5px">atribuída</span>':'')+'</label>';
  };
@@ -6191,8 +6273,11 @@ function addTarefaGeral(){
  if(!podeAtribuirTarefasDoDia()){toast("Só a Gestão ou quem for autorizado");return;}
  var texto=val("tg_texto");var dep=val("tg_dep");
  if(!(texto||"").trim()||!dep){toast("Preenche o texto e o departamento");return;}
+ var entry={id:"tg"+Date.now(),texto:texto.trim(),departamento:dep,activa:true,criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role};
+ var metaFonte=val("tg_metafonte");var metaAlvo=+val("tg_metaalvo")||0;
+ if(metaFonte&&metaAlvo>0)entry.meta={fonte:metaFonte,alvo:metaAlvo};
  data.tarefasGerais=data.tarefasGerais||[];
- data.tarefasGerais.push({id:"tg"+Date.now(),texto:texto.trim(),departamento:dep,activa:true,criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role});
+ data.tarefasGerais.push(entry);
  persist();toast("Tarefa geral adicionada");render();
 }
 function toggleTarefaGeralActiva(id){if(!podeAtribuirTarefasDoDia())return;var t=(data.tarefasGerais||[]).find(function(x){return x.id===id;});if(!t)return;t.activa=!(t.activa!==false);persist();render();}
@@ -6210,6 +6295,8 @@ function addTarefaEspecifica(){
  }else{
   entry.data=val("te_data")||new Date().toISOString().slice(0,10);
  }
+ var metaFonte=val("te_metafonte");var metaAlvo=+val("te_metaalvo")||0;
+ if(metaFonte&&metaAlvo>0)entry.meta={fonte:metaFonte,alvo:metaAlvo};
  data.tarefasEspecificas=data.tarefasEspecificas||[];
  data.tarefasEspecificas.push(entry);
  persist();toast("Tarefa atribuída a "+pessoa);render();
@@ -6222,21 +6309,28 @@ function vTarefasDia(){
  var gerais=(data.tarefasGerais||[]).slice().sort(function(a,b){return (a.departamento||"").localeCompare(b.departamento||"");});
  var especificas=(data.tarefasEspecificas||[]).slice().sort(function(a,b){return (a.pessoa||"").localeCompare(b.pessoa||"");});
  var pessoas=(data.perfis||[]).map(function(p){return p.nome;}).filter(Boolean);
- return '<div class="sec"><h2>Tarefas gerais por departamento</h2><div class="muted">Aplicam-se todos os dias a toda a gente desse departamento — aparecem no bloco "📋 Tarefas do Dia" de cada pessoa.</div>'
-  +'<div class="formgrid" style="margin-top:8px"><div style="grid-column:1/-1"><label>Texto da tarefa</label><input id="tg_texto" placeholder="ex.: Confirmar presenças do dia"></div><div><label>Departamento</label><select id="tg_dep">'+deps.map(function(d){return '<option>'+esc(d)+'</option>';}).join("")+'</select></div><div style="align-self:end"><button class="btn-p" onclick="addTarefaGeral()">Adicionar</button></div></div>'
+ /* L107: auditoria — quem tinha uma meta mensurável ontem e não bateu certo com o registo real.
+    Só aparece depois das 10h (tarefasMetaIncumprimentosOntem já trata disso) e cada linha fecha-se
+    individualmente, sem voltar a aparecer para o mesmo caso. */
+ var incMeta=(typeof tarefasMetaIncumprimentosOntem==="function")?tarefasMetaIncumprimentosOntem():[];
+ var incMetaHTML=incMeta.length?('<div class="sec" style="border-left:4px solid #C0392B"><h2>⚠️ Metas não cumpridas ontem <span class="pill p-verm">'+incMeta.length+'</span></h2><div class="muted" style="margin-bottom:6px">Comparação automática entre a meta da tarefa e o que ficou mesmo registado no sistema (chamadas, conteúdos, etc.).</div><table><thead><tr><th class="stickyhead">Pessoa</th><th class="stickyhead">Tarefa</th><th class="stickyhead">Meta</th><th class="stickyhead">Feitas</th><th class="stickyhead"></th></tr></thead><tbody>'+incMeta.map(function(x){return '<tr><td>'+esc(x.pessoa)+'</td><td>'+esc(x.texto)+'</td><td>'+x.alvo+'</td><td>'+x.feitas+'</td><td><button class="btn-o" style="padding:3px 8px" onclick="fecharAlertaMetaTarefa(\''+esc(x.key)+'\')">Fechar</button></td></tr>';}).join("")+'</tbody></table></div>'):'';
+ return incMetaHTML
+  +'<div class="sec"><h2>Tarefas gerais por departamento</h2><div class="muted">Aplicam-se todos os dias a toda a gente desse departamento — aparecem no bloco "📋 Tarefas do Dia" de cada pessoa.</div>'
+  +'<div class="formgrid" style="margin-top:8px"><div style="grid-column:1/-1"><label>Texto da tarefa</label><input id="tg_texto" placeholder="ex.: Confirmar presenças do dia"></div><div><label>Departamento</label><select id="tg_dep">'+deps.map(function(d){return '<option>'+esc(d)+'</option>';}).join("")+'</select></div><div><label>Meta mensurável (opcional)</label>'+metaSelectHTML("tg","")+'</div><div><label>Alvo (nº)</label><input id="tg_metaalvo" type="number" min="1" placeholder="ex.: 20"></div><div style="align-self:end"><button class="btn-p" onclick="addTarefaGeral()">Adicionar</button></div></div>'
   +'<table style="margin-top:12px"><thead><tr><th class="stickyhead">Departamento</th><th class="stickyhead">Tarefa</th><th class="stickyhead">Estado</th><th class="stickyhead"></th></tr></thead><tbody>'
-  +(gerais.length?gerais.map(function(t){return '<tr'+(t.activa===false?' style="opacity:.55"':'')+'><td>'+esc(t.departamento)+'</td><td>'+esc(t.texto)+'</td><td><span class="pill '+(t.activa===false?"p-cinza":"p-verde")+'">'+(t.activa===false?"Inactiva":"Activa")+'</span></td><td class="flex" style="gap:6px"><button class="btn-o" style="padding:3px 8px" onclick="toggleTarefaGeralActiva(\''+t.id+'\')">'+(t.activa===false?"Reactivar":"Desactivar")+'</button><button class="btn-o" style="padding:3px 8px" onclick="delTarefaGeral(\''+t.id+'\')">✕</button></td></tr>';}).join(""):'<tr><td colspan="4" class="muted">Sem tarefas gerais ainda.</td></tr>')
+  +(gerais.length?gerais.map(function(t){return '<tr'+(t.activa===false?' style="opacity:.55"':'')+'><td>'+esc(t.departamento)+'</td><td>'+esc(t.texto)+(t.meta?'<div class="muted" style="font-size:11px">Meta: '+esc(metaFonteLabel(t.meta.fonte))+' ≥ '+t.meta.alvo+'</div>':'')+'</td><td><span class="pill '+(t.activa===false?"p-cinza":"p-verde")+'">'+(t.activa===false?"Inactiva":"Activa")+'</span></td><td class="flex" style="gap:6px"><button class="btn-o" style="padding:3px 8px" onclick="toggleTarefaGeralActiva(\''+t.id+'\')">'+(t.activa===false?"Reactivar":"Desactivar")+'</button><button class="btn-o" style="padding:3px 8px" onclick="delTarefaGeral(\''+t.id+'\')">✕</button></td></tr>';}).join(""):'<tr><td colspan="4" class="muted">Sem tarefas gerais ainda.</td></tr>')
   +'</tbody></table></div>'
   +'<div class="sec"><h2>Tarefas específicas (por pessoa)</h2><div class="muted">Atribuídas a uma pessoa concreta — só para hoje/uma data futura, ou a repetir em dias da semana escolhidos.</div>'
   +'<div class="formgrid" style="margin-top:8px"><div style="grid-column:1/-1"><label>Texto da tarefa</label><input id="te_texto" placeholder="ex.: Ligar aos 3 leads mais antigos"></div>'
   +'<div><label>Pessoa</label><select id="te_pessoa"><option value="">— escolhe —</option>'+pessoas.map(function(n){return '<option>'+esc(n)+'</option>';}).join("")+'</select></div>'
+  +'<div><label>Meta mensurável (opcional)</label>'+metaSelectHTML("te","")+'</div><div><label>Alvo (nº)</label><input id="te_metaalvo" type="number" min="1" placeholder="ex.: 2"></div>'
   +'<div><label style="display:flex;align-items:center;gap:6px;margin-top:22px"><input type="checkbox" id="te_rep" style="width:auto" onchange="document.getElementById(\'te_datawrap\').style.display=this.checked?\'none\':\'block\';document.getElementById(\'te_diaswrap\').style.display=this.checked?\'block\':\'none\'"> Repetir semanalmente</label></div>'
   +'</div>'
   +'<div id="te_datawrap" style="margin-top:8px"><label>Para quando (hoje ou data futura)</label><input id="te_data" type="date" value="'+new Date().toISOString().slice(0,10)+'"></div>'
   +'<div id="te_diaswrap" style="display:none;margin-top:8px"><div class="muted" style="margin-bottom:4px">Em que dias da semana?</div><div style="display:flex;flex-wrap:wrap;gap:8px">'+DIAS_NOME.map(function(nm,d){return '<label style="font-weight:400;display:flex;gap:4px;align-items:center;margin:0"><input type="checkbox" class="te_dia" value="'+d+'" style="width:auto"> '+nm+'</label>';}).join("")+'</div></div>'
   +'<div class="row-actions"><button class="btn-p" onclick="addTarefaEspecifica()">Atribuir tarefa</button></div>'
   +'<table style="margin-top:12px"><thead><tr><th class="stickyhead">Pessoa</th><th class="stickyhead">Tarefa</th><th class="stickyhead">Quando</th><th class="stickyhead">Estado</th><th class="stickyhead"></th></tr></thead><tbody>'
-  +(especificas.length?especificas.map(function(t){var quando=t.repetir?("Repete: "+(t.dias||[]).map(function(d){return DIAS_NOME[d];}).join(", ")):fmtDataCurta(t.data);return '<tr'+(t.activa===false?' style="opacity:.55"':'')+'><td>'+esc(t.pessoa)+'</td><td>'+esc(t.texto)+'</td><td>'+esc(quando)+'</td><td><span class="pill '+(t.activa===false?"p-cinza":"p-verde")+'">'+(t.activa===false?"Inactiva":"Activa")+'</span></td><td class="flex" style="gap:6px"><button class="btn-o" style="padding:3px 8px" onclick="toggleTarefaEspecificaActiva(\''+t.id+'\')">'+(t.activa===false?"Reactivar":"Desactivar")+'</button><button class="btn-o" style="padding:3px 8px" onclick="delTarefaEspecifica(\''+t.id+'\')">✕</button></td></tr>';}).join(""):'<tr><td colspan="5" class="muted">Sem tarefas específicas ainda.</td></tr>')
+  +(especificas.length?especificas.map(function(t){var quando=t.repetir?("Repete: "+(t.dias||[]).map(function(d){return DIAS_NOME[d];}).join(", ")):fmtDataCurta(t.data);return '<tr'+(t.activa===false?' style="opacity:.55"':'')+'><td>'+esc(t.pessoa)+'</td><td>'+esc(t.texto)+(t.meta?'<div class="muted" style="font-size:11px">Meta: '+esc(metaFonteLabel(t.meta.fonte))+' ≥ '+t.meta.alvo+'</div>':'')+'</td><td>'+esc(quando)+'</td><td><span class="pill '+(t.activa===false?"p-cinza":"p-verde")+'">'+(t.activa===false?"Inactiva":"Activa")+'</span></td><td class="flex" style="gap:6px"><button class="btn-o" style="padding:3px 8px" onclick="toggleTarefaEspecificaActiva(\''+t.id+'\')">'+(t.activa===false?"Reactivar":"Desactivar")+'</button><button class="btn-o" style="padding:3px 8px" onclick="delTarefaEspecifica(\''+t.id+'\')">✕</button></td></tr>';}).join(""):'<tr><td colspan="5" class="muted">Sem tarefas específicas ainda.</td></tr>')
   +'</tbody></table></div>';
 }
 function podeFotoFormando(){return role==="admin"||(currentUser&&currentUser.funcao==="Gestora de Formação");}
