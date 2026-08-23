@@ -489,6 +489,7 @@ if(!data.perfis.length)data.perfis.push({nome:"Ventura Camilo",funcao:"Gestor",e
  try{autoFecharTurmas();}catch(e){}
  try{autoResumirPausas();}catch(e){}
  try{repararRecorrenciasOrfas();}catch(e){}
+ try{repararInicioOnline();}catch(e){}
  /* L33: qualquer pagamento já marcado como Bónus mas que ainda tenha prestações antigas por resolver
     (de antes de zerar) deixa de contar essas prestações para a receita — corrige de imediato quem já
     foi zerado, sem ser preciso repetir a acção. */
@@ -800,7 +801,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.13";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.14";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -1796,6 +1797,13 @@ function atualizarAlertaGlobal(){
   if(chkInc.length)partes.push(chkInc.length+" incumprimento"+(chkInc.length>1?"s":"")+" de checklist de formação");
   if(role==="admin"){var incTodos=chkFormacaoIncumprimentosTodos();if(incTodos.length)partes.push(incTodos.length+" incumprimento"+(incTodos.length>1?"s":"")+" na equipa");}
  }
+ /* L92-5: leads novos do Quiz/Catálogo por contactar — visível à Gestão e a quem for do
+    departamento Marketing e Vendas. Fica visível (não desaparece sozinho) até o lead ser
+    marcado "Contactado" — sai da contagem "Novo" nesse momento. */
+ if(currentUser&&(currentUser.departamento==="Marketing e Vendas"||role==="admin")){
+  var novosLeadsQuiz=(data.leads||[]).filter(function(l){return (l.canal==="Quiz"||l.canal==="Catálogo")&&l.estado==="Novo";});
+  if(novosLeadsQuiz.length){partes.push(novosLeadsQuiz.length+" lead"+(novosLeadsQuiz.length>1?"s":"")+" do quiz/catálogo por contactar");destino="quizleads";}
+ }
  if(!partes.length){el.style.display="none";return;}
  el.textContent="⚠️ "+partes.join(" · ")+" — clica para ver.";
  el.onclick=function(){show(destino);};
@@ -1935,7 +1943,7 @@ function vFormandos(){
  const _tFiltrada=fTurmaF?turmaByCod(fTurmaF):null;
  if(q&&INSCR===null)carregarInscricoes();
  const _inscPend=q?inscricoesPendentesParaBusca(q,dq):[];
- return `${fFicha?fichaCard(fFicha):""}${confirmarInscricaoModalHTML()}<div class="sec"><h2>Pesquisar formando</h2><div class="muted">Pesquisa pelo número de telefone ou pelo nome. Clica em "Ficha" para o histórico completo. O registo de novas vendas está agora em Marketing &amp; Vendas.</div>
+ return `${fFicha?fichaCard(fFicha):""}${entregaCertModalHTML()}${confirmarInscricaoModalHTML()}<div class="sec"><h2>Pesquisar formando</h2><div class="muted">Pesquisa pelo número de telefone ou pelo nome. Clica em "Ficha" para o histórico completo. O registo de novas vendas está agora em Marketing &amp; Vendas.</div>
   <input id="q_form" class="search" placeholder="Número de telefone ou nome…" value="${esc(fSearch)}" oninput="fSearch=this.value;refocusSearch('q_form');renderDebounced()">
   <div class="flex" style="gap:8px;margin:8px 0;flex-wrap:wrap"><select onchange="fTurmaF=this.value;render()" style="width:auto"><option value="">Todas as turmas</option>${data.turmas.slice().sort((a,b)=>(+b.ed||0)-(+a.ed||0)).map(t=>`<option value="${esc(t.cod)}" ${fTurmaF===t.cod?"selected":""}>${esc(t.ed)}ª — ${esc(t.curso||"")}</option>`).join("")}</select><select onchange="fTurno=this.value;render()" style="width:auto">${turnoOptsHTML(fTurno,fTurmaF)}</select><select onchange="fSort=this.value;render()" style="width:auto"><option value="nome" ${fSort==="nome"?"selected":""}>Ordenar: Nome</option><option value="turma" ${fSort==="turma"?"selected":""}>Ordenar: Turma</option><option value="data" ${fSort==="data"?"selected":""}>Ordenar: Data</option></select><label style="display:flex;align-items:center;gap:5px;font-weight:600;font-size:13px;margin:0"><input type="checkbox" ${fSemEmail?"checked":""} onchange="fSemEmail=this.checked;render()"> Só sem e-mail${_semEmailTot?' <span class="pill p-verm">'+_semEmailTot+'</span>':''}</label></div>
   ${_inscPend.map(function(x){var r=x.r;return '<div class="note" style="background:#eef3fb;border-color:#c7d6f0;color:#1F3864;margin-bottom:8px">📝 <b>'+esc(r.nome||"")+'</b> já se inscreveu pela landing'+(r.curso?' — <b>'+esc(r.curso)+'</b>':'')+(r.edicao?' ('+esc(r.edicao)+'ª ed.)':'')+', ainda por confirmar numa turma. <button class="btn-p" style="padding:4px 10px;margin-left:6px" onclick="abrirConfirmarInscricao('+x.i+')">Confirmar inscrição</button></div>';}).join("")}
@@ -2939,7 +2947,7 @@ function setCustosCertTodos(el){data.custosCertTodosFormadores=el.checked;persis
 function vCertificados(){const q=certSearch.toLowerCase();const dq=q.replace(/\D/g,"");const rows=data.certificados.filter(c=>{const f=data.formandos.find(x=>x.cod===c.cod)||{};if(certEd&&f.turma!==certEd)return false;if(certTurno&&(f.horario||f.turno||"")!==certTurno)return false;if(certEstado&&c.estado!==certEstado)return false;if(!q)return true;const tel=(f.tel||"").replace(/\D/g,"");return (c.nome||"").toLowerCase().includes(q)||(dq&&tel.includes(dq))||(c.cod||"").toLowerCase().includes(q);});
  const porEntregar=data.certificados.filter(c=>c.estado==="Emitido").length;const entregues=data.certificados.filter(c=>c.estado==="Entregue").length;
  const _cAtiv=e=>certEstado===e?'box-shadow:0 0 0 2px var(--azul) inset;':'';
- return `<div class="muted" style="margin-bottom:4px;font-size:12px">Clica num cartão para filtrar a lista por estado.</div><div class="kpigrid" style="margin-bottom:4px">
+ return `${entregaCertModalHTML()}<div class="muted" style="margin-bottom:4px;font-size:12px">Clica num cartão para filtrar a lista por estado.</div><div class="kpigrid" style="margin-bottom:4px">
    <div class="kpi" style="cursor:pointer;${_cAtiv('')}" onclick="certEstado='';render()"><div class="lab">Total de certificados</div><div class="val">${data.certificados.length}</div></div>
    <div class="kpi ${porEntregar>0?'alert':''}" style="cursor:pointer;${_cAtiv('Emitido')}" onclick="certEstado='Emitido';render()"><div class="lab">Emitidos por entregar</div><div class="val">${porEntregar}</div></div>
    <div class="kpi money" style="cursor:pointer;${_cAtiv('Entregue')}" onclick="certEstado='Entregue';render()"><div class="lab">Entregues</div><div class="val">${entregues}</div></div></div>
@@ -2948,7 +2956,7 @@ function vCertificados(){const q=certSearch.toLowerCase();const dq=q.replace(/\D
   <table><thead><tr><th>Código</th><th>Nome</th><th>Curso</th><th>Edição / Turno</th><th>Estado</th><th>Data de entrega</th><th>Recebido?</th><th></th></tr></thead><tbody>
   ${rows.map((c,idx)=>{const i=data.certificados.indexOf(c);const rec=c.estado==="Entregue";const fC=data.formandos.find(x=>x.cod===c.cod)||{};const tC=turmaByCod(fC.turma)||{};return `<tr><td>${esc(c.cod||"—")}</td><td>${esc(c.nome)}${(function(){var pp=payOf(c.cod);return pp&&pp.bonus?' <span class="pill p-dour">Bónus</span>':'';})()}</td><td>${esc(c.curso||"")}</td>
    <td>${tC.ed?esc(tC.ed)+"ª":"—"}${(fC.horario||fC.turno)?'<br><span class="muted">'+esc(fC.horario||fC.turno)+'</span>':''}</td>
-   <td><select onchange="setCert(${i},this.value)" style="padding:5px 8px;width:auto">${CERT_ESTADOS.map(e=>`<option ${c.estado===e?"selected":""}>${e}</option>`).join("")}</select></td>
+   <td><select onchange="setCertOrEntrega(${i},this.value)" style="padding:5px 8px;width:auto">${CERT_ESTADOS.map(e=>`<option ${c.estado===e?"selected":""}>${e}</option>`).join("")}</select></td>
    <td>${rec?(fmtDataCurta(c.data)||"—"):"—"}</td>
    <td><span class="pill ${rec?'p-verde':'p-verm'}">${rec?"Sim":"Não"}</span></td>
    <td><button class="btn-o" style="padding:4px 10px" onclick="delCert(${i})">✕</button></td></tr>`}).join("")||`<tr><td colspan="8" class="muted">Sem certificados. Usa "Gerar da lista de formandos".</td></tr>`}
@@ -2968,7 +2976,60 @@ function delCert(i){if(!confirm("Remover este certificado?"))return;data.certifi
    "por gerar" (sem registo) → Pendente → Emitido → Entregue, com clique para avançar. */
 function certInfoOnline(o){var cod=ensureOnlineCod(o);var idx=data.certificados.findIndex(function(c){return c.cod===cod;});return idx>=0?{idx:idx,c:data.certificados[idx]}:null;}
 function gerarCertOnline(oi){var o=data.online[oi];if(!o)return;if(o.status!=="Concluído"){toast("Só é possível gerar certificado para alunos Concluídos");return;}var cod=ensureOnlineCod(o);if(data.certificados.some(function(c){return c.cod===cod;})){toast("Certificado já existe");render();return;}data.certificados.push({cod:cod,nome:o.nome,curso:o.curso||"Excel (online)",estado:"Pendente",data:"",online:true});persist();toast("Certificado gerado (Pendente)");render();}
-function avancarCertOnline(oi){var o=data.online[oi];if(!o)return;var info=certInfoOnline(o);if(!info){gerarCertOnline(oi);return;}var pos=CERT_ESTADOS.indexOf(info.c.estado);if(pos>=CERT_ESTADOS.length-1){toast("Certificado já Entregue");return;}setCert(info.idx,CERT_ESTADOS[pos+1]);}
+function avancarCertOnline(oi){var o=data.online[oi];if(!o)return;var info=certInfoOnline(o);if(!info){gerarCertOnline(oi);return;}var pos=CERT_ESTADOS.indexOf(info.c.estado);if(pos>=CERT_ESTADOS.length-1){toast("Certificado já Entregue");return;}setCertOrEntrega(info.idx,CERT_ESTADOS[pos+1]);}
+/* L92-9: emitir ≠ entregar. Passar a "Entregue" (seja a partir da Turma Online, da página
+   Certificados, ou da ficha de um formando presencial) deixa de ser uma simples mudança de
+   estado — abre um modal a pedir como foi entregue (presencial, com assinatura desenhada, ou
+   por e-mail), quem entregou, e regista a data automaticamente. Todas as outras transições de
+   estado (Pendente↔Emitido) continuam directas, sem modal. */
+function setCertOrEntrega(i,e){if(e==="Entregue"){abrirEntregaCert(i);return;}setCert(i,e);}
+let entregaCertIdx=null,entregaCertMetodo="Presencial";
+function abrirEntregaCert(i){var c=data.certificados[i];if(!c)return;entregaCertIdx=i;entregaCertMetodo="Presencial";render();}
+function fecharEntregaCert(){entregaCertIdx=null;render();}
+function sigStart(evt){var cv=document.getElementById("sigCanvas");if(!cv)return;cv._sigDrawing=true;sigDraw(evt,true);}
+function sigMove(evt){var cv=document.getElementById("sigCanvas");if(!cv||!cv._sigDrawing)return;sigDraw(evt,false);}
+function sigEnd(){var cv=document.getElementById("sigCanvas");if(cv)cv._sigDrawing=false;}
+function sigDraw(evt,inicio){
+ var cv=document.getElementById("sigCanvas");if(!cv)return;
+ var rect=cv.getBoundingClientRect();
+ var pt=evt.touches?evt.touches[0]:evt;
+ var x=(pt.clientX-rect.left)*(cv.width/rect.width),y=(pt.clientY-rect.top)*(cv.height/rect.height);
+ var ctx=cv.getContext("2d");
+ if(inicio){ctx.beginPath();ctx.moveTo(x,y);}else{ctx.lineTo(x,y);ctx.strokeStyle="#1F3864";ctx.lineWidth=2.4;ctx.lineCap="round";ctx.lineJoin="round";ctx.stroke();}
+ cv._sigHasContent=true;
+ if(evt.cancelable)evt.preventDefault();
+}
+function sigClear(){var cv=document.getElementById("sigCanvas");if(!cv)return;cv.getContext("2d").clearRect(0,0,cv.width,cv.height);cv._sigHasContent=false;}
+function salvarEntregaCert(){
+ if(entregaCertIdx===null)return;var c=data.certificados[entregaCertIdx];if(!c){entregaCertIdx=null;render();return;}
+ var quem=(val("ec_quem")||"").trim();
+ if(!quem){toast("Indica quem entregou");return;}
+ var assinaturaImg="";
+ if(entregaCertMetodo==="Presencial"){
+  var cv=document.getElementById("sigCanvas");
+  if(!cv||!cv._sigHasContent){toast("Falta a assinatura do aluno — pede-lhe para assinar no quadro");return;}
+  assinaturaImg=cv.toDataURL("image/png");
+ }
+ c.estado="Entregue";c.data=new Date().toISOString().slice(0,10);
+ c.entregaMetodo=entregaCertMetodo;c.entregaQuem=quem;c.entregaAssinatura=assinaturaImg;
+ persist();toast("Certificado marcado como Entregue"+(entregaCertMetodo==="E-mail"?" (por e-mail)":""));
+ entregaCertIdx=null;render();
+}
+function entregaCertModalHTML(){
+ if(entregaCertIdx===null)return"";
+ var c=data.certificados[entregaCertIdx];if(!c)return"";
+ var euNome=(currentUser&&currentUser.nome)||"";
+ return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.4);display:grid;place-items:center;z-index:110;padding:16px" onclick="if(event.target===this)fecharEntregaCert()"><div class="card" style="padding:22px;width:420px;max-width:94vw;max-height:92vh;overflow:auto"><h3 style="color:var(--azul);margin-bottom:2px">Entregar certificado</h3><div class="muted" style="margin-bottom:12px">${esc(c.nome)} · ${esc(c.curso||"")}</div>
+  <label>Como foi entregue</label>
+  <div class="flex" style="gap:14px;margin-bottom:10px">
+   <label style="font-weight:400;display:flex;align-items:center;gap:6px"><input type="radio" name="ec_metodo" value="Presencial" ${entregaCertMetodo==="Presencial"?"checked":""} onchange="entregaCertMetodo='Presencial';render()"> Presencial</label>
+   <label style="font-weight:400;display:flex;align-items:center;gap:6px"><input type="radio" name="ec_metodo" value="E-mail" ${entregaCertMetodo==="E-mail"?"checked":""} onchange="entregaCertMetodo='E-mail';render()"> Enviado por e-mail</label>
+  </div>
+  <label>Quem entregou</label><input id="ec_quem" value="${esc(euNome)}" style="margin-bottom:10px">
+  ${entregaCertMetodo==="Presencial"?`<label>Assinatura do aluno (a receber)</label><canvas id="sigCanvas" width="360" height="140" style="width:100%;height:140px;border:1px solid var(--linha);border-radius:8px;background:#fff;touch-action:none;cursor:crosshair" onmousedown="sigStart(event)" onmousemove="sigMove(event)" onmouseup="sigEnd()" onmouseleave="sigEnd()" ontouchstart="sigStart(event)" ontouchmove="sigMove(event)" ontouchend="sigEnd()"></canvas><div class="flex" style="margin-top:6px"><button class="btn-o" style="padding:3px 10px;font-size:12px" onclick="sigClear()">Limpar assinatura</button></div>`:`<div class="muted" style="margin:6px 0">Sem assinatura — só confirma que o certificado foi enviado por e-mail.</div>`}
+  <div class="flex" style="margin-top:16px"><button class="btn-p" onclick="salvarEntregaCert()">Confirmar entrega</button><button class="btn-o" onclick="fecharEntregaCert()">Cancelar</button></div>
+ </div></div>`;
+}
 function certPillOnlineHTML(o,clicavel){var oi=data.online.indexOf(o);var info=certInfoOnline(o);
  if(!info)return clicavel?'<span class="pill p-verm" style="cursor:pointer" title="Clica para gerar o certificado" onclick="gerarCertOnline('+oi+')">Cert.: por gerar</span>':'<span class="pill p-verm">Cert.: por gerar</span>';
  var cor=info.c.estado==="Entregue"?"p-verde":(info.c.estado==="Emitido"?"p-dour":"p-verm");
@@ -3039,6 +3100,15 @@ let onSearch="";let onFilter="";
 /* L85 — estado da reorganização em separadores da Turma Online: aba activa, filtro de nível
    (combinável com onFilter/situação) e formador seleccionado dentro da aba Formadores. */
 let onTab="acomp";let onNivel="";let onFormSel="";
+/* L92-7: mesma conta usada dentro de prazoBarHTML, isolada aqui para o filtro "A terminar em
+   breve" poder usá-la sem duplicar o cálculo. Devolve null quando não há prazo a correr (sem
+   início, ou já concluído). */
+function diasParaConcluirNum(o){
+ if(!o.inicio||o.status==='Concluído')return null;
+ const prazoTot=+o.prazo||30;
+ const prev=addBusinessDays(o.inicio,prazoTot);
+ return diasUteisAte(prev);
+}
 function prazoBarHTML(o){
  if(!o.inicio)return '<span class="muted">—</span>';
  if(o.status==='Concluído')return '<span class="pill p-azul">concluído</span>';
@@ -3060,6 +3130,7 @@ function vOnline(){
  const _tbH=(document.querySelector('.topbar')||{}).offsetHeight||64;
  const hoje=new Date(new Date().toDateString());const wk=new Date(hoje);wk.setDate(hoje.getDate()+7);
  const ativos=data.online.filter(function(o){return o.status!=="Transferido";});
+ try{processarAlertasPrazo(ativos);}catch(e){}
  const semPDS=ativos.filter(function(o){return !o.proximoPDS&&o.status!=="Concluído"&&o.status!=="Parado";}).length;
  const proximos=ativos.filter(function(o){return o.proximoPDS&&new Date(o.proximoPDS)>=hoje&&new Date(o.proximoPDS)<=wk;}).length;
  const concluidosCount=ativos.filter(function(o){return o.status==="Concluído";}).length;
@@ -3075,7 +3146,7 @@ function vOnline(){
     menu lateral geral, que não se mexe. Pensado para caber bem no telemóvel (grelha auto-fit, tal
     como .kpigrid/.formgrid já usados no resto do painel). */
  const kpiRowHtml='<div class="kpigrid" style="margin-bottom:12px">'
-  +'<div class="kpi" style="cursor:pointer" onclick="onFilter=\'\';onTab=\'acomp\';render()"><div class="lab">Alunos online</div><div class="val">'+ativos.length+'</div></div>'
+  +'<div class="kpi" style="cursor:pointer" title="Ver a lista completa de todos os alunos" onclick="onFilter=\'\';onNivel=\'\';onTab=\'acomp\';render();setTimeout(function(){var t=document.querySelector(\'.sec table\');if(t)t.scrollIntoView({behavior:\'smooth\',block:\'start\'});},60)"><div class="lab">Alunos online</div><div class="val">'+ativos.length+'</div></div>'
   +'<div class="kpi" style="cursor:pointer" onclick="onFilter=\'proximos\';onTab=\'acomp\';render()"><div class="lab">PDS nos próximos 7 dias</div><div class="val">'+proximos+'</div></div>'
   +'<div class="kpi '+(semPDS?'alert':'')+'" style="cursor:pointer" onclick="onFilter=\'sem\';onTab=\'acomp\';render()"><div class="lab">Sem PDS agendado</div><div class="val">'+semPDS+'</div></div>'
   +'<div class="kpi"><div class="lab">Activos</div><div class="val">'+activosCount+'</div></div>'
@@ -3108,12 +3179,30 @@ function vOnline(){
   /* L90-4: as duas mensagens automáticas por e-mail (progressão de nível / boas-vindas), em texto
      livre com marcadores {nome} e {link} — editáveis por quem tiver a permissão de L90-3. */
   const _msgsHTML=podeDefsOnline()?('<div class="sec" style="padding:10px 16px"><b style="color:var(--azul)">✉ Mensagens automáticas por e-mail</b><div class="muted" style="margin-top:2px">Enviadas sozinhas: ao subir de nível (parabéns + link do nível novo) e ao registar um aluno pela primeira vez (link do nível Básico). Usa <code>{nome}</code> e <code>{link}</code> — são substituídos pelo nome do aluno e pelo link da Classroom.</div><div class="formgrid" style="margin-top:8px"><div><label>Parabéns por subir de nível</label><textarea id="msg_parabens_nivel" rows="3" onchange="setMsgOnline(\'msgParabensNivel\',this)">'+esc(msgParabensNivel())+'</textarea></div><div><label>Boas-vindas ao novo aluno (nível Básico)</label><textarea id="msg_boasvindas_online" rows="3" onchange="setMsgOnline(\'msgBoasVindasOnline\',this)">'+esc(msgBoasVindasOnline())+'</textarea></div></div></div>'):'';
-  corpo=prazosDefsHTML+'<div class="sec" style="padding:10px 16px"><div class="flex" style="gap:10px;align-items:center;flex-wrap:wrap"><label style="margin:0">Gestora responsável pela Turma Online</label>'+(role==="admin"?respInputHTML("resp_online",respOnline,"—")+'<button class="btn-o" style="padding:5px 12px" onclick="setRespOnline()">Guardar</button>':'<b>'+esc(respOnline||"—")+'</b>')+'</div></div>'+_formadoresDefHTML+_msgsHTML+(role!=="admin"&&!podeDefsOnline()?'<div class="muted" style="padding:0 16px">Prazo por nível, formadores e mensagens: só a Gestão (ou quem for autorizado) pode ver e alterar.</div>':'');
+  /* L92-7: alerta "a terminar em breve" — desligado por defeito, sem dias-limite nem intervalo
+     pré-definidos (a pedido do Ventura, para não mandar e-mail a ninguém antes dos dados estarem
+     organizados). Só a Gestão (ou quem tiver a permissão de Definições) vê e configura isto. */
+  const _prazoAlertaHTML=podeDefsOnline()?('<div class="sec" style="padding:10px 16px"><b style="color:var(--azul)">⏰ Alerta "A terminar em breve"</b><div class="muted" style="margin-top:2px">Envia um e-mail automático a quem estiver a poucos dias úteis de terminar o nível. Fica desligado e sem limites até seres tu a preencher — para não mandar nada enquanto os dados não estiverem organizados. Usa <code>{nome}</code> e <code>{dias}</code>.</div><div class="formgrid" style="margin-top:8px"><div><label>Envio automático</label><label class="flex" style="gap:8px;align-items:center;font-weight:400"><input type="checkbox" '+(data.comp&&data.comp.prazoAlertaActivo?"checked":"")+' onchange="setPrazoAlertaActivo(this)"> Ligado</label></div><div><label>Avisar quando faltarem até quantos dias úteis</label><input type="number" min="0" placeholder="por preencher" value="'+((data.comp&&data.comp.prazoAlertaDiasLimite!=null)?esc(String(data.comp.prazoAlertaDiasLimite)):"")+'" onchange="setPrazoAlertaDias(this)"></div><div><label>Intervalo mínimo entre envios ao mesmo aluno (dias)</label><input type="number" min="1" placeholder="por preencher = só envia uma vez" value="'+((data.comp&&data.comp.prazoAlertaIntervalo!=null)?esc(String(data.comp.prazoAlertaIntervalo)):"")+'" onchange="setPrazoAlertaIntervalo(this)"></div><div style="grid-column:1/-1"><label>Mensagem</label><textarea id="msg_prazo_proximo" rows="3" onchange="setPrazoAlertaMsg(this)">'+esc(msgPrazoProximo())+'</textarea></div></div></div>'):'';
+  const _prazoExtHTML=podeDefsOnline()?('<div class="sec" style="padding:10px 16px"><b style="color:var(--azul)">📅 E-mail ao conceder mais dias</b><div class="muted" style="margin-top:2px">Enviado quando alguém (Gestão, Gestora de Formação ou Formador) adiciona dias ao prazo de um aluno, no botão ✎ junto do Prazo. Usa <code>{nome}</code> e <code>{dias}</code>.</div><div class="formgrid" style="margin-top:8px"><div style="grid-column:1/-1"><label>Mensagem</label><textarea id="msg_prazo_extensao" rows="3" onchange="setPrazoExtensaoMsg(this)">'+esc(msgPrazoExtensao())+'</textarea></div></div></div>'):'';
+  /* L92-8b: horário/dia mais comum de PDS, visível a Gestão e Formadores (mesma permissão de
+     podeEditarPrazo, que já cobre Gestão + Gestora de Formação + Formador). */
+  const _pdsHorarioHTML=podeEditarPrazo()?(function(){
+   var an=analisePdsHorarios();
+   var topHoras=Object.keys(an.porHora).sort(function(a,b){return an.porHora[b]-an.porHora[a];}).slice(0,5);
+   var topDias=Object.keys(an.porDia).sort(function(a,b){return an.porDia[b]-an.porDia[a];});
+   if(!an.total)return '<div class="sec" style="padding:10px 16px"><b style="color:var(--azul)">🕒 Horário mais comum de PDS</b><div class="muted" style="margin-top:6px">Ainda não há PDS agendados ou recorrências suficientes para calcular.</div></div>';
+   return '<div class="sec" style="padding:10px 16px"><b style="color:var(--azul)">🕒 Horário mais comum de PDS</b>'
+    +'<div class="muted" style="margin-top:2px">Com base nas recorrências e nos PDS já agendados no sistema — um horário/dia de referência para pensar em turmas ou disponibilidade intermédia.</div>'
+    +'<div class="kpigrid" style="margin-top:8px"><div class="kpi" style="cursor:default"><div class="lab">Horário mais usado</div><div class="val">'+esc(an.melhorHora||"—")+'</div></div><div class="kpi" style="cursor:default"><div class="lab">Dia mais usado</div><div class="val">'+esc(an.melhorDia||"—")+'</div></div></div>'
+    +'<div class="muted" style="margin-top:6px;font-size:12px">Horários — '+topHoras.map(function(h){return esc(h)+' ('+an.porHora[h]+')';}).join(' · ')+'</div>'
+    +'<div class="muted" style="margin-top:2px;font-size:12px">Dias — '+topDias.map(function(d){return esc(DIAS_NOME[+d])+' ('+an.porDia[d]+')';}).join(' · ')+'</div></div>';
+  })():'';
+  corpo=prazosDefsHTML+'<div class="sec" style="padding:10px 16px"><div class="flex" style="gap:10px;align-items:center;flex-wrap:wrap"><label style="margin:0">Gestora responsável pela Turma Online</label>'+(role==="admin"?respInputHTML("resp_online",respOnline,"—")+'<button class="btn-o" style="padding:5px 12px" onclick="setRespOnline()">Guardar</button>':'<b>'+esc(respOnline||"—")+'</b>')+'</div></div>'+_formadoresDefHTML+_msgsHTML+_prazoAlertaHTML+_prazoExtHTML+_pdsHorarioHTML+(role!=="admin"&&!podeDefsOnline()?'<div class="muted" style="padding:0 16px">Prazo por nível, formadores e mensagens: só a Gestão (ou quem for autorizado) pode ver e alterar.</div>':'');
  }else{
   corpo=vOnlineAcompanhamentoHTML(hoje,wk,_theadTop);
  }
 
- return `${pdsPickerHTML()}${avalModalHTML()}${naoRealModalHTML()}${transferOnlineModalHTML()}${atribuirFormadorModalHTML()}${kpiRowHtml}${onTabGridHtml}<div>${corpo}</div>`;
+ return `${pdsPickerHTML()}${avalModalHTML()}${naoRealModalHTML()}${transferOnlineModalHTML()}${atribuirFormadorModalHTML()}${editarPrazoModalHTML()}${entregaCertModalHTML()}${kpiRowHtml}${onTabGridHtml}<div>${corpo}</div>`;
 }
 function vOnlineAcompanhamentoHTML(hoje,wk,theadTop){
  const q=onSearch.toLowerCase();
@@ -3125,13 +3214,15 @@ function vOnlineAcompanhamentoHTML(hoje,wk,theadTop){
   if(id==='pausa')return o.status==='Parado';
   if(id==='sem')return !o.proximoPDS&&o.status!=='Parado'&&o.status!=='Concluído';
   if(id==='concluido')return o.status==='Concluído';
+  if(id==='breve'){var d=diasParaConcluirNum(o);return d!==null&&d>=0&&d<=3;}
   if(id==='proximos')return o.proximoPDS&&new Date(o.proximoPDS)>=hoje&&new Date(o.proximoPDS)<=wk;
   return o.status!=='Concluído';
  };
- const situFiltros=[{id:'',label:'Todos'},{id:'andamento',label:'Em andamento'},{id:'pausa',label:'Em pausa'},{id:'sem',label:'Sem PDS agendado'},{id:'concluido',label:'Concluídos'}];
+ const situFiltros=[{id:'',label:'Todos'},{id:'andamento',label:'Em andamento'},{id:'pausa',label:'Em pausa'},{id:'sem',label:'Sem PDS agendado'},{id:'breve',label:'A terminar em breve'},{id:'concluido',label:'Concluídos'}];
  const situChipsHtml=situFiltros.map(function(f){
   var n=rowsBase.filter(function(o){return _matchSitu(o,f.id)&&(!onNivel||o.nivel===onNivel);}).length;
-  return '<button class="btn-'+(onFilter===f.id?"p":"o")+'" style="padding:6px 12px;flex:0 0 auto" onclick="onFilter=\''+f.id+'\';render()">'+esc(f.label)+' <span class="pill p-cinza" style="padding:1px 7px">'+n+'</span></button>';
+  var breveStyle=(f.id==='breve'&&onFilter!==f.id)?'border-color:#BF9000;color:#8a6200;':'';
+  return '<button class="btn-'+(onFilter===f.id?"p":"o")+'" style="padding:6px 12px;flex:0 0 auto;'+breveStyle+'" onclick="onFilter=\''+f.id+'\';render()">'+esc(f.label)+' <span class="pill '+(f.id==='breve'&&n?'p-dour':'p-cinza')+'" style="padding:1px 7px">'+n+'</span></button>';
  }).join("");
  const nivelListFiltros=[{id:'',label:'Todos'}].concat(NIVEIS.map(function(n){return {id:n,label:n};}));
  const nivelChipsHtml=nivelListFiltros.map(function(f){
@@ -3157,8 +3248,8 @@ function vOnlineAcompanhamentoHTML(hoje,wk,theadTop){
   ${filtroBanner}
   ${agendaHtml}${realizadosHtml}
   <div class="muted" style="margin:8px 0 2px">${onFilter==='concluido'?'A mostrar quem já concluiu — usa o chip &quot;Todos&quot; para voltar a escondê-los.':'Concluídos ficam escondidos por defeito — usa o chip &quot;Concluídos&quot; acima para os ver (com o estado do certificado por aluno).'}</div>
-  <table><thead class="stickyhead" style="top:${+theadTop||110}px"><tr><th>Nome</th><th>Nível</th><th>Fase</th><th>Status</th><th>Tarefa</th><th>Aval.</th><th>PDS feitos</th><th>Prazo</th><th>Próximo PDS</th><th>Formador</th><th>Responsável (venda)</th><th>Situação</th><th></th></tr></thead><tbody>
-  ${rows.map(o=>{const i=data.online.indexOf(o);const fl=pdsFlag(o);const done=o.status==='Concluído';const nivelCell=done?'<span class="pill p-azul">Concluído</span>':(esc(o.nivel||"")+' <button class="btn-o" style="padding:1px 7px" title="Passar ao próximo nível" onclick="proxNivel('+i+')">↑</button>'+((role==="admin"||podeEditar())?' <button class="btn-o" style="padding:1px 7px" title="Gerir/reabrir nível (só Gestão)" onclick="gerirNivel('+i+')">✎</button>':''));const cellTarefa=done?'<span class="muted">—</span>':('<button class="pill '+(o.tarefa==='Sim'?'p-verde':'p-verm')+'" style="border:none;cursor:pointer" onclick="toggleOnline('+i+',&#39;tarefa&#39;)">'+(o.tarefa==='Sim'?'Sim':'Não')+'</button>');const cellAval=done?'<span class="muted">—</span>':('<button class="pill '+(o.avaliacao==='Sim'?'p-verde':'p-verm')+'" style="border:none;cursor:pointer" onclick="toggleOnline('+i+',&#39;avaliacao&#39;)">'+(o.avaliacao==='Sim'?'Sim':'Não')+'</button>');return `<tr><td>${esc(o.nome)}<br><span class="muted">${esc(o.email||"")}</span>${pareceNomeFundido(o.nome)?'<br><span class="pill p-verm" title="Nome com cara de ter dois alunos juntos numa só linha — usa Detalhe → Separar em dois">⚠ possível perfil fundido</span>':''}${done?'<br>'+certPillOnlineHTML(o,true):''}</td><td>${nivelCell}</td><td>${esc(o.fase||"")}</td><td><button class="pill ${o.status==='Concluído'?'p-azul':o.status==='Em andamento'?'p-verde':o.status==='Parado'?'p-dour':'p-verm'}" style="border:none;cursor:pointer" title="Mudar estado" onclick="setStatusOnline(${i})">${esc(o.status||"")}</button>${o.status==='Parado'?'<div class="muted" style="margin-top:2px">⏸ '+(o.pausaRazao?esc(o.pausaRazao)+' — ':'')+'até '+(o.pausaAte?fmtDataCurta(o.pausaAte):'—')+'</div>':''}</td><td>${cellTarefa}</td><td>${cellAval}</td><td style="text-align:center">${+o.pdsFeitos||0}</td><td>${prazoBarHTML(o)} ${role==="admin"?`<button class="btn-o" style="padding:1px 6px;margin-top:3px" title="Editar prazo (só gestão)" onclick="editPrazo(${i})">✎</button>`:""}</td><td>${(function(){syncProx(o);var arr=o.pds||[];var _hs=new Date().toISOString().slice(0,10);var h=arr.map(function(p,pi){var atras=p.data<_hs,hj=p.data===_hs;return '<div style="margin:1px 0;white-space:nowrap">'+fmtDataCurta(p.data)+(p.hora?' '+esc(p.hora):'')+(p.rec?' ♻':'')+(p.parceiro?' 🤝 '+esc(p.parceiro):'')+(atras?' <span class="pill p-verm" style="padding:0 5px">atraso</span>':(hj?' <span class="pill p-dour" style="padding:0 5px">hoje</span>':''))+' <button class="btn-o" style="padding:0 5px" title="Cancelar este PDS" onclick="cancelPdsItem('+i+','+pi+')">✕</button></div>';}).join("")||'<span class="muted">—</span>';var recs=(o.recs||[]).map(function(r,ri){return '<span class="pill p-verde" style="padding:1px 6px;margin:1px 2px 0 0;display:inline-block">♻ '+DIAS_NOME[r.dia]+' '+esc(r.hora||"")+(r.parceiro?' 🤝 '+esc(r.parceiro):'')+' <a onclick="delRec('+i+','+ri+')" style="cursor:pointer">✕</a></span>';}).join("");return h+(recs?'<div style="margin-top:3px">'+recs+'</div>':'');})()}</td><td>${esc(o.formador||"")}</td><td>${o.vendedor?esc(o.vendedor):'<span class="pill p-verm" title="Sem responsável — a comissão desta venda não é atribuída a ninguém">— por definir</span>'}</td><td><span class="pill ${fl.c}">${fl.t}</span></td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:4px 8px" onclick="verDetalhe(${i})">Detalhe</button><button class="btn-g" style="padding:4px 8px" onclick="doPDS(${i})">PDS feito</button><button class="btn-o" style="padding:4px 8px" onclick="naoRealizadoPDS(${i})">Não realizado</button><button class="btn-o" style="padding:4px 8px" onclick="agendarPDS(${i})">+ PDS</button><button class="btn-o" style="padding:4px 8px" title="Enviar link da Classroom deste nível por e-mail" onclick="enviarLinkClassroomOnlineAluno(${i})">✉ Classroom</button>${done?`<button class="btn-o" style="padding:4px 8px;opacity:.4;cursor:not-allowed" title="Aluno já concluiu — não é possível trocar o formador" disabled>🔁 Formador</button>`:`<button class="btn-o" style="padding:4px 8px" title="Atribuir/mudar formador" onclick="abrirAtribuirFormador(${i})">🔁 Formador</button>`}${role==="admin"?`<button class="btn-o" style="padding:4px 8px;color:var(--verm)" title="Eliminar aluno (só Gestão)" onclick="delOnline(${i})">🗑</button>`:""}${rowActEditarOnline(i)}</td></tr>`}).join("")||`<tr><td colspan="12" class="muted">Sem alunos nesta situação/nível.</td></tr>`}
+  <table><thead><tr>${['Nome','Nível','Fase','Status','Tarefa','Aval.','PDS feitos','Prazo','Próximo PDS','Formador','Situação',''].map(function(h){return '<th class="stickyhead" style="top:'+(+theadTop||110)+'px">'+h+'</th>';}).join('')}</tr></thead><tbody>
+  ${rows.map(o=>{const i=data.online.indexOf(o);const fl=pdsFlag(o);const done=o.status==='Concluído';const nivelCell=done?'<span class="pill p-azul">Concluído</span>':(esc(o.nivel||"")+' <button class="btn-o" style="padding:1px 7px" title="Passar ao próximo nível" onclick="proxNivel('+i+')">↑</button>'+((role==="admin"||podeEditar())?' <button class="btn-o" style="padding:1px 7px" title="Gerir/reabrir nível (só Gestão)" onclick="gerirNivel('+i+')">✎</button>':''));const cellTarefa=done?'<span class="muted">—</span>':('<button class="pill '+(o.tarefa==='Sim'?'p-verde':'p-verm')+'" style="border:none;cursor:pointer" onclick="toggleOnline('+i+',&#39;tarefa&#39;)">'+(o.tarefa==='Sim'?'Sim':'Não')+'</button>');const cellAval=done?'<span class="muted">—</span>':('<button class="pill '+(o.avaliacao==='Sim'?'p-verde':'p-verm')+'" style="border:none;cursor:pointer" onclick="toggleOnline('+i+',&#39;avaliacao&#39;)">'+(o.avaliacao==='Sim'?'Sim':'Não')+'</button>');return `<tr><td>${esc(o.nome)}<br><span class="muted">${esc(o.email||"")}</span>${done?'<br>'+certPillOnlineHTML(o,true):''}</td><td>${nivelCell}</td><td>${esc(o.fase||"")}</td><td><button class="pill ${o.status==='Concluído'?'p-azul':o.status==='Em andamento'?'p-verde':o.status==='Parado'?'p-dour':'p-verm'}" style="border:none;cursor:pointer" title="Mudar estado" onclick="setStatusOnline(${i})">${esc(o.status||"")}</button>${o.status==='Parado'?'<div class="muted" style="margin-top:2px">⏸ '+(o.pausaRazao?esc(o.pausaRazao)+' — ':'')+'até '+(o.pausaAte?fmtDataCurta(o.pausaAte):'—')+'</div>':''}</td><td>${cellTarefa}</td><td>${cellAval}</td><td style="text-align:center">${+o.pdsFeitos||0}</td><td>${prazoBarHTML(o)} ${podeEditarPrazo()?`<button class="btn-o" style="padding:1px 6px;margin-top:3px" title="Conceder mais dias (Gestão, Gestora de Formação ou Formador)" onclick="abrirEditarPrazo(${i})">✎</button>`:""}</td><td>${(function(){syncProx(o);var arr=o.pds||[];var _hs=new Date().toISOString().slice(0,10);var h=arr.map(function(p,pi){var atras=p.data<_hs,hj=p.data===_hs;return '<div style="margin:1px 0;white-space:nowrap">'+fmtDataCurta(p.data)+(p.hora?' '+esc(p.hora):'')+(p.rec?' ♻':'')+(p.parceiro?' 🤝 '+esc(p.parceiro):'')+(atras?' <span class="pill p-verm" style="padding:0 5px">atraso</span>':(hj?' <span class="pill p-dour" style="padding:0 5px">hoje</span>':''))+' <button class="btn-o" style="padding:0 5px" title="Cancelar este PDS" onclick="cancelPdsItem('+i+','+pi+')">✕</button></div>';}).join("")||'<span class="muted">—</span>';var recs=(o.recs||[]).map(function(r,ri){return '<span class="pill p-verde" style="padding:1px 6px;margin:1px 2px 0 0;display:inline-block">♻ '+DIAS_NOME[r.dia]+' '+esc(r.hora||"")+(r.parceiro?' 🤝 '+esc(r.parceiro):'')+' <a onclick="delRec('+i+','+ri+')" style="cursor:pointer">✕</a></span>';}).join("");return h+(recs?'<div style="margin-top:3px">'+recs+'</div>':'');})()}</td><td>${esc(o.formador||"")}</td><td><span class="pill ${fl.c}">${fl.t}</span></td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:4px 8px" onclick="verDetalhe(${i})">Detalhe</button><button class="btn-g" style="padding:4px 8px" onclick="doPDS(${i})">PDS feito</button><button class="btn-o" style="padding:4px 8px" onclick="naoRealizadoPDS(${i})">Não realizado</button><button class="btn-o" style="padding:4px 8px" onclick="agendarPDS(${i})">+ PDS</button><button class="btn-o" style="padding:4px 8px" title="Enviar link da Classroom deste nível por e-mail" onclick="enviarLinkClassroomOnlineAluno(${i})">✉ Classroom</button>${done?`<button class="btn-o" style="padding:4px 8px;opacity:.4;cursor:not-allowed" title="Aluno já concluiu — não é possível trocar o formador" disabled>🔁 Formador</button>`:`<button class="btn-o" style="padding:4px 8px" title="Atribuir/mudar formador" onclick="abrirAtribuirFormador(${i})">🔁 Formador</button>`}${role==="admin"?`<button class="btn-o" style="padding:4px 8px;color:var(--verm)" title="Eliminar aluno (só Gestão)" onclick="delOnline(${i})">🗑</button>`:""}${rowActEditarOnline(i)}</td></tr>`}).join("")||`<tr><td colspan="12" class="muted">Sem alunos nesta situação/nível.</td></tr>`}
   </tbody></table></div>`;
 }
 function vOnlineFormadoresHTML(ativos){
@@ -3178,7 +3269,8 @@ function vOnlineFormadoresHTML(ativos){
  }).join("")+'</div>';
  var sel=byF[onFormSel];
  var listaHtml=sel?sel.alunos.slice().sort(function(a,b){return (a.nome||"").localeCompare(b.nome||"");}).map(function(o){
-  return '<div class="flex" style="justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--linha);flex-wrap:wrap"><div><b>'+esc(o.nome)+'</b><div class="muted" style="font-size:12px">'+esc(o.nivel||"—")+(o.status?' · '+esc(o.status):'')+'</div></div><div class="flex" style="gap:16px;align-items:center;flex-wrap:wrap"><div style="text-align:center;min-width:70px"><div class="muted" style="font-size:11px">PDS feitos</div><div style="font-weight:700">'+(+o.pdsFeitos||0)+'</div></div><div style="text-align:center;min-width:100px"><div class="muted" style="font-size:11px">Não realizados</div><div style="font-weight:700">'+(+o.pdsNaoRealizados||0)+'</div></div><div style="min-width:120px"><div class="muted" style="font-size:11px;text-align:center">Dias para concluir</div>'+prazoBarHTML(o)+'</div></div></div>';
+  var oi=data.online.indexOf(o);
+  return '<div class="flex" style="justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--linha);flex-wrap:wrap"><div><b>'+esc(o.nome)+'</b><div class="muted" style="font-size:12px">'+esc(o.nivel||"—")+(o.status?' · '+esc(o.status):'')+'</div></div><div class="flex" style="gap:16px;align-items:center;flex-wrap:wrap"><div style="text-align:center;min-width:70px"><div class="muted" style="font-size:11px">PDS feitos</div><div style="font-weight:700">'+(+o.pdsFeitos||0)+'</div></div><div style="text-align:center;min-width:100px"><div class="muted" style="font-size:11px">Não realizados</div><div style="font-weight:700">'+(+o.pdsNaoRealizados||0)+'</div></div><div style="min-width:120px"><div class="muted" style="font-size:11px;text-align:center">Dias para concluir</div>'+prazoBarHTML(o)+'</div><button class="btn-o" style="padding:4px 10px" onclick="verDetalhe('+oi+')">Detalhe</button></div></div>';
  }).join(""):"";
  return '<div class="sec">'+headerHtml+chipsHtml+(onFormSel?('<h3 style="color:var(--azul2);font-size:14px;margin-bottom:2px">'+esc(onFormSel)+'</h3>'+(listaHtml||'<div class="muted">Sem alunos.</div>')):'<div class="muted">Sem formadores com alunos ainda.</div>')+'</div>';
 }
@@ -3190,7 +3282,7 @@ function vOnlineConcluidosHTML(){
  var lista=data.online.filter(function(o){return o.status==="Concluído"&&(!q||(o.nome||"").toLowerCase().includes(q));}).sort(function(a,b){return (b.concluidoData||"").localeCompare(a.concluidoData||"");});
  var entregues=lista.filter(function(o){var info=certInfoOnline(o);return info&&info.c.estado==="Entregue";}).length;
  var headerHtml='<div class="flex" style="align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px"><h2 style="margin:0">Formandos que concluíram</h2><span class="pill p-cinza">'+lista.length+'</span><span class="pill '+(lista.length&&entregues===lista.length?'p-verde':'p-dour')+'">'+entregues+' de '+lista.length+' já receberam o certificado</span></div>';
- var rowsHtml=lista.map(function(o){var i=data.online.indexOf(o);return '<tr><td>'+esc(o.nome)+'<br><span class="muted">'+esc(o.email||"")+'</span>'+(pareceNomeFundido(o.nome)?'<br><span class="pill p-verm" title="Nome com cara de ter dois alunos juntos numa só linha — usa Detalhe → Separar em dois">⚠ possível perfil fundido</span>':'')+'</td><td>'+esc(o.nivel||"—")+'</td><td>'+esc(o.formador||"—")+'</td><td>'+(o.concluidoData?fmtDataCurta(o.concluidoData):'—')+'</td><td>'+certPillOnlineHTML(o,true)+'</td><td><button class="btn-o" style="padding:4px 8px" onclick="verDetalhe('+i+')">Detalhe</button></td></tr>';}).join("")||'<tr><td colspan="6" class="muted">Ainda ninguém concluiu.</td></tr>';
+ var rowsHtml=lista.map(function(o){var i=data.online.indexOf(o);return '<tr><td>'+esc(o.nome)+'<br><span class="muted">'+esc(o.email||"")+'</span></td><td>'+esc(o.nivel||"—")+'</td><td>'+esc(o.formador||"—")+'</td><td>'+(o.concluidoData?fmtDataCurta(o.concluidoData):'—')+'</td><td>'+certPillOnlineHTML(o,true)+'</td><td><button class="btn-o" style="padding:4px 8px" onclick="verDetalhe('+i+')">Detalhe</button></td></tr>';}).join("")||'<tr><td colspan="6" class="muted">Ainda ninguém concluiu.</td></tr>';
  return '<div class="sec">'+headerHtml
   +'<input id="q_on" class="search" placeholder="Pesquisar por nome…" value="'+esc(onSearch)+'" oninput="onSearch=this.value;refocusSearch(\'q_on\');renderDebounced()">'
   +'<table style="margin-top:10px"><thead><tr><th>Nome</th><th>Nível</th><th>Formador</th><th>Concluiu em</th><th>Certificado</th><th></th></tr></thead><tbody>'+rowsHtml+'</tbody></table></div>';
@@ -3201,7 +3293,55 @@ function addOnline(){const nome=val("o_nome");if(!nome){toast("Falta o nome");re
  persist();toast("Aluno online gravado");render();}
 function addBusinessDays(dateStr,n){if(!dateStr)return"";let d=new Date(dateStr);let c=0;while(c<(+n||0)){d.setDate(d.getDate()+1);const wd=d.getDay();if(wd!==0&&wd!==6)c++;}return d.toISOString().slice(0,10);}
 function diasUteisAte(dateStr){if(!dateStr)return null;const alvo=new Date(dateStr);alvo.setHours(0,0,0,0);let hoje=new Date(new Date().toDateString());if(alvo<hoje){let x=new Date(alvo),neg=0;while(x<hoje){x.setDate(x.getDate()+1);const wd=x.getDay();if(wd!==0&&wd!==6)neg++;}return -neg;}let d=new Date(hoje),c=0;while(d<alvo){d.setDate(d.getDate()+1);const wd=d.getDay();if(wd!==0&&wd!==6)c++;}return c;}
-function editPrazo(i){const o=data.online[i];if(!o)return;const v=prompt("Prazo em dias úteis:",o.prazo||30);if(v===null)return;o.prazo=+v||30;persist();render();}
+/* L92-7b: conceder mais dias ao prazo do aluno — antes era um prompt() simples, só para Gestão,
+   sem histórico nem e-mail. Agora: Gestão, Gestora de Formação e Formadores podem fazer isto,
+   fica registado no histórico do aluno (visível na ficha, como o histórico de troca de formador),
+   e o aluno recebe um e-mail automático (mensagem configurável nas Definições). */
+/* L92-8b: horário/dia mais comum de PDS — agrega as recorrências (o.recs, o horário fixo semanal
+   de cada aluno) e os PDS já agendados (o.pds, incluindo os pontuais), porque juntos são o retrato
+   mais fiel de quando os PDS acontecem com base no que já está no sistema. Não há um histórico à
+   parte dos PDS já realizados (marcarUmPDS remove a entrada de o.pds ao concluir), por isso esta é
+   a fonte de dados disponível e mais representativa. */
+function analisePdsHorarios(){
+ var porHora={},porDia={},total=0;
+ (data.online||[]).forEach(function(o){
+  if(o.status==="Transferido")return;
+  (o.recs||[]).forEach(function(r){if(r.hora){porHora[r.hora]=(porHora[r.hora]||0)+1;total++;}if(r.dia!=null){porDia[r.dia]=(porDia[r.dia]||0)+1;}});
+  (o.pds||[]).forEach(function(p){if(p.hora){porHora[p.hora]=(porHora[p.hora]||0)+1;total++;}if(p.data){var d=new Date(p.data+"T00:00:00").getDay();porDia[d]=(porDia[d]||0)+1;}});
+ });
+ var melhorHora=Object.keys(porHora).sort(function(a,b){return porHora[b]-porHora[a];})[0]||null;
+ var melhorDiaIdx=Object.keys(porDia).sort(function(a,b){return porDia[b]-porDia[a];})[0];
+ var melhorDia=melhorDiaIdx!=null?DIAS_NOME[+melhorDiaIdx]:null;
+ return {porHora:porHora,porDia:porDia,total:total,melhorHora:melhorHora,melhorDia:melhorDia};
+}
+function podeEditarPrazo(){return role==="admin"||(currentUser&&/gestora de forma|formador/i.test(((currentUser.funcao||"")+" "+(currentUser.categorias||""))));}
+function msgPrazoExtensao(){return (data.comp&&data.comp.msgPrazoExtensao)||"Olá {nome}! O prazo do teu nível actual na Knowledge Angola foi alargado em {dias} dia(s) útil(eis) — tens agora até mais tempo para concluíres com calma.";}
+function setPrazoExtensaoMsg(el){if(!podeDefsOnline()){toast("Sem autorização");return;}if(!data.comp)data.comp={};data.comp.msgPrazoExtensao=el.value;persist();toast("Mensagem guardada");}
+let prazoEdit=null;
+function abrirEditarPrazo(i){if(!podeEditarPrazo()){toast("Sem autorização para alterar o prazo");return;}prazoEdit=i;render();}
+function fecharEditarPrazo(){prazoEdit=null;render();}
+function salvarEditarPrazo(){
+ if(prazoEdit===null)return;var o=data.online[prazoEdit];if(!o){prazoEdit=null;render();return;}
+ if(!podeEditarPrazo()){toast("Sem autorização");prazoEdit=null;render();return;}
+ var add=+val("ep_dias")||0;
+ if(!add){toast("Indica quantos dias adicionar");return;}
+ var antigo=+o.prazo||30;var novo=Math.max(1,antigo+add);
+ if(!Array.isArray(o.historicoPrazo))o.historicoPrazo=[];
+ o.historicoPrazo.unshift({de:antigo,para:novo,dias:add,quem:(currentUser&&currentUser.nome)||role,quando:new Date().toISOString()});
+ o.prazo=novo;persist();
+ if(o.email){
+  var diasTxt=add+(Math.abs(add)===1?" dia útil":" dias úteis");
+  var corpo=msgPrazoExtensao().replace(/\{nome\}/g,o.nome||"").replace(/\{dias\}/g,String(Math.abs(add))).replace(/\n/g,"<br>");
+  filaEmail(o.email,"O teu prazo foi actualizado — Knowledge Angola",corpo);
+ }
+ toast("Prazo actualizado: "+antigo+" → "+novo+" dias úteis"+(o.email?" · e-mail enviado":""));
+ prazoEdit=null;render();
+}
+function editarPrazoModalHTML(){
+ if(prazoEdit===null)return"";
+ var o=data.online[prazoEdit];if(!o)return"";
+ return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharEditarPrazo()"><div class="card" style="padding:22px;width:380px;max-width:94vw"><h3 style="color:var(--azul);margin-bottom:2px">Conceder mais dias</h3><div class="muted" style="margin-bottom:12px">${esc(o.nome)} · prazo actual: ${+o.prazo||30} dias úteis</div><label>Dias a adicionar (usa negativo para reduzir)</label><input id="ep_dias" type="number" value="5" style="width:100%"><div class="muted" style="margin-top:6px;font-size:12px">${o.email?"O aluno recebe um e-mail automático a avisar.":"Este aluno não tem e-mail registado — não é possível avisar por e-mail."}</div><div class="flex" style="margin-top:14px"><button class="btn-p" onclick="salvarEditarPrazo()">Guardar</button><button class="btn-o" onclick="fecharEditarPrazo()">Cancelar</button></div>${(o.historicoPrazo&&o.historicoPrazo.length)?`<div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--linha)"><b style="font-size:12px;color:var(--azul2)">Histórico</b>${o.historicoPrazo.map(function(h){return '<div class="muted" style="padding:4px 0;border-bottom:1px solid var(--linha);font-size:12px">'+fmtDataCurta((h.quando||"").slice(0,10))+' — '+h.de+' → '+h.para+' dias ('+esc(h.quem)+')</div>';}).join("")}</div>`:""}</div></div>`;
+}
 function toggleOnline(i,key){const o=data.online[i];if(!o)return;if(key==="recorrente")o.recorrente=!o.recorrente;else o[key]=(o[key]==="Sim")?"Não":"Sim";persist();render();}
 function setInicioProposto(i,key,el){const o=data.online[i];if(!o)return;o[key]=el.value;persist();toast("Guardado");}
 function setStatusOnline(i){const o=data.online[i];if(!o)return;const eraParado=o.status==="Parado";const s=prompt("Estado do aluno ("+STATUS_ONLINE.join(" / ")+"):",o.status||"Em andamento");if(s===null)return;const sv=s.trim();if(STATUS_ONLINE.indexOf(sv)<0){toast("Estado inválido");return;}o.status=sv;
@@ -3272,7 +3412,22 @@ function repararRecorrenciasOrfas(){
   if(mudou)syncProx(o);
  });
 }
-function marcarUmPDS(o,idx){idx=idx||0;ensurePds(o);var pds=o.pds[idx];o.ultimoPDS=new Date().toISOString().slice(0,10);o.pdsFeitos=(+o.pdsFeitos||0)+1;
+/* L92-2: repara em quem já tinha PDS feitos antes desta regra existir (o.inicio ficava vazio
+   porque dependia do campo manual "Início proposto"). Aproximação: usa a data do último PDS
+   realizado (ultimoPDS) como referência, por não haver histórico da data do 1º PDS. Quem ainda
+   não fez nenhum PDS continua sem prazo a correr — correcto, ainda não começou. */
+function repararInicioOnline(){
+ (data.online||[]).forEach(function(o){
+  if(!o.inicio&&(+o.pdsFeitos||0)>0){o.inicio=o.ultimoPDS||new Date().toISOString().slice(0,10);}
+ });
+}
+function marcarUmPDS(o,idx){idx=idx||0;ensurePds(o);var pds=o.pds[idx];
+ /* L92-2: a data de "início" (usada em prazoBarHTML para calcular "Dias para concluir") passa a
+    ser preenchida automaticamente na primeira vez que um PDS é marcado como realizado, em vez de
+    depender de um campo "Início proposto" que muitas vezes ficava vazio e deixava o prazo em
+    branco ("—") mesmo com o aluno já em andamento. Só define se ainda não houver data. */
+ if(!o.inicio)o.inicio=new Date().toISOString().slice(0,10);
+ o.ultimoPDS=new Date().toISOString().slice(0,10);o.pdsFeitos=(+o.pdsFeitos||0)+1;
  if(pds){o.pds.splice(idx,1);if(pds.rec){var wd=new Date(pds.data).getDay();var recMatch=(o.recs||[]).find(function(r){return r.dia===wd;});if(recMatch){var nd=new Date(pds.data);nd.setDate(nd.getDate()+7);o.pds.push({data:nd.toISOString().slice(0,10),hora:pds.hora,rec:true,groupId:recMatch.groupId||null,parceiro:recMatch.parceiro||null});}}}
  syncProx(o);}
 function doPDS(i){const o=data.online[i];if(!o)return;if(o.status==="Parado"){toast("Aluno em pausa — não dá para marcar PDS");return;}var comb=prompt("O que ficou combinado até ao próximo encontro? (opcional)","");if(comb===null)return;comb=(comb||"").trim();ensurePds(o);syncProx(o);const alvo=o.pds[0];const gid=alvo?alvo.groupId:null;const ddAlvo=alvo?alvo.data:null;
@@ -3394,7 +3549,6 @@ function desvincularFormadorOnline(nome){
    ferramenta é manual: sinaliza os nomes com cara de fundidos, e "Separar em dois" duplica o
    registo inteiro (PDS, nível, formador, pagamentos associados ficam ligados ao código antigo)
    para a Gestão editar o nome/nível/e-mail de cada cópia separadamente, sem perder nada. */
-function pareceNomeFundido(nome){if(!nome)return false;if(nome.indexOf(" - ")>=0||nome.indexOf(" e ")>0)return true;if(nome.length>38)return true;return (nome.match(/\s/g)||[]).length>=5;}
 function separarAlunoOnline(i){
  if(role!=="admin"){toast("Só a Gestão pode separar perfis");return;}
  var o=data.online[i];if(!o)return;
@@ -3471,6 +3625,7 @@ function avalModalHTML(){if(onDetail===null)return"";const o=data.online[onDetai
  const mailto=o.email?("mailto:"+encodeURIComponent(o.email)+"?subject="+encodeURIComponent("Parabéns pela conclusão — Knowledge Angola")+"&body="+encodeURIComponent(parabensTxt(o))):"";
  return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharDetalhe()"><div class="card" style="padding:22px;width:520px;max-width:94vw;max-height:88vh;overflow:auto"><div class="flex"><h2 style="color:var(--azul)">${esc(o.nome)}</h2><div class="spacer"></div><button class="btn-o" style="padding:4px 10px" onclick="fecharDetalhe()">Fechar ✕</button></div>
   <div class="muted" style="margin:2px 0 12px">Turma ${esc(cor)} · Nível ${esc(nivel||"—")}${o.email?' · '+esc(o.email):''}</div>
+  <details style="margin:0 0 12px"><summary class="muted" style="cursor:pointer">Ver mais informações</summary><div style="margin-top:6px;font-size:13px">Responsável (venda): ${o.vendedor?esc(o.vendedor):'<span class="pill p-verm" title="Sem responsável — a comissão desta venda não é atribuída a ninguém">— por definir</span>'}</div></details>
   ${o.status==="Concluído"?`<div class="flex" style="align-items:center;gap:8px;margin:0 0 12px;flex-wrap:wrap"><b style="color:var(--azul)">🎓 Certificado</b>${certPillOnlineHTML(o,true)}</div>`:""}
   <div class="kpigrid" style="grid-template-columns:1fr 1fr 1fr">
    <div class="kpi" style="cursor:default"><div class="lab">Aulas / PDS já dados</div><div class="val">${+o.pdsFeitos||0}</div></div>
@@ -3481,7 +3636,8 @@ function avalModalHTML(){if(onDetail===null)return"";const o=data.online[onDetai
   <div class="muted" style="margin-top:2px;font-size:12px">Só aparece no comprovativo se a data estiver preenchida.</div>
   ${(o.historicoNaoRealizado&&o.historicoNaoRealizado.length)?`<h3 style="color:var(--azul2);font-size:14px;margin:16px 0 4px">Histórico de PDS não realizados</h3>${o.historicoNaoRealizado.slice().reverse().map(h=>`<div class="muted" style="padding:4px 0;border-bottom:1px solid var(--linha)">${fmtDataCurta(h.data)} — ${esc(h.motivo)}</div>`).join("")}`:""}
   ${(o.historicoFormador&&o.historicoFormador.length)?`<h3 style="color:var(--azul2);font-size:14px;margin:16px 0 4px">Histórico de troca de formador</h3>${o.historicoFormador.map(h=>`<div class="muted" style="padding:4px 0;border-bottom:1px solid var(--linha)">${fmtDataCurta((h.quando||"").slice(0,10))} — ${esc(h.de)} → ${esc(h.para)} <span style="opacity:.7">(por ${esc(h.quem)})</span></div>`).join("")}`:""}
-  ${role==="admin"?`<div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--linha)">${pareceNomeFundido(o.nome)?`<div class="muted" style="margin-bottom:6px">⚠ Este nome tem cara de ter dois alunos juntos numa só linha.</div>`:""}<button class="btn-o" style="padding:5px 10px;font-size:12.5px" onclick="separarAlunoOnline(${onDetail})">🧬 Separar em dois</button></div>`:""}
+  ${(o.historicoPrazo&&o.historicoPrazo.length)?`<h3 style="color:var(--azul2);font-size:14px;margin:16px 0 4px">Histórico de alterações ao prazo</h3>${o.historicoPrazo.map(h=>`<div class="muted" style="padding:4px 0;border-bottom:1px solid var(--linha)">${fmtDataCurta((h.quando||"").slice(0,10))} — ${h.de} → ${h.para} dias ${h.dias>0?'(+':'('}${h.dias} d.) <span style="opacity:.7">(por ${esc(h.quem)})</span></div>`).join("")}`:""}
+  ${role==="admin"?`<div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--linha)"><button class="btn-o" style="padding:5px 10px;font-size:12.5px" onclick="separarAlunoOnline(${onDetail})">🧬 Separar em dois</button></div>`:""}
   <h3 style="color:var(--azul2);font-size:14px;margin:16px 0 4px">Percurso do aluno</h3>
   ${percurso}
   <h3 style="color:var(--azul2);font-size:14px;margin:16px 0 4px">Avaliações do nível actual</h3>
@@ -4472,7 +4628,7 @@ function fichaCard(cod){const f=data.formandos.find(x=>x.cod===cod);if(!f)return
    <div><label>Registado por</label><div>${esc(f.criadoPor||f.vendedor||"—")}</div></div>
    ${role==="admin"?`<div><label>Formador potencial</label><div>${f.formadorPotencial?'<span class="pill p-dour">✓ Candidato</span> <span class="muted" style="font-size:11px">'+esc(f.formadorPotencialNota||"")+'</span>':'<span class="muted">—</span>'} <button class="btn-o" style="padding:2px 8px;font-size:12px" onclick="toggleFormadorPotencial('${esc(f.cod)}')">${f.formadorPotencial?"Retirar":"Marcar como candidato"}</button></div></div>`:""}
    <div><label>Pagamento</label><div>${d>0?'<span class="pill p-verm">Em dívida: '+kz(d)+'</span>':'<span class="pill p-verde">Em dia</span>'} <span class="muted">(${esc(p.plano||"—")})</span>${(d>0&&podeEditar())?' <button class="btn-o" style="padding:2px 8px;font-size:12px" onclick="irPagar(\''+esc(f.cod)+'\')">Registar pagamento</button>':''}${role==="admin"?' · Pago: <b>'+kz(p.pago||0)+'</b> <button class="btn-o" style="padding:2px 8px;font-size:12px" onclick="editPagamentoDeCod(\''+esc(f.cod)+'\')">✎ Editar</button> <button class="btn-o" style="padding:2px 8px;font-size:12px" onclick="zerarBonus(\''+esc(f.cod)+'\')">Zerar (bónus)</button>':''}</div>${pagamentoEditLogHTML(f.cod)}</div>
-   <div><label>Certificado</label><div>${(function(){var c=data.certificados.find(function(x){return x.cod===cod;});return c?'<span class="pill '+(c.estado==="Entregue"?"p-verde":c.estado==="Emitido"?"p-dour":"p-cinza")+'">'+esc(c.estado)+'</span>':'<span class="muted">—</span>';})()}</div></div>
+   <div><label>Certificado</label><div>${(function(){var ci=data.certificados.findIndex(function(x){return x.cod===cod;});var c=ci>=0?data.certificados[ci]:null;if(!c)return '<span class="muted">—</span>';var pill='<span class="pill '+(c.estado==="Entregue"?"p-verde":c.estado==="Emitido"?"p-dour":"p-cinza")+'">'+esc(c.estado)+'</span>';var acao=c.estado!=="Entregue"?' <button class="btn-o" style="padding:2px 8px;font-size:12px" onclick="setCertOrEntrega('+ci+',\''+(c.estado==="Pendente"?"Emitido":"Entregue")+'\')">'+(c.estado==="Pendente"?"Marcar emitido":"Marcar entregue")+'</button>':'';return pill+acao;})()}</div></div>
    <div><label>Faltas</label><div><b>${faltasDe(cod)}</b> <span class="muted">(contadas das presenças)</span></div></div>
    ${faltasDe(cod)>0?`<div><label>Avisou que ia faltar?</label><div>${avisouFalta(f.tel)?'<span class="pill p-dour">Sim</span>':'<span class="pill p-cinza">Não</span>'}</div></div>`:''}
    ${classroomFichaHTML(f)}
@@ -4496,6 +4652,40 @@ function podeClassroom(){return podeDefsOnline()||(currentUser&&/gestora de form
 function msgParabensNivel(){return (data.comp&&data.comp.msgParabensNivel)||"Olá {nome}! 🎉 Parabéns, subiste de nível na tua formação na Knowledge Angola. Aqui está o link da tua próxima aula: {link}";}
 function msgBoasVindasOnline(){return (data.comp&&data.comp.msgBoasVindasOnline)||"Olá {nome}! Bem-vindo(a) à Turma Online da Knowledge Angola. Aqui está o link da Classroom do nível Básico para começares: {link}";}
 function setMsgOnline(campo,el){if(!podeDefsOnline()){toast("Sem autorização");return;}if(!data.comp)data.comp={};data.comp[campo]=el.value;persist();toast("Mensagem guardada");}
+/* L92-7: alerta de "a terminar em breve" — desligado por defeito e sem dias-limite nem intervalo
+   pré-definidos, a pedido do Ventura (dados ainda desorganizados, receio de mandar e-mail a quem
+   já terminou). Só passa a enviar quando a Gestão (ou quem autorizada) ligar o interruptor E
+   preencher os dias-limite. O intervalo entre envios ao mesmo aluno fica vazio = só envia uma vez
+   por aluno enquanto ele estiver na janela (mais seguro do que reenviar todos os dias sem a
+   Gestão ter pedido isso). */
+function msgPrazoProximo(){return (data.comp&&data.comp.msgPrazoProximo)||"Olá {nome}! O prazo para concluíres o teu nível actual na Knowledge Angola está quase a terminar ({dias}). Fala com o teu formador se precisares de apoio.";}
+function setPrazoAlertaMsg(el){if(!podeDefsOnline()){toast("Sem autorização");return;}if(!data.comp)data.comp={};data.comp.msgPrazoProximo=el.value;persist();toast("Mensagem guardada");}
+function setPrazoAlertaDias(el){if(!podeDefsOnline()){toast("Sem autorização");return;}if(!data.comp)data.comp={};var v=el.value===""?null:Math.max(0,+el.value||0);data.comp.prazoAlertaDiasLimite=v;persist();toast("Guardado");}
+function setPrazoAlertaIntervalo(el){if(!podeDefsOnline()){toast("Sem autorização");return;}if(!data.comp)data.comp={};var v=el.value===""?null:Math.max(1,+el.value||0);data.comp.prazoAlertaIntervalo=v;persist();toast("Guardado");}
+function setPrazoAlertaActivo(el){if(!podeDefsOnline()){toast("Sem autorização");return;}if(!data.comp)data.comp={};data.comp.prazoAlertaActivo=el.checked;persist();toast(el.checked?"Envio automático ligado":"Envio automático desligado");render();}
+function processarAlertasPrazo(ativos){
+ if(!data.comp||!data.comp.prazoAlertaActivo)return;
+ var lim=data.comp.prazoAlertaDiasLimite;if(lim===undefined||lim===null)return;
+ var hojeStr=new Date().toISOString().slice(0,10);
+ if(data.comp.prazoAlertaUltimaVarrida===hojeStr)return;
+ data.comp.prazoAlertaUltimaVarrida=hojeStr;
+ var intervalo=data.comp.prazoAlertaIntervalo;
+ var mudou=false;
+ (ativos||[]).forEach(function(o){
+  var d=diasParaConcluirNum(o);if(d===null||d<0||d>lim)return;
+  if(o.ultimoAlertaPrazoEnviado){
+   if(!intervalo)return;
+   var dif=Math.round((new Date(hojeStr)-new Date(o.ultimoAlertaPrazoEnviado))/86400000);
+   if(dif<intervalo)return;
+  }
+  if(!o.email)return;
+  var diasTxt=d===0?"termina hoje":(d===1?"falta 1 dia útil":"faltam "+d+" dias úteis");
+  var corpo=msgPrazoProximo().replace(/\{nome\}/g,o.nome||"").replace(/\{dias\}/g,diasTxt).replace(/\n/g,"<br>");
+  filaEmail(o.email,"O teu prazo está quase a terminar — Knowledge Angola",corpo);
+  o.ultimoAlertaPrazoEnviado=hojeStr;mudou=true;
+ });
+ persist();
+}
 function setClassroomLink(cod,el){var f=data.formandos.find(x=>x.cod===cod);if(!f)return;var t=turmaByCod(f.turma);if(!t){toast("Este formando não tem turma definida");return;}t.classroom=el.value.trim();persist();toast("Link da Classroom guardado para a turma");}
 function toggleClassAdd(cod){if(!podeClassroom()){toast("Só a gestão ou a gestora de formação");return;}var f=data.formandos.find(x=>x.cod===cod);if(!f)return;f.classroomAdd=!f.classroomAdd;persist();render();}
 function enviarConviteClassroom(cod){if(!podeClassroom()){toast("Só a gestão ou a gestora de formação");return;}var f=data.formandos.find(x=>x.cod===cod);if(!f)return;var t=turmaByCod(f.turma);var link=(t&&t.classroom)||"";if(!link){toast("Define primeiro o link da Classroom da turma (na ficha)");return;}var assunto="Google Classroom — "+(t?((t.ed||"")+"ª Edição · "+(t.curso||"")):"Knowledge Angola");var corpo=encodeURIComponent("Olá "+(f.nome||"")+",\n\nJá podes entrar na nossa turma no Google Classroom através deste link:\n"+link+"\n\nQualquer dúvida, fala connosco.\n\nAté já,\nKnowledge Angola");var to=encodeURIComponent(f.email||"");window.open("mailto:"+to+"?subject="+encodeURIComponent(assunto)+"&body="+corpo,"_blank");f.classroomInvite=new Date().toISOString().slice(0,10);persist();toast("E-mail de convite aberto no teu correio");render();}
