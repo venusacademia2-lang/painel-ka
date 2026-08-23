@@ -824,7 +824,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.20";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.21";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -3237,7 +3237,11 @@ function prazoBarHTML(o){
  const cor=f<0?"#C0392B":(f<=Math.ceil(prazoTot*0.25)?"#BF9000":"#2E7D46");
  /* L90: "0 d.úteis" confundia (parecia erro) — frase simples nos casos-limite. */
  const lab=f<0?("em atraso "+(-f)+"d"):(f===0?"Termina hoje":(f===1?"Termina amanhã":f+" d.úteis"));
- return '<div style="background:#eef0f4;border-radius:5px;position:relative;height:17px;min-width:92px" title="Prevista: '+prev+' · '+prazoTot+' dias úteis no nível"><div style="position:absolute;left:0;top:0;bottom:0;background:'+cor+';border-radius:5px;width:'+pct+'%;transition:width .3s"></div><span style="position:relative;display:block;text-align:center;font-size:10.5px;line-height:17px;font-weight:700;color:'+(pct>50?"#fff":"#333")+'">'+lab+'</span></div>';
+ /* L97-3: antes a cor do texto trocava consoante pct>50%, mas o texto fica centrado na barra
+    inteira — quando caía a cavalo da transição barra-colorida/fundo-cinza, ficava ilegível
+    (branco sobre cinza claro, ou escuro sobre a barra colorida). Cor fixa + contorno claro
+    resolve nos dois fundos, sem depender da percentagem preenchida. */
+ return '<div style="background:#eef0f4;border-radius:5px;position:relative;height:17px;min-width:92px" title="Prevista: '+prev+' · '+prazoTot+' dias úteis no nível"><div style="position:absolute;left:0;top:0;bottom:0;background:'+cor+';border-radius:5px;width:'+pct+'%;transition:width .3s"></div><span style="position:relative;display:block;text-align:center;font-size:10.5px;line-height:17px;font-weight:700;color:#1a1a1a;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff">'+lab+'</span></div>';
 }
 function pdsFlag(o){if(o.status==="Concluído")return{t:"Concluído",c:"p-azul"};if(o.status==="Parado")return{t:"Em pausa"+(o.pausaAte?" até "+fmtDataCurta(o.pausaAte):""),c:"p-dour"};const hoje=new Date(new Date().toDateString());
  if(o.proximoPDS){const d=new Date(o.proximoPDS);const diff=(d-hoje)/86400000;if(diff<0)return{t:"PDS em atraso",c:"p-verm"};if(diff<=7)return{t:"PDS esta semana",c:"p-dour"};return{t:"agendado",c:"p-cinza"}}
@@ -3301,7 +3305,8 @@ function vOnline(){
   const _formadoresByName={};ativos.forEach(function(o){var n=o.formador||"—";if(n==="—")return;if(!_formadoresByName[n])_formadoresByName[n]=0;_formadoresByName[n]++;});
   const _formNomes=Object.keys(_formadoresByName).sort();
   const _formadoresDefHTML=role==="admin"?('<div class="sec" style="padding:10px 16px"><b style="color:var(--azul)">Formadores na Turma Online</b><div class="muted" style="margin-top:2px">Desvincular só remove a ligação à Turma Online — o colaborador continua a existir e pode dar aulas presenciais. Os alunos que tinha ficam com o campo Formador em branco (usa "Atribuir formador" na Acompanhamento para reatribuir).</div><div style="margin-top:8px">'+(_formNomes.length?_formNomes.map(function(n){return '<div class="flex" style="justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--linha)"><div>'+esc(n)+' <span class="muted">('+_formadoresByName[n]+' aluno(s))</span></div><button class="btn-o" style="padding:3px 9px" onclick="desvincularFormadorOnline(\''+n.replace(/\'/g,"\\'")+'\')">Desvincular</button></div>';}).join(""):'<div class="muted">Sem formadores com alunos activos na Turma Online.</div>')+'</div>'
-   +'<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--linha)"><label>Código para trocar formador (autoriza quem não tem a permissão activada em Permissões)</label><input id="cf_codform" value="'+esc((data.comp&&data.comp.codFormador)||'')+'" placeholder="Vazio = só Gestão ou quem tem autorização activada. Ex.: 1357" onchange="setCodFormador(this)"></div></div>'):'';
+   +'<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--linha)"><label>Código para trocar formador (autoriza quem não tem a permissão activada em Permissões)</label><input id="cf_codform" value="'+esc((data.comp&&data.comp.codFormador)||'')+'" placeholder="Vazio = só Gestão ou quem tem autorização activada. Ex.: 1357" onchange="setCodFormador(this)"></div>'
+   +'<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--linha)"><label>Código para eliminar formando / reeditar Início e Horário propostos (próprio, diferente do de cima)</label><input id="cf_codficha" value="'+esc((data.comp&&data.comp.codFichaFormando)||'')+'" placeholder="Vazio = só Gestão. Ex.: 2468" onchange="setCodFichaFormando(this)"></div></div>'):'';
   /* L90-4: as duas mensagens automáticas por e-mail (progressão de nível / boas-vindas), em texto
      livre com marcadores {nome} e {link} — editáveis por quem tiver a permissão de L90-3. */
   const _msgsHTML=podeDefsOnline()?('<div class="sec" style="padding:10px 16px"><b style="color:var(--azul)">✉ Mensagens automáticas por e-mail</b><div class="muted" style="margin-top:2px">Enviadas sozinhas: ao subir de nível (parabéns + link do nível novo), ao registar um aluno pela primeira vez (link do nível Básico) e, se o dia da 1ª aula já vier combinado no registo, ao aluno e ao formador. Usa <code>{nome}</code>, <code>{link}</code>, <code>{data}</code> e <code>{hora}</code> conforme o caso.</div><div class="formgrid" style="margin-top:8px"><div><label>Parabéns por subir de nível</label><textarea id="msg_parabens_nivel" rows="3" onchange="setMsgOnline(\'msgParabensNivel\',this)">'+esc(msgParabensNivel())+'</textarea></div><div><label>Boas-vindas ao novo aluno (nível Básico)</label><textarea id="msg_boasvindas_online" rows="3" onchange="setMsgOnline(\'msgBoasVindasOnline\',this)">'+esc(msgBoasVindasOnline())+'</textarea></div><div><label>1ª aula — para o aluno</label><textarea id="msg_1aaula_aluno" rows="3" onchange="set1aAulaMsg(\'msg1aAulaAluno\',this)">'+esc(msg1aAulaAluno())+'</textarea></div><div><label>1ª aula — para o formador</label><textarea id="msg_1aaula_formador" rows="3" onchange="set1aAulaMsg(\'msg1aAulaFormador\',this)">'+esc(msg1aAulaFormador())+'</textarea></div></div></div>'):'';
@@ -3344,7 +3349,7 @@ function vOnline(){
   corpo=vOnlineAcompanhamentoHTML(hoje,wk,_theadTop);
  }
 
- return `${pdsPickerHTML()}${avalModalHTML()}${naoRealModalHTML()}${transferOnlineModalHTML()}${atribuirFormadorModalHTML()}${editarPrazoModalHTML()}${entregaCertModalHTML()}${formadorPerfilModalHTML()}${formadorIndispModalHTML()}${kpiRowHtml}${onTabGridHtml}${onSecaoNomeHtml}<div>${corpo}</div>`;
+ return `${pdsPickerHTML()}${avalModalHTML()}${naoRealModalHTML()}${transferOnlineModalHTML()}${atribuirFormadorModalHTML()}${editarPrazoModalHTML()}${entregaCertModalHTML()}${formadorPerfilModalHTML()}${formadorIndispModalHTML()}${iniPropModalHTML()}${kpiRowHtml}${onTabGridHtml}${onSecaoNomeHtml}<div>${corpo}</div>`;
 }
 function vOnlineAcompanhamentoHTML(hoje,wk,theadTop){
  const q=onSearch.toLowerCase();
@@ -3527,7 +3532,19 @@ function editarPrazoModalHTML(){
  return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharEditarPrazo()"><div class="card" style="padding:22px;width:380px;max-width:94vw"><h3 style="color:var(--azul);margin-bottom:2px">Conceder mais dias</h3><div class="muted" style="margin-bottom:12px">${esc(o.nome)} · prazo actual: ${+o.prazo||30} dias úteis</div><label>Dias a adicionar (usa negativo para reduzir)</label><input id="ep_dias" type="number" value="5" style="width:100%"><div class="muted" style="margin-top:6px;font-size:12px">${o.email?"O aluno recebe um e-mail automático a avisar.":"Este aluno não tem e-mail registado — não é possível avisar por e-mail."}</div><div class="flex" style="margin-top:14px"><button class="btn-p" onclick="salvarEditarPrazo()">Guardar</button><button class="btn-o" onclick="fecharEditarPrazo()">Cancelar</button></div>${(o.historicoPrazo&&o.historicoPrazo.length)?`<div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--linha)"><b style="font-size:12px;color:var(--azul2)">Histórico</b>${o.historicoPrazo.map(function(h){return '<div class="muted" style="padding:4px 0;border-bottom:1px solid var(--linha);font-size:12px">'+fmtDataCurta((h.quando||"").slice(0,10))+' — '+h.de+' → '+h.para+' dias ('+esc(h.quem)+')</div>';}).join("")}</div>`:""}</div></div>`;
 }
 function toggleOnline(i,key){const o=data.online[i];if(!o)return;if(key==="recorrente")o.recorrente=!o.recorrente;else o[key]=(o[key]==="Sim")?"Não":"Sim";persist();render();}
-function setInicioProposto(i,key,el){const o=data.online[i];if(!o)return;o[key]=el.value;persist();toast("Guardado");}
+/* L97-4: "Início proposto"/"Horário proposto" só podem ser definidos por Gestão, Formador ou
+   Gestora de Formação (podeEditarPrazo já cobre exactamente estes três), e só ficam abertos
+   como campo editável na ficha ENQUANTO ainda não têm valor — depois de gravados uma vez ficam
+   bloqueados: reeditar exige o código próprio (L97-1), a partir de "Mais opções". Cada alteração
+   fica registada em o.historicoInicio (quem, quando, de → para), visível a qualquer pessoa. */
+function setInicioPropostoGuard(i,key,el){
+ const o=data.online[i];if(!o)return;
+ if(!podeEditarPrazo()){toast("Só Gestão, Formador ou Gestora de Formação podem definir isto");render();return;}
+ if(o[key]&&!podeFichaFormandoFinal("Código de autorização (definido pela Gestão) para reeditar o Início/Horário propostos:")){render();return;}
+ if(!Array.isArray(o.historicoInicio))o.historicoInicio=[];
+ o.historicoInicio.push({quando:new Date().toISOString(),quem:(currentUser&&currentUser.nome)||role,campo:key,de:o[key]||"",para:el.value});
+ o[key]=el.value;persist();toast("Guardado");render();
+}
 function setStatusOnline(i){const o=data.online[i];if(!o)return;const eraParado=o.status==="Parado";const s=prompt("Estado do aluno ("+STATUS_ONLINE.join(" / ")+"):",o.status||"Em andamento");if(s===null)return;const sv=s.trim();if(STATUS_ONLINE.indexOf(sv)<0){toast("Estado inválido");return;}o.status=sv;
  if(sv==="Parado"){
   const r=prompt("Razão da pausa:",o.pausaRazao||"");if(r!==null)o.pausaRazao=r.trim();
@@ -3721,7 +3738,49 @@ function pdsPickerHTML(){if(pdsEdit===null)return"";const o=data.online[pdsEdit]
    Google Calendar, esse evento ficava órfão (o aluno já não existia no painel, mas continuava
    a receber/gerar convite). Agora cancela primeiro cada PDS com gcalRef, só depois remove o
    registo. Restrito à Gestão. */
-function delOnline(i){const o=data.online[i];if(!o)return;if(role!=="admin"){toast("Só a gestão pode eliminar um aluno");return;}if(!confirm("Eliminar "+(o.nome||"este aluno")+" da Turma Online? Cancela também os PDS já agendados no Google Calendar."))return;ensurePds(o);(o.pds||[]).forEach(function(p){if(p.gcalRef)filaCancelarCalendario(p.gcalRef,"PDS — "+o.nome);});if(onDetail===i)onDetail=null;data.online.splice(i,1);persist();toast("Aluno eliminado da Turma Online");render()}
+/* L97-2: deixou de ser só-Gestão sem mais — agora Gestão entra sempre, e quem não é Gestão
+   precisa do código próprio (codFichaFormando, L97-1) para eliminar um formando. */
+function delOnline(i){const o=data.online[i];if(!o)return;if(!podeFichaFormandoFinal("Código de autorização (definido pela Gestão) para eliminar este formando:"))return;if(!confirm("Eliminar "+(o.nome||"este aluno")+" da Turma Online? Cancela também os PDS já agendados no Google Calendar."))return;ensurePds(o);(o.pds||[]).forEach(function(p){if(p.gcalRef)filaCancelarCalendario(p.gcalRef,"PDS — "+o.nome);});if(onDetail===i)onDetail=null;data.online.splice(i,1);persist();toast("Aluno eliminado da Turma Online");render()}
+/* L97-2: "Mais opções" — colapsado por defeito na ficha do formando, junta Trocar formador,
+   Editar Início/Horário propostos (só depois de já definidos, com o código) e Eliminar. */
+function maisOpcoesFichaHTML(i,o){
+ var done=o.status==="Concluído";
+ var itens='';
+ itens+=done
+  ?'<div class="muted" style="padding:4px 0" title="Aluno já concluiu — não é possível trocar o formador">🔁 Trocar formador (indisponível)</div>'
+  :'<button class="btn-o" style="padding:5px 10px;font-size:12.5px;margin:2px 6px 2px 0" onclick="abrirAtribuirFormador('+i+')">🔁 Trocar formador</button>';
+ if(o.inicio)itens+='<button class="btn-o" style="padding:5px 10px;font-size:12.5px;margin:2px 6px 2px 0" onclick="abrirIniProp('+i+')">📅 Editar Início/Horário propostos</button>';
+ itens+='<button class="btn-o" style="padding:5px 10px;font-size:12.5px;margin:2px 6px 2px 0;color:#a3311f;border-color:#e5b8ac" onclick="delOnline('+i+')">🗑 Eliminar formando</button>';
+ return '<details class="sec accdet" style="margin-top:14px"><summary>⚙️ Mais opções</summary><div style="padding:8px 2px 2px">'+itens+'</div></details>';
+}
+let iniPropEdit=null;
+function abrirIniProp(i){
+ var o=data.online[i];if(!o)return;
+ if(!podeEditarPrazo()){toast("Só Gestão, Formador ou Gestora de Formação");return;}
+ if(o.inicio&&!podeFichaFormandoFinal("Código de autorização (definido pela Gestão) para reeditar o Início/Horário propostos:"))return;
+ iniPropEdit=i;render();
+}
+function fecharIniProp(){iniPropEdit=null;render();}
+function salvarIniProp(){
+ var i=iniPropEdit;var o=i!=null?data.online[i]:null;if(!o)return;
+ var d=val("ip_data"),h=val("ip_hora");
+ if(!d){toast("Falta a data");return;}
+ if(!Array.isArray(o.historicoInicio))o.historicoInicio=[];
+ o.historicoInicio.push({quando:new Date().toISOString(),quem:(currentUser&&currentUser.nome)||role,campo:"inicio",de:o.inicio||"",para:d});
+ if((o.horarioProposto||"")!==h)o.historicoInicio.push({quando:new Date().toISOString(),quem:(currentUser&&currentUser.nome)||role,campo:"horarioProposto",de:o.horarioProposto||"",para:h});
+ o.inicio=d;o.horarioProposto=h;
+ persist();toast("Início/Horário propostos actualizados");iniPropEdit=null;render();
+}
+function iniPropModalHTML(){
+ if(iniPropEdit==null)return"";
+ var o=data.online[iniPropEdit];if(!o)return"";
+ return '<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharIniProp()"><div class="card" style="padding:22px;width:420px;max-width:94vw">'
+  +'<div class="flex"><h2 style="color:var(--azul)">Início e horário propostos</h2><div class="spacer"></div><button class="btn-o" style="padding:4px 10px" onclick="fecharIniProp()">Fechar ✕</button></div>'
+  +'<div class="muted" style="margin:2px 0 10px;font-size:12.5px">'+esc(o.nome)+' — só aparece no comprovativo se a data estiver preenchida.</div>'
+  +'<div class="formgrid"><div><label>Data</label><input id="ip_data" type="date" value="'+esc(o.inicio||"")+'"></div><div><label>Horário</label><input id="ip_hora" type="time" value="'+esc(o.horarioProposto||"")+'"></div></div>'
+  +'<div class="flex" style="gap:8px;margin-top:16px;justify-content:flex-end"><button class="btn" onclick="salvarIniProp()">Gravar</button></div>'
+  +'</div></div>';
+}
 /* L87-1: "eliminar formador" na Turma Online = só remove a ligação (não apaga o colaborador,
    que continua a existir e pode dar aulas presenciais). Os alunos ficam com Formador em branco;
    a atribuição de um novo formador faz-se depois com "Atribuir formador" (L87-1b). */
@@ -3988,6 +4047,20 @@ function separarAlunoOnline(i){
    momento do clique a quem não é admin nem tem o interruptor activado. Vazio = sem essa via. */
 function codFormadorValor(){return (data.comp&&data.comp.codFormador)||"";}
 function setCodFormador(el){if(role!=="admin")return;if(!data.comp)data.comp={};data.comp.codFormador=(el.value||"").trim();persist();toast("Código de autorização actualizado");}
+/* L97-1: código PRÓPRIO (distinto do codFormador acima) para eliminar um formando da Turma Online
+   e para reeditar "Início proposto"/"Horário proposto" depois de já definidos uma vez — a pedido
+   do Ventura, para não misturar com o código do valor do contrato do formador. */
+function codFichaFormandoValor(){return (data.comp&&data.comp.codFichaFormando)||"";}
+function setCodFichaFormando(el){if(role!=="admin")return;if(!data.comp)data.comp={};data.comp.codFichaFormando=(el.value||"").trim();persist();toast("Código de autorização actualizado");}
+function podeFichaFormandoFinal(msg){
+ if(role==="admin")return true;
+ var c=codFichaFormandoValor();
+ if(!c){toast("Sem autorização — pede à Gestão o código (Definições da Turma Online)");return false;}
+ var e=prompt(msg||"Código de autorização (definido pela Gestão):");
+ if(e===null)return false;
+ if((e||"").trim()!==String(c)){toast("Código errado — não autorizado");return false;}
+ return true;
+}
 function podeAtribuirFormadorFinal(){
  if(role==="admin")return true;
  if(currentUser&&currentUser.podeAtribuirFormador===true)return true;
@@ -4055,12 +4128,16 @@ function avalModalHTML(){if(onDetail===null)return"";const o=data.online[onDetai
    <div class="kpi ${(+o.pdsNaoRealizados||0)?'alert':''}" style="cursor:default"><div class="lab">PDS não realizados</div><div class="val">${+o.pdsNaoRealizados||0}</div></div>
    <div class="kpi" style="cursor:default"><div class="lab">Status</div><div class="val" style="font-size:18px">${esc(o.status||"—")}</div></div>
   </div>
-  <div class="formgrid" style="margin-top:12px"><div><label>Início proposto (data)</label><input type="date" value="${esc(o.inicio||"")}" onchange="setInicioProposto(${onDetail},'inicio',this)"></div><div><label>Horário proposto</label><input type="time" value="${esc(o.horarioProposto||"")}" onchange="setInicioProposto(${onDetail},'horarioProposto',this)"></div></div>
-  <div class="muted" style="margin-top:2px;font-size:12px">Só aparece no comprovativo se a data estiver preenchida.</div>
+  ${o.inicio
+   ?`<div class="muted" style="margin-top:12px;font-size:12px">Início proposto</div><div style="font-weight:600">${esc(formatarDataExtensa(o.inicio))}${o.horarioProposto?' · '+esc(o.horarioProposto):''}</div><div class="muted" style="margin-top:2px;font-size:12px">Só aparece no comprovativo. Já está definido — para mudar, usa "Mais opções" mais abaixo.</div>`
+   :(podeEditarPrazo()
+    ?`<div class="formgrid" style="margin-top:12px"><div><label>Início proposto (data)</label><input type="date" value="" onchange="setInicioPropostoGuard(${onDetail},'inicio',this)"></div><div><label>Horário proposto</label><input type="time" value="" onchange="setInicioPropostoGuard(${onDetail},'horarioProposto',this)"></div></div><div class="muted" style="margin-top:2px;font-size:12px">Só aparece no comprovativo se a data estiver preenchida. Só editável por Gestão, Formador ou Gestora de Formação — e só uma vez.</div>`
+    :`<div class="muted" style="margin-top:12px;font-size:12px">Início proposto: ainda não definido (só Gestão, Formador ou Gestora de Formação podem defini-lo).</div>`)}
+  ${(o.historicoInicio&&o.historicoInicio.length)?`<h3 style="color:var(--azul2);font-size:14px;margin:16px 0 4px">Histórico de Início/Horário propostos</h3>${o.historicoInicio.slice().reverse().map(h=>`<div class="muted" style="padding:4px 0;border-bottom:1px solid var(--linha)">${fmtDataCurta((h.quando||"").slice(0,10))} — ${h.campo==='inicio'?'Data':'Horário'}: ${esc(h.de||"—")} → ${esc(h.para||"—")} <span style="opacity:.7">(por ${esc(h.quem)})</span></div>`).join("")}`:""}
   ${(o.historicoNaoRealizado&&o.historicoNaoRealizado.length)?`<h3 style="color:var(--azul2);font-size:14px;margin:16px 0 4px">Histórico de PDS não realizados</h3>${o.historicoNaoRealizado.slice().reverse().map(h=>`<div class="muted" style="padding:4px 0;border-bottom:1px solid var(--linha)">${fmtDataCurta(h.data)} — ${esc(h.motivo)}</div>`).join("")}`:""}
   ${(o.historicoFormador&&o.historicoFormador.length)?`<h3 style="color:var(--azul2);font-size:14px;margin:16px 0 4px">Histórico de troca de formador</h3>${o.historicoFormador.map(h=>`<div class="muted" style="padding:4px 0;border-bottom:1px solid var(--linha)">${fmtDataCurta((h.quando||"").slice(0,10))} — ${esc(h.de)} → ${esc(h.para)} <span style="opacity:.7">(por ${esc(h.quem)})</span></div>`).join("")}`:""}
   ${(o.historicoPrazo&&o.historicoPrazo.length)?`<h3 style="color:var(--azul2);font-size:14px;margin:16px 0 4px">Histórico de alterações ao prazo</h3>${o.historicoPrazo.map(h=>`<div class="muted" style="padding:4px 0;border-bottom:1px solid var(--linha)">${fmtDataCurta((h.quando||"").slice(0,10))} — ${h.de} → ${h.para} dias ${h.dias>0?'(+':'('}${h.dias} d.) <span style="opacity:.7">(por ${esc(h.quem)})</span></div>`).join("")}`:""}
-  ${role==="admin"?`<div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--linha)"><button class="btn-o" style="padding:5px 10px;font-size:12.5px;color:#a3311f;border-color:#e5b8ac" onclick="delOnline(${onDetail})">🗑 Eliminar formando</button></div>`:""}
+  ${maisOpcoesFichaHTML(onDetail,o)}
   <h3 style="color:var(--azul2);font-size:14px;margin:16px 0 4px">Percurso do aluno</h3>
   ${percurso}
   <h3 style="color:var(--azul2);font-size:14px;margin:16px 0 4px">Avaliações do nível actual</h3>
