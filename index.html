@@ -824,7 +824,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.23";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.24";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -3216,7 +3216,7 @@ function editNota(i){const n=data.notas[i];if(!n)return;const t=prompt("Editar t
 let onSearch="";let onFilter="";
 /* L85 — estado da reorganização em separadores da Turma Online: aba activa, filtro de nível
    (combinável com onFilter/situação) e formador seleccionado dentro da aba Formadores. */
-let onTab="acomp";let onNivel="";let onFormSel="";
+let onTab="acomp";let onNivel="";let onFormSel="";let onFormBuscaAluno="";
 /* L92-7: mesma conta usada dentro de prazoBarHTML, isolada aqui para o filtro "A terminar em
    breve" poder usá-la sem duplicar o cálculo. Devolve null quando não há prazo a correr (sem
    início, ou já concluído). */
@@ -3429,8 +3429,17 @@ function vOnlineFormadoresHTML(ativos){
  (data.formadoresOnline||[]).forEach(function(p){if(p.nome&&!byF[p.nome])byF[p.nome]={alunos:[],ativo:0,concl:0,tot:0};});
  var nomes=Object.keys(byF).sort(function(a,b){return byF[b].tot-byF[a].tot;});
  if(!onFormSel||nomes.indexOf(onFormSel)<0)onFormSel=nomes[0]||"";
+ /* L100-4: pesquisar formando dentro da aba Formadores — filtra os formadores mostrados
+    aos que têm um aluno correspondente, e salta automaticamente para o 1º resultado. */
+ var qAluno=(onFormBuscaAluno||"").toLowerCase().trim();
+ var nomesFiltrados=nomes;
+ if(qAluno){
+  nomesFiltrados=nomes.filter(function(n){return byF[n].alunos.some(function(o){return (o.nome||"").toLowerCase().includes(qAluno);});});
+  if(nomesFiltrados.length&&nomesFiltrados.indexOf(onFormSel)<0){onFormSel=nomesFiltrados[0];}
+ }
+ var buscaAlunoHtml='<div style="margin:10px 0 4px"><input class="search" placeholder="Pesquisar formando…" value="'+esc(onFormBuscaAluno)+'" oninput="onFormBuscaAluno=this.value;renderDebounced()"></div>'+(qAluno&&!nomesFiltrados.length?'<div class="muted" style="font-size:12px">Nenhum formando encontrado com esse nome.</div>':"");
  var headerHtml='<div class="flex" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><h2 style="margin:0">Formadores</h2><div class="flex" style="gap:8px;align-items:center"><span class="pill p-cinza">'+nomes.length+' formador'+(nomes.length===1?"":"es")+'</span>'+(role==="admin"?'<button class="btn" style="padding:6px 12px" onclick="abrirFormadorPerfil(null)">+ Novo perfil de formador</button>':'')+'</div></div>';
- var chipsHtml='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin:10px 0 16px">'+nomes.map(function(n){
+ var chipsHtml='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin:10px 0 16px">'+nomesFiltrados.map(function(n){
   var email=emailDoColaborador(n);
   var temPerfil=!!formadorPerfilByNome(n);
   return '<button class="btn-'+(onFormSel===n?"p":"o")+'" style="padding:10px 12px;text-align:left" onclick="onFormSel=\''+n.replace(/\'/g,"\\'")+'\';render()"><div style="font-weight:700">'+esc(n)+(temPerfil?'':' <span class="pill p-cinza" style="font-size:9.5px;padding:1px 5px;vertical-align:middle">sem perfil</span>')+'</div><div class="muted" style="font-size:11px">'+(email?esc(email)+' · ':'')+byF[n].tot+' aluno(s)</div></button>';
@@ -3450,18 +3459,19 @@ function vOnlineFormadoresHTML(ativos){
     +(perfil.resumo?('<div style="font-size:12.5px;margin-top:4px">'+esc(perfil.resumo)+'</div>'):'')
     +'<div class="muted" style="font-size:12px;margin-top:6px">Dias contratados: '+diasTxt+' · Contrato: '+contratoTxt+'</div>'
     +'</div></div>'
-    +'<div class="flex" style="gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn-o" onclick="abrirFormadorPerfil(\''+nomeEsc+'\')">Editar Perfil</button><button class="btn-o" onclick="abrirFormadorIndisp(\''+nomeEsc+'\')">Marcar indisponibilidade</button></div>'
+    +'<div class="flex" style="gap:8px;margin-top:10px;flex-wrap:wrap">'+(podeEditarPerfisFormador()?'<button class="btn-o" onclick="abrirFormadorPerfil(\''+nomeEsc+'\')">Editar Perfil</button>':'<span class="pill p-cinza" title="Só a Gestão ou quem tiver autorização pode editar">Sem autorização para editar</span>')+'<button class="btn-o" onclick="abrirFormadorIndisp(\''+nomeEsc+'\')">Marcar indisponibilidade</button></div>'
     +formadorGradeHTML(onFormSel)
     +'</div>';
   }else{
-   perfilHtml='<div class="sec" style="padding:12px 16px;margin-bottom:12px"><div class="muted">Ainda sem perfil registado para '+esc(onFormSel)+'.</div><button class="btn" style="margin-top:8px" onclick="abrirFormadorPerfil(\''+nomeEsc+'\')">Criar Perfil</button></div>';
+   perfilHtml='<div class="sec" style="padding:12px 16px;margin-bottom:12px"><div class="muted">Ainda sem perfil registado para '+esc(onFormSel)+'.</div>'+(podeEditarPerfisFormador()?('<button class="btn" style="margin-top:8px" onclick="abrirFormadorPerfil(\''+nomeEsc+'\')">Criar Perfil</button>'):'<div class="muted" style="margin-top:8px;font-size:12px">Sem autorização para criar perfil — pede à Gestão.</div>')+'</div>';
   }
  }
- var listaHtml=sel&&sel.alunos.length?sel.alunos.slice().sort(function(a,b){return (a.nome||"").localeCompare(b.nome||"");}).map(function(o){
+ var alunosSel=sel?sel.alunos.filter(function(o){return !qAluno||(o.nome||"").toLowerCase().includes(qAluno);}):[];
+ var listaHtml=alunosSel.length?alunosSel.slice().sort(function(a,b){return (a.nome||"").localeCompare(b.nome||"");}).map(function(o){
   var oi=data.online.indexOf(o);
   return '<div class="flex" style="justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--linha);flex-wrap:wrap"><div><b>'+esc(o.nome)+'</b><div class="muted" style="font-size:12px">'+esc(o.nivel||"—")+(o.status?' · '+esc(o.status):'')+'</div></div><div class="flex" style="gap:16px;align-items:center;flex-wrap:wrap"><div style="text-align:center;min-width:70px"><div class="muted" style="font-size:11px">PDS feitos</div><div style="font-weight:700">'+(+o.pdsFeitos||0)+'</div></div><div style="text-align:center;min-width:100px"><div class="muted" style="font-size:11px">Não realizados</div><div style="font-weight:700">'+(+o.pdsNaoRealizados||0)+'</div></div><div style="min-width:120px"><div class="muted" style="font-size:11px;text-align:center">Dias para concluir</div>'+prazoBarHTML(o)+'</div><button class="btn-o" style="padding:4px 10px" onclick="verDetalhe('+oi+')">Detalhe</button></div></div>';
  }).join(""):"";
- return '<div class="sec">'+headerHtml+buscarFormadorDisponivelHTML()+chipsHtml+(onFormSel?(perfilHtml+'<h3 style="color:var(--azul2);font-size:14px;margin-bottom:2px">'+esc(onFormSel)+'</h3>'+(listaHtml||'<div class="muted">Sem alunos activos.</div>')):'<div class="muted">Sem formadores ainda.</div>')+'</div>';
+ return '<div class="sec">'+headerHtml+buscaAlunoHtml+buscarFormadorDisponivelHTML()+chipsHtml+(onFormSel?(perfilHtml+'<h3 style="color:var(--azul2);font-size:14px;margin-bottom:2px">'+esc(onFormSel)+'</h3>'+(listaHtml||'<div class="muted">Sem alunos'+(qAluno?" com esse nome":" activos")+'.</div>')):'<div class="muted">Sem formadores ainda.</div>')+'</div>';
 }
 /* L90-1: separador dedicado a quem já concluiu, com o estado do certificado logo visível por
    aluno (reutiliza certPillOnlineHTML, o mesmo usado na Acompanhamento e no Detalhe). O chip
@@ -3911,9 +3921,14 @@ function podeVerValorContratoFormador(){
  if((e||"").trim()!==String(c)){toast("Código errado — não autorizado");return false;}
  return true;
 }
+/* L100-2: editar/criar perfil de formador passa a exigir ser Gestão, ou ter a permissão dedicada
+   "Pode editar perfis de Formador" activada em Permissões — antes qualquer pessoa que visse a
+   aba Formadores podia editar qualquer perfil. */
+function podeEditarPerfisFormador(){return role==="admin"||(currentUser&&currentUser.podeEditarFormadores===true);}
 /* ---- Modal de perfil (criar/editar) ---- */
 let formadorPerfilEditNome=null,formadorPerfilBuffer=null,formadorPerfilVerValor=false;
 function abrirFormadorPerfil(nome){
+ if(!podeEditarPerfisFormador()){toast("Sem autorização para editar perfis de formador — pede à Gestão");return;}
  var existente=nome?formadorPerfilByNome(nome):null;
  formadorPerfilEditNome=nome||"";
  formadorPerfilBuffer=existente?JSON.parse(JSON.stringify(existente)):formadorPerfilVazio("");
@@ -3937,6 +3952,7 @@ function setFormadorPerfilHorario(dia,campo,el){
 function pedirVerValorContratoFormador(){if(podeVerValorContratoFormador()){formadorPerfilVerValor=true;render();}}
 function salvarFormadorPerfil(){
  if(!formadorPerfilBuffer)return;
+ if(!podeEditarPerfisFormador()){toast("Sem autorização para editar perfis de formador");return;}
  var b=formadorPerfilBuffer;
  b.nome=(val("fp_nome")||"").trim();
  if(!b.nome){toast("Falta o nome do formador");return;}
@@ -4003,44 +4019,65 @@ function delFormadorIndisp(nome,idx){
 function _horaDentro(h,ini,fim){return h>=ini&&h<fim;}
 function _isoAddDays(iso,dias){var d=new Date(iso+"T00:00:00");d.setDate(d.getDate()+dias);return d.toISOString().slice(0,10);}
 function _add1h(h){var m=(+h.slice(0,2))+1;return (m<10?"0":"")+m+h.slice(2);}
+/* L100-5: a marcação real de PDS (Teams-style) tem SEMPRE prioridade sobre o horário contratado —
+   um formador pode ter um PDS marcado fora do seu horário habitual (troca pontual, excepção, etc.)
+   e isso continua a aparecer na grelha com o nome do aluno. O horário contratado passa a ser só
+   um destaque visual secundário (o que está "livre" dentro dele), nunca um portão que esconde
+   marcações reais. Devolve {estado, aluno} em vez de uma string simples. */
 function formadorEstadoSlot(nome,dataISO,horaStr){
- var p=formadorPerfilByNome(nome);
- if(!p)return "sem_perfil";
- var dow=new Date(dataISO+"T00:00:00").getDay();
- if(!(Array.isArray(p.diasContratados)&&p.diasContratados.indexOf(dow)>=0))return "fora";
- var h=p.horarioPorDia&&p.horarioPorDia[dow];
- if(!h||!h.inicio||!h.fim||!_horaDentro(horaStr,h.inicio,h.fim))return "fora";
- var indisp=(p.indisponibilidades||[]).some(function(x){return x.data===dataISO&&_horaDentro(horaStr,x.horaInicio,x.horaFim);});
- if(indisp)return "indisponivel";
- var ocupado=(data.online||[]).some(function(o){
+ var aluno=null;
+ (data.online||[]).some(function(o){
   if((o.formador||"")!==nome)return false;
-  return (o.pds||[]).some(function(pd){if(pd.data!==dataISO)return false;var ph=pd.hora||"";if(!ph)return false;return ph>=horaStr&&ph<_add1h(horaStr);});
+  return (o.pds||[]).some(function(pd){if(pd.data!==dataISO)return false;var ph=pd.hora||"";if(!ph)return false;if(ph>=horaStr&&ph<_add1h(horaStr)){aluno=o.nome;return true;}return false;});
  });
- return ocupado?"ocupado":"livre";
+ if(aluno)return {estado:"ocupado",aluno:aluno};
+ var p=formadorPerfilByNome(nome);
+ if(!p)return {estado:"sem_perfil",aluno:null};
+ var dow=new Date(dataISO+"T00:00:00").getDay();
+ var dentro=Array.isArray(p.diasContratados)&&p.diasContratados.indexOf(dow)>=0;
+ var h=p.horarioPorDia&&p.horarioPorDia[dow];
+ if(!dentro||!h||!h.inicio||!h.fim||!_horaDentro(horaStr,h.inicio,h.fim))return {estado:"fora",aluno:null};
+ var indisp=(p.indisponibilidades||[]).some(function(x){return x.data===dataISO&&_horaDentro(horaStr,x.horaInicio,x.horaFim);});
+ if(indisp)return {estado:"indisponivel",aluno:null};
+ return {estado:"livre",aluno:null};
 }
 function formadoresDisponiveisEm(dataISO,horaStr){
- return todosNomesFormadoresOnline().filter(function(n){return formadorEstadoSlot(n,dataISO,horaStr)==="livre";});
+ return todosNomesFormadoresOnline().filter(function(n){return formadorEstadoSlot(n,dataISO,horaStr).estado==="livre";});
 }
 /* ---- Grelha de ocupação/disponibilidade (dia/semana), por formador ---- */
 let formGradeSemanaBase=null;
+/* L100-3: a grelha fica colapsada por defeito — só ocupa espaço quando alguém pede para a ver. */
+let verDispFormador=false;
+function toggleVerDispFormador(){verDispFormador=!verDispFormador;render();}
 function formadorGradeHTML(nome){
  if(!nome)return"";
  var p=formadorPerfilByNome(nome);
+ var toggleHtml='<button class="btn-o" style="margin-top:10px" onclick="toggleVerDispFormador()">'+(verDispFormador?"▾":"▸")+' Ver disponibilidade do formador</button>';
+ if(!verDispFormador)return '<div style="margin-top:4px">'+toggleHtml+'</div>';
  var segISO=formGradeSemanaBase||inicioSemana(new Date()).toISOString().slice(0,10);
  var diasISO=[];for(var i=0;i<7;i++)diasISO.push(_isoAddDays(segISO,i));
  var horas=[];for(var h=7;h<20;h++)horas.push((h<10?"0":"")+h+":00");
  var header='<tr><th style="width:70px">Hora</th>'+diasISO.map(function(diso){var dow=new Date(diso+"T00:00:00").getDay();return '<th style="text-align:center;font-size:12px">'+DIAS_NOME[dow]+'<br><span class="muted" style="font-weight:400">'+fmtDataCurta(diso)+'</span></th>';}).join("")+'</tr>';
  var linhas=horas.map(function(hh){
   return '<tr><td class="muted" style="font-size:12px">'+hh+'</td>'+diasISO.map(function(diso){
-   var est=p?formadorEstadoSlot(nome,diso,hh):"sem_perfil";
-   var label=(est==="fora"||est==="sem_perfil")?"—":(est==="indisponivel"?"Indisp.":(est==="ocupado"?"PDS":"Livre"));
-   var cls=est==="livre"?"p-verde":(est==="ocupado"?"p-verm":(est==="indisponivel"?"p-dour":"p-cinza"));
-   return '<td style="text-align:center;padding:3px"><span class="pill '+cls+'" style="padding:2px 6px;font-size:10.5px">'+label+'</span></td>';
+   /* L100-5: marcações reais de PDS aparecem sempre (estilo Teams: marcação + nome do aluno),
+      independentemente de o formador ter ou não horário contratado configurado para esta hora.
+      O "contratado" só entra como destaque secundário quando o slot está livre. */
+   var r=formadorEstadoSlot(nome,diso,hh);
+   var est=r.estado,alunoNome=r.aluno;
+   var contratado=false;
+   if(p){var dow=new Date(diso+"T00:00:00").getDay();var h2=p.horarioPorDia&&p.horarioPorDia[dow];contratado=Array.isArray(p.diasContratados)&&p.diasContratados.indexOf(dow)>=0&&h2&&h2.inicio&&h2.fim&&_horaDentro(hh,h2.inicio,h2.fim);}
+   var label,cls;
+   if(est==="ocupado"){label=esc(alunoNome||"PDS");cls="p-verm";}
+   else if(est==="indisponivel"){label="Indisp.";cls="p-dour";}
+   else if(est==="livre"){label=contratado?"Livre":"Livre (fora do horário)";cls=contratado?"p-verde":"p-cinza";}
+   else{label="—";cls="p-cinza";}
+   return '<td style="text-align:center;padding:3px'+(contratado&&est!=="ocupado"?';background:rgba(31,56,100,.06)':'')+'"><span class="pill '+cls+'" style="padding:2px 6px;font-size:10.5px" title="'+(est==="ocupado"?"PDS marcado — "+esc(alunoNome||""):(contratado?"Dentro do horário contratado":"Fora do horário contratado"))+'">'+label+'</span></td>';
   }).join("")+'</tr>';
  }).join("");
  var navHtml='<div class="flex" style="gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap"><button class="btn-o" style="padding:4px 10px" onclick="formGradeSemanaBase=\''+_isoAddDays(segISO,-7)+'\';render()">‹ Semana anterior</button><b>'+fmtDataCurta(segISO)+' – '+fmtDataCurta(diasISO[6])+'</b><button class="btn-o" style="padding:4px 10px" onclick="formGradeSemanaBase=\''+_isoAddDays(segISO,7)+'\';render()">Semana seguinte ›</button>'+(formGradeSemanaBase?'<button class="btn-o" style="padding:4px 10px" onclick="formGradeSemanaBase=null;render()">Semana actual</button>':'')+'</div>';
- return '<div style="margin-top:14px">'+navHtml+'<div style="overflow-x:auto"><table style="min-width:640px"><thead>'+header+'</thead><tbody>'+linhas+'</tbody></table></div>'
-  +'<div class="muted" style="font-size:11px;margin-top:6px">Cinza = fora do horário contratado (ou sem perfil) · Verde = disponível · Dourado = indisponibilidade marcada · Vermelho = PDS marcado</div></div>';
+ return '<div style="margin-top:4px">'+toggleHtml+'<div style="margin-top:14px">'+navHtml+'<div style="overflow-x:auto"><table style="min-width:640px"><thead>'+header+'</thead><tbody>'+linhas+'</tbody></table></div>'
+  +'<div class="muted" style="font-size:11px;margin-top:6px">Vermelho = PDS marcado (nome do aluno) · Verde = livre dentro do horário contratado · Cinza = livre mas fora do horário contratado (ou sem perfil) · Dourado = indisponibilidade marcada</div></div></div>';
 }
 /* ---- Pesquisar formador disponível por dia/hora ---- */
 let dispBuscaData="",dispBuscaHora="";
@@ -4193,13 +4230,17 @@ function avaliacoesOnlineFichaHTML(on){var oi=data.online.indexOf(on);var nivel=
   <table style="margin-top:2px"><thead><tr><th>Avaliação</th><th>Estado</th><th>Nota (/20)</th></tr></thead><tbody>
   ${lista.map(function(a){var key=nivel+"::"+a;var d=avals[key];var nota=notas[key];return '<tr><td>'+esc(a)+'</td><td>'+(d?'<span class="pill p-verde">Entregue '+esc(d)+'</span>':'<span class="pill p-verm">Por entregar</span>')+'</td><td><input type="number" min="0" max="20" style="width:70px" value="'+((nota!=null)?esc(String(nota)):"")+'" onchange="setNotaAvalOnline('+oi+',\''+key.replace(/'/g,"\\'")+'\',this.value)"></td></tr>';}).join("")}
   </tbody></table></div>`;}
-function concluirAluno(i){const o=data.online[i];if(!o)return;if(!confirm("Marcar "+o.nome+" como CONCLUÍDO?"))return;o.status="Concluído";o.concluidoData=new Date().toISOString().slice(0,10);persist();toast("Aluno concluído — parabéns preparados");render();}
+/* L100-1: antes o e-mail de parabéns era um link mailto — exigia abrir o e-mail e clicar
+   Enviar à mão. Agora sai sozinho pela fila (filaEmail), tal como os outros e-mails automáticos
+   do sistema; a mensagem continua configurável pela Gestão (data.comp.parabens). */
+function concluirAluno(i){const o=data.online[i];if(!o)return;if(!confirm("Marcar "+o.nome+" como CONCLUÍDO?"))return;o.status="Concluído";o.concluidoData=new Date().toISOString().slice(0,10);
+ if(o.email)filaEmail(o.email,"Parabéns pela conclusão — Knowledge Angola",parabensTxt(o).replace(/\n/g,"<br>"));
+ persist();toast("Aluno concluído"+(o.email?" — e-mail de parabéns enviado":""));render();}
 function parabensTxt(o){const t=(data.comp&&data.comp.parabens)||"Parabéns {nome}! Concluíste a tua formação na Knowledge Angola.";return t.replace(/\{nome\}/g,o.nome||"");}
 function avalModalHTML(){if(onDetail===null)return"";const o=data.online[onDetail];if(!o)return"";const nivel=o.nivel||"";const cor=TURMA_COR[nivel]||"—";const lista=AVALIACOES[nivel]||[];const avals=o.avals||{};const edit=canEditAval();const isGold=nivel==="Expert";
  const passados=o.niveisPassados||[];
  const percurso=NIVEIS.map(n=>{const done=passados.find(x=>x.nivel===n);const isCur=n===nivel;const entregues=(AVALIACOES[n]||[]).filter(a=>avals[n+"::"+a]);return `<div style="padding:6px 0;border-bottom:1px solid var(--linha)"><b>${esc(n)}</b> ${done?'<span class="pill p-verde">passou · '+fmtDataCurta(done.data)+'</span>':(isCur?'<span class="pill p-dour">nível actual</span>':'<span class="pill p-cinza">—</span>')}${entregues.length?'<div class="muted" style="margin-top:2px">Entregues: '+entregues.map(esc).join(", ")+'</div>':''}</div>`;}).join("");
  const linhas=lista.map(a=>{const key=nivel+"::"+a;const d=avals[key];return `<div class="flex" style="justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--linha)"><div>${esc(a)}${d?' <span class="muted">· entregue '+esc(d)+'</span>':''}</div>${edit?`<button class="pill ${d?'p-verde':'p-verm'}" style="border:none;cursor:pointer" onclick="toggleAval(${onDetail},'${esc(key)}')">${d?'Entregue':'Marcar entregue'}</button>`:`<span class="pill ${d?'p-verde':'p-verm'}">${d?'Entregue':'Por entregar'}</span>`}</div>`}).join("")||'<div class="muted">Este nível não tem avaliações listadas.</div>';
- const mailto=o.email?("mailto:"+encodeURIComponent(o.email)+"?subject="+encodeURIComponent("Parabéns pela conclusão — Knowledge Angola")+"&body="+encodeURIComponent(parabensTxt(o))):"";
  return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharDetalhe()"><div class="card" style="padding:22px;width:520px;max-width:94vw;max-height:88vh;overflow:auto"><div class="flex"><h2 style="color:var(--azul)">${esc(o.nome)}</h2><div class="spacer"></div><button class="btn-o" style="padding:4px 10px" onclick="fecharDetalhe()">Fechar ✕</button></div>
   <div class="muted" style="margin:2px 0 12px">Turma ${esc(cor)} · Nível ${esc(nivel||"—")}${o.email?' · '+esc(o.email):''}</div>
   <details style="margin:0 0 12px"><summary class="muted" style="cursor:pointer">Ver mais informações</summary><div style="margin-top:6px;font-size:13px">Responsável (venda): ${o.vendedor?esc(o.vendedor):'<span class="pill p-verm" title="Sem responsável — a comissão desta venda não é atribuída a ninguém">— por definir</span>'}</div></details>
@@ -4224,7 +4265,7 @@ function avalModalHTML(){if(onDetail===null)return"";const o=data.online[onDetai
   ${percurso}
   <h3 style="color:var(--azul2);font-size:14px;margin:16px 0 4px">Avaliações do nível actual</h3>
   ${linhas}
-  ${isGold?`<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--linha)"><div class="muted" style="margin-bottom:8px">Turma Gold — conclusão do curso.</div><div class="row-actions">${o.status==="Concluído"?`<span class="pill p-azul">Concluído em ${esc(o.concluidoData||"")}</span>${mailto?` <a class="btn-g" style="text-decoration:none;color:#fff" href="${mailto}">Enviar parabéns</a>`:""}`:`<button class="btn-p" onclick="concluirAluno(${onDetail})">Aluno concluiu</button>`}</div><div class="note">O e-mail de parabéns e o lembrete no Google Calendar (ao gestor de formação) serão automáticos no deploy Apps Script. Por agora, "Enviar parabéns" abre o e-mail já preenchido.</div></div>`:""}
+  ${isGold?`<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--linha)"><div class="muted" style="margin-bottom:8px">Turma Gold — conclusão do curso.</div><div class="row-actions">${o.status==="Concluído"?`<span class="pill p-azul">Concluído em ${esc(o.concluidoData||"")}</span>`:`<div class="muted" style="margin-bottom:6px;font-size:12.5px">Marca o botão abaixo se o aluno concluiu o curso.</div><button class="btn-p" onclick="concluirAluno(${onDetail})">Concluiu</button>`}</div>${o.status==="Concluído"?`<div class="note">O e-mail de parabéns foi enviado automaticamente ao aluno.</div>`:""}</div>`:""}
   ${transferHistBlockOnline(o,onDetail)}
  </div></div>`;}
 function codTransferValor(){return (data.comp&&data.comp.codTransfer)||"";}
@@ -5745,7 +5786,7 @@ function addPerfil(){const nome=val("pf_nome");if(!nome){toast("Falta o nome");r
 let permEdit=null;
 function editPerms(i){permEdit=i;render();}
 function fecharPerms(){permEdit=null;render();}
-function savePerms(){const p=data.perfis[permEdit];if(!p){permEdit=null;render();return;}const _checked=[...document.querySelectorAll('.pm_aba:checked')].map(c=>c.value);p.bloqueadas=TEAM_ABAS.filter(function(id){return _checked.indexOf(id)<0;});const ex=document.getElementById('pm_export');p.podeExportar=ex?ex.checked:true;const ed=document.getElementById('pm_edit');p.podeEditar=ed?ed.checked:false;const pv=document.getElementById('pm_presenca');p.vePresenca=pv?pv.checked:false;const pl=document.getElementById('pm_landing');p.gereLanding=pl?pl.checked:false;const pc=document.getElementById('pm_carteira');p.gereCarteira=pc?pc.checked:false;const pcu=document.getElementById('pm_cursos');p.gereCursos=pcu?pcu.checked:false;const pb2=document.getElementById('pm_b2b');p.gereB2B=pb2?pb2.checked:false;const pem=document.getElementById('pm_emailmkt');p.gereEmailMkt=pem?pem.checked:false;const paf=document.getElementById('pm_atribform');p.podeAtribuirFormador=paf?paf.checked:false;const pdo=document.getElementById('pm_defsonline');p.podeDefsOnline=pdo?pdo.checked:false;persist();permEdit=null;toast("Permissões guardadas");render();}
+function savePerms(){const p=data.perfis[permEdit];if(!p){permEdit=null;render();return;}const _checked=[...document.querySelectorAll('.pm_aba:checked')].map(c=>c.value);p.bloqueadas=TEAM_ABAS.filter(function(id){return _checked.indexOf(id)<0;});const ex=document.getElementById('pm_export');p.podeExportar=ex?ex.checked:true;const ed=document.getElementById('pm_edit');p.podeEditar=ed?ed.checked:false;const pv=document.getElementById('pm_presenca');p.vePresenca=pv?pv.checked:false;const pl=document.getElementById('pm_landing');p.gereLanding=pl?pl.checked:false;const pc=document.getElementById('pm_carteira');p.gereCarteira=pc?pc.checked:false;const pcu=document.getElementById('pm_cursos');p.gereCursos=pcu?pcu.checked:false;const pb2=document.getElementById('pm_b2b');p.gereB2B=pb2?pb2.checked:false;const pem=document.getElementById('pm_emailmkt');p.gereEmailMkt=pem?pem.checked:false;const paf=document.getElementById('pm_atribform');p.podeAtribuirFormador=paf?paf.checked:false;const pdo=document.getElementById('pm_defsonline');p.podeDefsOnline=pdo?pdo.checked:false;const pef=document.getElementById('pm_editformadores');p.podeEditarFormadores=pef?pef.checked:false;persist();permEdit=null;toast("Permissões guardadas");render();}
 function permModalHTML(){if(permEdit===null)return"";const p=data.perfis[permEdit];if(!p)return"";const bloq=Array.isArray(p.bloqueadas)?p.bloqueadas:[];const chk=id=>bloq.indexOf(id)<0?"checked":"";
  return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharPerms()"><div class="card" style="padding:22px;width:470px;max-width:94vw;max-height:88vh;overflow:auto"><div class="flex"><h2 style="color:var(--azul)">Permissões — ${esc(p.nome)}</h2><div class="spacer"></div><button class="btn-o" style="padding:4px 10px" onclick="fecharPerms()">Fechar ✕</button></div>
   <div class="muted" style="margin:2px 0 12px">Escolhe que abas esta pessoa vê — desmarca só as que queres restringir. Abas novas que a Knowledge Angola venha a ganhar aparecem já marcadas por defeito. A gestão vê sempre tudo.</div>
@@ -5760,6 +5801,7 @@ function permModalHTML(){if(permEdit===null)return"";const p=data.perfis[permEdi
   <label style="margin-top:10px;display:flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" id="pm_emailmkt" ${p.gereEmailMkt===true?"checked":""} style="width:auto"> Pode ver a Base de E-mails (nome, e-mail, contacto e turma dos formandos)</label>
   <label style="margin-top:10px;display:flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" id="pm_atribform" ${p.podeAtribuirFormador===true?"checked":""} style="width:auto"> Pode atribuir/mudar o formador de um aluno na Turma Online</label>
   <label style="margin-top:10px;display:flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" id="pm_defsonline" ${p.podeDefsOnline===true?"checked":""} style="width:auto"> Pode editar as Definições da Turma Online (Links do Classroom + mensagens automáticas de e-mail)</label>
+  <label style="margin-top:10px;display:flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" id="pm_editformadores" ${p.podeEditarFormadores===true?"checked":""} style="width:auto"> Pode editar perfis de Formador (Turma Online)</label>
   <div class="row-actions"><button class="btn-p" onclick="savePerms()">Guardar permissões</button></div></div></div>`;}
 function editarPerfil(i){if(role!=="admin"){toast("Só a gestão");return;}var p=data.perfis[i];if(!p)return;var nome=prompt("Nome:",p.nome||"");if(nome===null)return;var email=prompt("E-mail:",p.email||"");if(email===null)return;var id=prompt("ID de entrada:",p.id||"");if(id===null)return;var func=prompt("Função (Assistente / Formador / Gestora de Formação / Gestor):",p.funcao||"");if(func===null)return;var cats=prompt("Categorias que acumula (por vírgula):",p.categorias||"");if(cats===null)return;p.nome=nome.trim();p.email=email.trim();p.id=id.trim();p.funcao=func.trim();p.categorias=cats.trim();persist();syncAutorizados();toast("Perfil actualizado");render();}
 function delPerfil(i){if(role!=="admin"){toast("Só a gestão");return;}var p=data.perfis[i];if(!p)return;if(!confirm("Remover o perfil de "+(p.nome||"")+"? (pessoa deixa de entrar no sistema)"))return;if(p.nome&&confirm("Arquivar também "+p.nome+" para sair das listas de todas as abas?")){var a=arquivados();if(a.indexOf(p.nome)<0)a.push(p.nome);}data.perfis.splice(i,1);persist();syncAutorizados();toast("Perfil removido");render()}
