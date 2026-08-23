@@ -804,7 +804,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.17";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.18";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -2985,7 +2985,7 @@ function vCertificados(){const q=certSearch.toLowerCase();const dq=q.replace(/\D
   <table><thead><tr><th>Código</th><th>Nome</th><th>Curso</th><th>Edição / Turno</th><th>Estado</th><th>Data de entrega</th><th>Recebido?</th><th></th></tr></thead><tbody>
   ${rows.map((c,idx)=>{const i=data.certificados.indexOf(c);const rec=c.estado==="Entregue";const fC=data.formandos.find(x=>x.cod===c.cod)||{};const tC=turmaByCod(fC.turma)||{};return `<tr><td>${esc(c.cod||"—")}</td><td>${esc(c.nome)}${(function(){var pp=payOf(c.cod);return pp&&pp.bonus?' <span class="pill p-dour">Bónus</span>':'';})()}</td><td>${esc(c.curso||"")}</td>
    <td>${tC.ed?esc(tC.ed)+"ª":"—"}${(fC.horario||fC.turno)?'<br><span class="muted">'+esc(fC.horario||fC.turno)+'</span>':''}</td>
-   <td><select onchange="setCertOrEntrega(${i},this.value)" style="padding:5px 8px;width:auto">${CERT_ESTADOS.map(e=>`<option ${c.estado===e?"selected":""}>${e}</option>`).join("")}</select></td>
+   <td>${certPerguntasHTML(i)}</td>
    <td>${rec?(fmtDataCurta(c.data)||"—"):"—"}</td>
    <td><span class="pill ${rec?'p-verde':'p-verm'}">${rec?"Sim":"Não"}</span></td>
    <td><button class="btn-o" style="padding:4px 10px" onclick="delCert(${i})">✕</button></td></tr>`}).join("")||`<tr><td colspan="8" class="muted">Sem certificados. Usa "Gerar da lista de formandos".</td></tr>`}
@@ -3012,9 +3012,20 @@ function avancarCertOnline(oi){var o=data.online[oi];if(!o)return;var info=certI
    por e-mail), quem entregou, e regista a data automaticamente. Todas as outras transições de
    estado (Pendente↔Emitido) continuam directas, sem modal. */
 function setCertOrEntrega(i,e){if(e==="Entregue"){abrirEntregaCert(i);return;}setCert(i,e);}
-let entregaCertIdx=null,entregaCertMetodo="Presencial";
-function abrirEntregaCert(i){var c=data.certificados[i];if(!c)return;entregaCertIdx=i;entregaCertMetodo="Presencial";render();}
-function fecharEntregaCert(){entregaCertIdx=null;render();}
+let entregaCertIdx=null,entregaCertMetodo="Presencial",entregaCertQuemRecebeu="Proprio",entregaCertFotoDoc="";
+function abrirEntregaCert(i){var c=data.certificados[i];if(!c)return;entregaCertIdx=i;entregaCertMetodo="Presencial";entregaCertQuemRecebeu="Proprio";entregaCertFotoDoc="";render();}
+function fecharEntregaCert(){entregaCertIdx=null;entregaCertQuemRecebeu="Proprio";entregaCertFotoDoc="";render();}
+function setEntregaCertQuemRecebeu(v){entregaCertQuemRecebeu=v;render();}
+function onEntregaCertFotoDoc(inp){var f=inp.files&&inp.files[0];if(!f)return;var r=new FileReader();r.onload=function(e){entregaCertFotoDoc=e.target.result;render();};r.readAsDataURL(f);}
+/* L94-2: fonte do e-mail do formando a partir do certificado — data.certificados[] não guarda
+   o e-mail directamente, por isso resolve-se pelo cod: alunos online em data.online, presenciais
+   em data.formandos. */
+function emailDoCertificado(c){if(!c)return"";if(c.online){var o=data.online.find(function(x){return ensureOnlineCod(x)===c.cod;});return o&&o.email||"";}var f=data.formandos.find(function(x){return x.cod===c.cod;});return f&&f.email||"";}
+/* L94-2: mensagem de confirmação enviada ao formando assim que a entrega é confirmada — editável
+   pela Gestão e por quem a Gestão autorizar, tal como todos os outros textos automáticos deste
+   painel. Usa {nome}. */
+function msgEntregaCert(){return (data.comp&&data.comp.msgEntregaCert)||"Caro(a) {nome}, enviámos este e-mail para confirmar que acabou de receber o certificado. Parabéns pela conclusão! Caso não tenha sido você a proceder à recepção, ligue com urgência para 939 845 313.";}
+function setEntregaCertMsg(el){if(!podeDefsOnline()){toast("Sem autorização");return;}if(!data.comp)data.comp={};data.comp.msgEntregaCert=el.value;persist();toast("Mensagem guardada");}
 function sigStart(evt){var cv=document.getElementById("sigCanvas");if(!cv)return;cv._sigDrawing=true;sigDraw(evt,true);}
 function sigMove(evt){var cv=document.getElementById("sigCanvas");if(!cv||!cv._sigDrawing)return;sigDraw(evt,false);}
 function sigEnd(){var cv=document.getElementById("sigCanvas");if(cv)cv._sigDrawing=false;}
@@ -3033,14 +3044,28 @@ function salvarEntregaCert(){
  if(entregaCertIdx===null)return;var c=data.certificados[entregaCertIdx];if(!c){entregaCertIdx=null;render();return;}
  var quem=(val("ec_quem")||"").trim();
  if(!quem){toast("Indica quem entregou");return;}
+ var nomeRecebeu="";
+ if(entregaCertQuemRecebeu==="Outro"){
+  nomeRecebeu=(val("ec_nomerecebeu")||"").trim();
+  if(!nomeRecebeu){toast("Indica o nome de quem recebeu");return;}
+  if(!entregaCertFotoDoc){toast("Falta a foto do documento de identificação de quem recebeu");return;}
+ }
  var assinaturaImg="";
  if(entregaCertMetodo==="Presencial"){
   var cv=document.getElementById("sigCanvas");
   if(!cv||!cv._sigHasContent){toast("Falta a assinatura do aluno — pede-lhe para assinar no quadro");return;}
   assinaturaImg=cv.toDataURL("image/png");
  }
+ /* L94-1: confirmação explícita antes de fechar a entrega — só "Sim" grava; "Não" cancela sem
+    registar nada. É uma confirmação dentro do painel, não um SMS real (o sistema não tem ligação
+    a nenhuma operadora); o aviso real ao formando é o e-mail automático logo a seguir (L94-2). */
+ if(!confirm("Confirmas que o estudante recebeu o certificado?"))return;
  c.estado="Entregue";c.data=new Date().toISOString().slice(0,10);
  c.entregaMetodo=entregaCertMetodo;c.entregaQuem=quem;c.entregaAssinatura=assinaturaImg;
+ c.entregaQuemRecebeu=entregaCertQuemRecebeu;c.entregaNomeRecebeu=entregaCertQuemRecebeu==="Outro"?nomeRecebeu:"";c.entregaFotoDoc=entregaCertQuemRecebeu==="Outro"?entregaCertFotoDoc:"";
+ /* L94-2: e-mail automático de confirmação ao formando, assim que a entrega fica registada. */
+ var _emailAluno=emailDoCertificado(c);
+ if(_emailAluno){var _corpoEc=msgEntregaCert().replace(/\{nome\}/g,c.nome||"").replace(/\n/g,"<br>");filaEmail(_emailAluno,"Confirmação de entrega do certificado — Knowledge Angola",_corpoEc);}
  persist();toast("Certificado marcado como Entregue"+(entregaCertMetodo==="E-mail"?" (por e-mail)":""));
  entregaCertIdx=null;render();
 }
@@ -3055,15 +3080,47 @@ function entregaCertModalHTML(){
    <label style="font-weight:400;display:flex;align-items:center;gap:6px"><input type="radio" name="ec_metodo" value="E-mail" ${entregaCertMetodo==="E-mail"?"checked":""} onchange="entregaCertMetodo='E-mail';render()"> Enviado por e-mail</label>
   </div>
   <label>Quem entregou</label><input id="ec_quem" value="${esc(euNome)}" style="margin-bottom:10px">
+  <label>Quem recebeu</label>
+  <select id="ec_quemrecebeu" style="margin-bottom:8px" onchange="setEntregaCertQuemRecebeu(this.value)">
+   <option value="Proprio" ${entregaCertQuemRecebeu==="Proprio"?"selected":""}>O próprio formando</option>
+   <option value="Outro" ${entregaCertQuemRecebeu==="Outro"?"selected":""}>Outra pessoa</option>
+  </select>
+  ${entregaCertQuemRecebeu==="Outro"?`<div style="margin-bottom:10px;padding:8px;background:#f7f8fb;border-radius:8px"><label>Nome de quem recebeu</label><input id="ec_nomerecebeu" placeholder="Nome completo" style="margin-bottom:8px"><label>Foto do documento de identificação</label><input type="file" accept="image/*" onchange="onEntregaCertFotoDoc(this)">${entregaCertFotoDoc?`<div style="margin-top:6px"><img src="${entregaCertFotoDoc}" style="max-width:100%;max-height:120px;border-radius:6px;border:1px solid var(--linha)"></div>`:''}</div>`:''}
   ${entregaCertMetodo==="Presencial"?`<label>Assinatura do aluno (a receber)</label><canvas id="sigCanvas" width="360" height="140" style="width:100%;height:140px;border:1px solid var(--linha);border-radius:8px;background:#fff;touch-action:none;cursor:crosshair" onmousedown="sigStart(event)" onmousemove="sigMove(event)" onmouseup="sigEnd()" onmouseleave="sigEnd()" ontouchstart="sigStart(event)" ontouchmove="sigMove(event)" ontouchend="sigEnd()"></canvas><div class="flex" style="margin-top:6px"><button class="btn-o" style="padding:3px 10px;font-size:12px" onclick="sigClear()">Limpar assinatura</button></div>`:`<div class="muted" style="margin:6px 0">Sem assinatura — só confirma que o certificado foi enviado por e-mail.</div>`}
   <div class="flex" style="margin-top:16px"><button class="btn-p" onclick="salvarEntregaCert()">Confirmar entrega</button><button class="btn-o" onclick="fecharEntregaCert()">Cancelar</button></div>
  </div></div>`;
 }
-function certPillOnlineHTML(o,clicavel){var oi=data.online.indexOf(o);var info=certInfoOnline(o);
- if(!info)return clicavel?'<span class="pill p-verm" style="cursor:pointer" title="Clica para gerar o certificado" onclick="gerarCertOnline('+oi+')">Cert.: por gerar</span>':'<span class="pill p-verm">Cert.: por gerar</span>';
- var cor=info.c.estado==="Entregue"?"p-verde":(info.c.estado==="Emitido"?"p-dour":"p-verm");
- var podeAvancar=clicavel&&info.c.estado!=="Entregue";
- return podeAvancar?'<span class="pill '+cor+'" style="cursor:pointer" title="Clica para avançar o estado" onclick="avancarCertOnline('+oi+')">Cert.: '+esc(info.c.estado)+'</span>':'<span class="pill '+cor+'">Cert.: '+esc(info.c.estado)+'</span>';}
+/* L94-5: em vez da etiqueta "Cert.: Pendente" com dropdown por baixo (pouco intuitivo), duas
+   perguntas simples de marcar — "Certificado emitido?" e, só depois disso, "Certificado
+   entregue?" — para que qualquer pessoa da equipa consiga mexer sem explicação. Usada em todos
+   os sítios onde o estado do certificado aparece: página Certificados, Turma Online (lista de
+   Concluídos e Detalhe do aluno) e ficha do formando presencial. */
+function certPerguntasHTML(i){
+ var c=data.certificados[i];if(!c)return'<span class="muted">—</span>';
+ var emitido=c.estado==="Emitido"||c.estado==="Entregue";
+ var entregue=c.estado==="Entregue";
+ return '<div style="display:flex;flex-direction:column;gap:3px;min-width:150px">'
+  +'<label style="font-weight:400;display:flex;align-items:center;gap:6px;white-space:nowrap;font-size:13px"><input type="checkbox" '+(emitido?"checked":"")+' onchange="toggleCertEmitido('+i+',this)"> Certificado emitido?</label>'
+  +(emitido?'<label style="font-weight:400;display:flex;align-items:center;gap:6px;white-space:nowrap;font-size:13px"><input type="checkbox" '+(entregue?"checked":"")+' onchange="toggleCertEntregue('+i+',this)"> Certificado entregue?</label>':'')
+  +'</div>';}
+function toggleCertEmitido(i,el){
+ var c=data.certificados[i];if(!c)return;
+ if(el.checked){setCert(i,"Emitido");return;}
+ if(c.estado==="Entregue"){toast("Já foi entregue — desmarca primeiro \"Certificado entregue?\"");render();return;}
+ if(!confirm("Voltar o certificado a Pendente?")){render();return;}
+ setCert(i,"Pendente");
+}
+function toggleCertEntregue(i,el){
+ var c=data.certificados[i];if(!c)return;
+ if(el.checked){abrirEntregaCert(i);return;}
+ if(!confirm("Voltar o certificado a Emitido (deixar de estar Entregue)?")){render();return;}
+ setCert(i,"Emitido");
+}
+/* Compatível com as chamadas já existentes na Turma Online (recebem o objecto do aluno, não o
+   índice em data.certificados). */
+function certPillOnlineHTML(o){var oi=data.online.indexOf(o);var info=certInfoOnline(o);
+ if(!info)return'<span class="pill p-verm" style="cursor:pointer" title="Clica para gerar o certificado" onclick="gerarCertOnline('+oi+')">Cert.: por gerar</span>';
+ return certPerguntasHTML(info.idx);}
 
 /* L86 — janela rápida (global) para ver quem já recebeu certificado, acessível de qualquer página via botão na topbar */
 let certRapidoOpen=false,certRapidoQ="";
@@ -3191,7 +3248,14 @@ function vOnline(){
     já renderizada (do render anterior, tal como _tbH acima mede o topbar) e soma ao offset do
     topbar. Na primeiríssima vez (elemento ainda não existe) cai num valor por omissão razoável. */
  const _tabBarH=(document.getElementById('onTabBar')||{}).offsetHeight||46;
- const _theadTop=_tbH+_tabBarH;
+ /* L94-6: nome do separador activo (ex.: "📋 Acompanhamento") fixo por baixo da grelha de
+    separadores e por cima do cabeçalho da tabela, para nunca se perder a noção de em que
+    separador se está ao rolar muitos alunos — mesma técnica de medir a altura já renderizada
+    usada acima para o _tabBarH. */
+ const _onTabActual=onTabsDef.find(function(t){return t.id===onTab;})||onTabsDef[0];
+ const onSecaoNomeHtml='<div id="onSecaoNome" style="position:sticky;top:'+(_tbH+_tabBarH)+'px;z-index:8;background:var(--azul);color:#fff;padding:7px 14px;margin:0 0 8px;border-radius:8px;font-weight:700;font-size:13px;letter-spacing:.2px">'+_onTabActual.icone+' '+esc(_onTabActual.label)+'</div>';
+ const _secaoNomeH=(document.getElementById('onSecaoNome')||{}).offsetHeight||34;
+ const _theadTop=_tbH+_tabBarH+_secaoNomeH;
 
  let corpo="";
  if(onTab==="formadores"){
@@ -3240,17 +3304,25 @@ function vOnline(){
   /* L93-1: histórico de troca de Gestora de Formação (Turma Online) — só visível a quem pode
      editar as Definições (Gestão ou quem for autorizado), tal como pediste. */
   const _gestoraHistHTML=podeDefsOnline()&&Array.isArray(data.historicoGestoraFormacao)&&data.historicoGestoraFormacao.length?('<div class="sec" style="padding:10px 16px"><b style="color:var(--azul)">Histórico de troca de Gestora de Formação</b>'+data.historicoGestoraFormacao.map(function(h){return '<div class="muted" style="padding:4px 0;border-bottom:1px solid var(--linha)">'+fmtDataCurta((h.quando||"").slice(0,10))+' — '+esc(h.de)+' → '+esc(h.para)+' <span style="opacity:.7">(por '+esc(h.quem)+')</span></div>';}).join("")+'</div>'):'';
-  corpo=prazosDefsHTML+'<div class="sec" style="padding:10px 16px"><div class="flex" style="gap:10px;align-items:center;flex-wrap:wrap"><label style="margin:0">Gestora responsável pela Turma Online</label>'+(role==="admin"?respInputHTML("resp_online",respOnline,"—")+'<button class="btn-o" style="padding:5px 12px" onclick="setRespOnline()">Guardar</button>':'<b>'+esc(respOnline||"—")+'</b>')+'</div></div>'+_gestoraHistHTML+_formadoresDefHTML+_msgsHTML+_prazoAlertaHTML+_prazoExtHTML+_semPdsHTML+_nuncaPdsHTML+_pdsHorarioHTML+(role!=="admin"&&!podeDefsOnline()?'<div class="muted" style="padding:0 16px">Prazo por nível, formadores e mensagens: só a Gestão (ou quem for autorizado) pode ver e alterar.</div>':'');
+  /* L94-2: mensagem de confirmação enviada ao formando assim que a entrega do certificado é
+     confirmada — editável pela Gestão e por quem a Gestão autorizar, tal como todos os outros
+     textos automáticos deste painel. */
+  const _entregaCertMsgHTML=podeDefsOnline()?('<div class="sec" style="padding:10px 16px"><b style="color:var(--azul)">🎓 E-mail de confirmação da entrega do certificado</b><div class="muted" style="margin-top:2px">Enviado ao formando assim que a entrega do certificado é confirmada (Certificados, Turma Online ou ficha do aluno, em qualquer aba). Usa <code>{nome}</code>.</div><div class="formgrid" style="margin-top:8px"><div style="grid-column:1/-1"><label>Mensagem</label><textarea id="msg_entrega_cert" rows="3" onchange="setEntregaCertMsg(this)">'+esc(msgEntregaCert())+'</textarea></div></div></div>'):'';
+  corpo=prazosDefsHTML+'<div class="sec" style="padding:10px 16px"><div class="flex" style="gap:10px;align-items:center;flex-wrap:wrap"><label style="margin:0">Gestora responsável pela Turma Online</label>'+(role==="admin"?respInputHTML("resp_online",respOnline,"—")+'<button class="btn-o" style="padding:5px 12px" onclick="setRespOnline()">Guardar</button>':'<b>'+esc(respOnline||"—")+'</b>')+'</div></div>'+_gestoraHistHTML+_formadoresDefHTML+_msgsHTML+_prazoAlertaHTML+_prazoExtHTML+_semPdsHTML+_nuncaPdsHTML+_entregaCertMsgHTML+_pdsHorarioHTML+(role!=="admin"&&!podeDefsOnline()?'<div class="muted" style="padding:0 16px">Prazo por nível, formadores e mensagens: só a Gestão (ou quem for autorizado) pode ver e alterar.</div>':'');
  }else{
   corpo=vOnlineAcompanhamentoHTML(hoje,wk,_theadTop);
  }
 
- return `${pdsPickerHTML()}${avalModalHTML()}${naoRealModalHTML()}${transferOnlineModalHTML()}${atribuirFormadorModalHTML()}${editarPrazoModalHTML()}${entregaCertModalHTML()}${kpiRowHtml}${onTabGridHtml}<div>${corpo}</div>`;
+ return `${pdsPickerHTML()}${avalModalHTML()}${naoRealModalHTML()}${transferOnlineModalHTML()}${atribuirFormadorModalHTML()}${editarPrazoModalHTML()}${entregaCertModalHTML()}${kpiRowHtml}${onTabGridHtml}${onSecaoNomeHtml}<div>${corpo}</div>`;
 }
 function vOnlineAcompanhamentoHTML(hoje,wk,theadTop){
  const q=onSearch.toLowerCase();
  /* L87-7: rowsBase deixou de excluir Concluído por defeito — quem quiser vê-los através do
-    chip "Concluídos" abaixo (a vista "Todos" continua a escondê-los, tal como já era). */
+    chip "Concluídos" abaixo.
+    L94-4: "Todos" passa a mostrar mesmo TODOS os alunos, concluídos incluídos — antes escondia
+    quem já tinha concluído, o que fazia uma pesquisa por nome (ex.: "noé") devolver 0 resultados
+    quando o aluno procurado já tinha concluído, mesmo com "Todos" seleccionado. Quem quiser só
+    os activos usa o chip "Em andamento"; quem quiser só concluídos usa "Concluídos". */
  let rowsBase=data.online.filter(function(o){return o.status!=="Transferido";}).filter(function(o){return !q||(o.nome||"").toLowerCase().includes(q)||(o.formador||"").toLowerCase().includes(q);});
  const _matchSitu=function(o,id){
   if(id==='andamento')return o.status==='Em andamento';
@@ -3259,7 +3331,7 @@ function vOnlineAcompanhamentoHTML(hoje,wk,theadTop){
   if(id==='concluido')return o.status==='Concluído';
   if(id==='breve'){var d=diasParaConcluirNum(o);return d!==null&&d>=0&&d<=3;}
   if(id==='proximos')return o.proximoPDS&&new Date(o.proximoPDS)>=hoje&&new Date(o.proximoPDS)<=wk;
-  return o.status!=='Concluído';
+  return true;
  };
  const situFiltros=[{id:'',label:'Todos'},{id:'andamento',label:'Em andamento'},{id:'pausa',label:'Em pausa'},{id:'sem',label:'Sem PDS agendado'},{id:'breve',label:'A terminar em breve'},{id:'concluido',label:'Concluídos'}];
  const situChipsHtml=situFiltros.map(function(f){
@@ -4681,7 +4753,7 @@ function fichaCard(cod){const f=data.formandos.find(x=>x.cod===cod);if(!f)return
    <div><label>Registado por</label><div>${esc(f.criadoPor||f.vendedor||"—")}${f.canal==="Landing"?' <span class="pill p-azul" title="Entrou como interessado pela landing page e foi depois transferido/confirmado nesta turma">via Landing page</span>':''}</div></div>
    ${role==="admin"?`<div><label>Formador potencial</label><div>${f.formadorPotencial?'<span class="pill p-dour">✓ Candidato</span> <span class="muted" style="font-size:11px">'+esc(f.formadorPotencialNota||"")+'</span>':'<span class="muted">—</span>'} <button class="btn-o" style="padding:2px 8px;font-size:12px" onclick="toggleFormadorPotencial('${esc(f.cod)}')">${f.formadorPotencial?"Retirar":"Marcar como candidato"}</button></div></div>`:""}
    <div><label>Pagamento</label><div>${d>0?'<span class="pill p-verm">Em dívida: '+kz(d)+'</span>':'<span class="pill p-verde">Em dia</span>'} <span class="muted">(${esc(p.plano||"—")})</span>${(d>0&&podeEditar())?' <button class="btn-o" style="padding:2px 8px;font-size:12px" onclick="irPagar(\''+esc(f.cod)+'\')">Registar pagamento</button>':''}${role==="admin"?' · Pago: <b>'+kz(p.pago||0)+'</b> <button class="btn-o" style="padding:2px 8px;font-size:12px" onclick="editPagamentoDeCod(\''+esc(f.cod)+'\')">✎ Editar</button> <button class="btn-o" style="padding:2px 8px;font-size:12px" onclick="zerarBonus(\''+esc(f.cod)+'\')">Zerar (bónus)</button>':''}</div>${pagamentoEditLogHTML(f.cod)}</div>
-   <div><label>Certificado</label><div>${(function(){var ci=data.certificados.findIndex(function(x){return x.cod===cod;});var c=ci>=0?data.certificados[ci]:null;if(!c)return '<span class="muted">—</span>';var pill='<span class="pill '+(c.estado==="Entregue"?"p-verde":c.estado==="Emitido"?"p-dour":"p-cinza")+'">'+esc(c.estado)+'</span>';var acao=c.estado!=="Entregue"?' <button class="btn-o" style="padding:2px 8px;font-size:12px" onclick="setCertOrEntrega('+ci+',\''+(c.estado==="Pendente"?"Emitido":"Entregue")+'\')">'+(c.estado==="Pendente"?"Marcar emitido":"Marcar entregue")+'</button>':'';return pill+acao;})()}</div></div>
+   <div><label>Certificado</label><div>${(function(){var ci=data.certificados.findIndex(function(x){return x.cod===cod;});if(ci<0)return '<span class="muted">—</span>';return certPerguntasHTML(ci);})()}</div></div>
    <div><label>Faltas</label><div><b>${faltasDe(cod)}</b> <span class="muted">(contadas das presenças)</span></div></div>
    ${faltasDe(cod)>0?`<div><label>Avisou que ia faltar?</label><div>${avisouFalta(f.tel)?'<span class="pill p-dour">Sim</span>':'<span class="pill p-cinza">Não</span>'}</div></div>`:''}
    ${classroomFichaHTML(f)}
