@@ -847,7 +847,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.29";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.30";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -3580,7 +3580,12 @@ function vOnlineFormadoresHTML(ativos){
   var oi=data.online.indexOf(o);
   return '<div class="flex" style="justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--linha);flex-wrap:wrap"><div><b>'+esc(o.nome)+'</b><div class="muted" style="font-size:12px">'+esc(o.nivel||"—")+(o.status?' · '+esc(o.status):'')+'</div></div><div class="flex" style="gap:16px;align-items:center;flex-wrap:wrap"><div style="text-align:center;min-width:70px"><div class="muted" style="font-size:11px">PDS feitos</div><div style="font-weight:700">'+(+o.pdsFeitos||0)+'</div></div><div style="text-align:center;min-width:100px"><div class="muted" style="font-size:11px">Não realizados</div><div style="font-weight:700">'+(+o.pdsNaoRealizados||0)+'</div></div><div style="min-width:120px"><div class="muted" style="font-size:11px;text-align:center">Dias para concluir</div>'+prazoBarHTML(o)+'</div><button class="btn-o" style="padding:4px 10px" onclick="verDetalhe('+oi+')">Detalhe</button></div></div>';
  }).join(""):"";
- return '<div class="sec">'+headerHtml+buscaAlunoHtml+buscarFormadorDisponivelHTML()+chipsHtml+(onFormSel?(perfilHtml+'<h3 style="color:var(--azul2);font-size:14px;margin-bottom:2px">'+esc(onFormSel)+'</h3>'+(listaHtml||'<div class="muted">Sem alunos'+(qAluno?" com esse nome":" activos")+'.</div>')):'<div class="muted">Sem formadores ainda.</div>')+'</div>';
+ /* L105: enquanto houver uma pesquisa de disponibilidade activa, esconde a lista de formadores e
+    o painel do formador seleccionado — fica só o resultado da pesquisa, para não poluir o ecrã
+    (pensado sobretudo para caber bem no telemóvel). "‹ Voltar à lista" (dentro de
+    buscarFormadorDisponivelHTML) repõe a vista normal. */
+ var listaENormal=dispBuscaFeita?"":(chipsHtml+(onFormSel?(perfilHtml+'<h3 style="color:var(--azul2);font-size:14px;margin-bottom:2px">'+esc(onFormSel)+'</h3>'+(listaHtml||'<div class="muted">Sem alunos'+(qAluno?" com esse nome":" activos")+'.</div>')):'<div class="muted">Sem formadores ainda.</div>'));
+ return '<div class="sec">'+headerHtml+buscaAlunoHtml+buscarFormadorDisponivelHTML()+listaENormal+'</div>';
 }
 /* L90-1: separador dedicado a quem já concluiu, com o estado do certificado logo visível por
    aluno (reutiliza certPillOnlineHTML, o mesmo usado na Acompanhamento e no Detalhe). O chip
@@ -4322,14 +4327,22 @@ function formadorGradeHTML(nome){
   +'<div class="muted" style="font-size:11px;margin-top:6px">Vermelho = PDS marcado, com nome e hora exacta (👁 clicável para ver/editar) · Vermelho esbatido = previsto pela recorrência, ainda sem ocorrência concreta · Verde = livre dentro do horário contratado · Cinza = livre mas fora do horário contratado (ou sem perfil) · Dourado = indisponibilidade marcada</div></div></div>';
 }
 /* ---- Pesquisar formador disponível por dia/hora ---- */
-let dispBuscaData="",dispBuscaHora="";
-function setDispBusca(campo,el){if(campo==="data")dispBuscaData=el.value;else dispBuscaHora=el.value;}
+let dispBuscaData="",dispBuscaHora="",dispBuscaFeita=false;
+function setDispBusca(campo,el){if(campo==="data")dispBuscaData=el.value;else dispBuscaHora=el.value;dispBuscaFeita=false;}
+/* L105: pesquisa só corre ao clicar no botão (antes disparava sozinha ao escrever), e ao mostrar
+   resultado esconde a lista normal de formadores/cartões (ver vOnlineFormadoresHTML) para poupar
+   espaço no ecrã do telemóvel — "‹ Voltar à lista de formadores" repõe a vista normal. */
+function pesquisarDispBusca(){
+ if(!dispBuscaData||!dispBuscaHora){toast("Escolhe o dia e a hora");return;}
+ dispBuscaFeita=true;render();
+}
+function limparDispBusca(){dispBuscaFeita=false;render();}
 /* L102-5: lista (não só pills soltos) para ficar claro nome a nome, e avisa se esse formador
    já tem outro PDS no mesmo dia dentro de ±2h da hora pedida — mesmo estando tecnicamente livre
    na hora exacta, ajuda a perceber a carga do dia antes de marcar mais um. */
 function buscarFormadorDisponivelHTML(){
  var resultado="";
- if(dispBuscaData&&dispBuscaHora){
+ if(dispBuscaFeita&&dispBuscaData&&dispBuscaHora){
   var livres=formadoresDisponiveisEm(dispBuscaData,dispBuscaHora);
   resultado='<div style="margin-top:10px">'+(livres.length?('<div style="display:flex;flex-direction:column;gap:6px">'+livres.map(function(n){
     var prox=formadorPdsProximo(n,dispBuscaData,dispBuscaHora);
@@ -4337,10 +4350,11 @@ function buscarFormadorDisponivelHTML(){
      +'<span class="pill p-verde">Livre</span><b style="flex:1">'+esc(n)+'</b>'
      +(prox?'<span class="muted" style="font-size:11.5px;color:#b8860b">⚠ já tem PDS com '+esc(prox.nome)+' às '+_fmtHoraExtenso(prox.hora)+' nesse dia</span>':'')
      +'</div>';
-   }).join("")+'</div>'):'<span class="muted">Ninguém disponível neste dia/hora (dentro do horário contratado, sem PDS nem indisponibilidade).</span>')+'</div>';
+   }).join("")+'</div>'):'<span class="muted">Ninguém disponível neste dia/hora (dentro do horário contratado, sem PDS nem indisponibilidade).</span>')
+   +'<button class="btn-o" style="padding:4px 10px;margin-top:8px" onclick="limparDispBusca()">‹ Voltar à lista de formadores</button></div>';
  }
  return '<div class="sec" style="padding:10px 16px;margin-bottom:12px"><b style="color:var(--azul)">🔎 Procurar formador disponível</b><div class="muted" style="margin-top:2px;font-size:12px">Escolhe um dia e uma hora para ver quem está livre para dar suporte.</div>'
-  +'<div class="flex" style="gap:8px;margin-top:8px;flex-wrap:wrap;align-items:flex-end"><div><label style="font-size:12px">Dia</label><input type="date" value="'+esc(dispBuscaData)+'" onchange="setDispBusca(\'data\',this);render()"></div><div><label style="font-size:12px">Hora</label><input type="time" value="'+esc(dispBuscaHora)+'" onchange="setDispBusca(\'hora\',this);render()"></div></div>'
+  +'<div class="flex" style="gap:8px;margin-top:8px;flex-wrap:wrap;align-items:flex-end"><div><label style="font-size:12px">Dia</label><input type="date" value="'+esc(dispBuscaData)+'" onchange="setDispBusca(\'data\',this);render()"></div><div><label style="font-size:12px">Hora</label><input type="time" value="'+esc(dispBuscaHora)+'" onchange="setDispBusca(\'hora\',this);render()"></div><button class="btn" style="padding:6px 12px" onclick="pesquisarDispBusca()">🔎 Pesquisar disponibilidade</button></div>'
   +resultado+'</div>';
 }
 /* ---- Modal: Gravar/Editar Perfil do Formador ---- */
