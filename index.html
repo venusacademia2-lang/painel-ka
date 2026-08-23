@@ -497,6 +497,7 @@ if(!data.perfis.length)data.perfis.push({nome:"Ventura Camilo",funcao:"Gestor",e
  try{migrarContasBanco();}catch(e){}
  try{limparContasEnvelopeAntigas();}catch(e){}
  try{autoFecharTurmas();}catch(e){}
+ try{processarAvisosRegressoPausa();}catch(e){}
  try{autoResumirPausas();}catch(e){}
  try{repararRecorrenciasOrfas();}catch(e){}
  try{repararInicioOnline();}catch(e){}
@@ -846,7 +847,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.28";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.29";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -2394,6 +2395,53 @@ function autoResumirPausas(){var hoje=new Date().toISOString().slice(0,10);
    criarNotaAuto((o.nome||"Aluno online")+" regressou automaticamente da pausa — PDS retomados.",(data.responsaveis&&data.responsaveis.online)||"","Académico");
   }
  });}
+/* L104-5: escolhe, entre os dias da recorrência semanal que o aluno tinha antes da pausa (o.recs),
+   a data mais próxima a partir de "desde" (normalmente pausaAte) — é essa a 1ª sessão de regresso
+   que o sistema vai marcar sozinho. Devolve null se o aluno não tinha nenhuma recorrência (nesse
+   caso não se inventa data nenhuma — fica para a formadora combinar). */
+function _proximaOcorrenciaRecs(o,desde){
+ var melhor=null;
+ (o.recs||[]).forEach(function(r){
+  if(!r||r.hora==null)return;
+  var d=_proximaDataDia(desde,r.dia);
+  if(!melhor||d<melhor.data)melhor={data:d,hora:r.hora,groupId:r.groupId||null,parceiro:r.parceiro||null};
+ });
+ return melhor;
+}
+/* L104-5: dois dias antes do fim da pausa, avisa o aluno por e-mail — e, para a promessa ("no dia X
+   às Xh terás um PDS") ser verdadeira, o sistema já marca sozinho essa 1ª sessão de regresso (com
+   convite no Google Calendar), com base no padrão semanal que o aluno tinha antes de pausar. Corre
+   uma vez por aluno por pausa (o.avisoRegressoPausaEnviado), a partir de ensure(). Sem recorrência
+   conhecida, envia um aviso mais genérico e não inventa data nenhuma. */
+function processarAvisosRegressoPausa(){
+ var hoje=new Date().toISOString().slice(0,10);
+ (data.online||[]).forEach(function(o){
+  if(o.status!=="Parado"||!o.pausaAte||o.avisoRegressoPausaEnviado)return;
+  if(hoje<_isoAddDays(o.pausaAte,-2))return;
+  if(hoje>=o.pausaAte)return;
+  o.avisoRegressoPausaEnviado=true;
+  var proxima=_proximaOcorrenciaRecs(o,o.pausaAte);
+  if(proxima){
+   ensurePds(o);
+   if(!o.pds.some(function(p){return p.data===proxima.data&&(p.hora||"")===proxima.hora;})){
+    var durMin=60;
+    var fimISO=new Date(new Date(proxima.data+"T"+proxima.hora+":00").getTime()+durMin*60000).toISOString();
+    var _emailForm=emailDoColaborador(o.formador);
+    var _ref=filaCalendario("PDS — "+o.nome,proxima.data+"T"+proxima.hora+":00",fimISO,"Ponto de Situação · Formador: "+(o.formador||"")+" · Knowledge Angola",juntarConvidados(o.email,_emailForm));
+    o.pds.push({data:proxima.data,hora:proxima.hora,rec:true,groupId:proxima.groupId,parceiro:proxima.parceiro,gcalRef:_ref||null});
+    syncProx(o);
+   }
+   if(o.email){
+    var corpo=msgPausaRegresso().replace(/\{nome\}/g,o.nome||"").replace(/\{data\}/g,fmtDataCurta(proxima.data)).replace(/\{hora\}/g,proxima.hora).replace(/\n/g,"<br>");
+    filaEmail(o.email,"A tua pausa está a terminar — Knowledge Angola",corpo);
+   }
+  }else if(o.email){
+   var corpoGen=("Olá {nome}, a tua pausa está quase a terminar. A tua formadora vai combinar contigo o próximo Ponto de Situação (PDS).").replace(/\{nome\}/g,o.nome||"");
+   filaEmail(o.email,"A tua pausa está a terminar — Knowledge Angola",corpoGen);
+  }
+  persist();
+ });
+}
 function autoFecharTurmas(){var hoje=new Date(new Date().toDateString());var fechadas=0;
  (data.turmas||[]).forEach(function(t){
   if(t.concluida||!t.fim)return;
@@ -3094,6 +3142,12 @@ function emailDoCertificado(c){if(!c)return"";if(c.online){var o=data.online.fin
    painel. Usa {nome}. */
 function msgEntregaCert(){return (data.comp&&data.comp.msgEntregaCert)||"Caro(a) {nome}, enviámos este e-mail para confirmar que acabou de receber o certificado. Parabéns pela conclusão! Caso não tenha sido você a proceder à recepção, ligue com urgência para 939 845 313.";}
 function setEntregaCertMsg(el){if(!podeDefsOnline()){toast("Sem autorização");return;}if(!data.comp)data.comp={};data.comp.msgEntregaCert=el.value;persist();toast("Mensagem guardada");}
+/* L104-4: e-mails automáticos ligados à pausa — mesmo padrão dos outros textos configuráveis
+   (data.comp.msgXxx), editáveis só por quem pode as Definições da Turma Online. */
+function msgPausaCancelado(){return (data.comp&&data.comp.msgPausaCancelado)||"Olá {nome}, como ficaste em pausa, cancelámos o(s) Ponto(s) de Situação que já estavam marcados até {ate}. Quando regressares entramos em contacto para combinar o próximo.";}
+function setPausaCancMsg(el){if(!podeDefsOnline()){toast("Sem autorização");return;}if(!data.comp)data.comp={};data.comp.msgPausaCancelado=el.value;persist();toast("Mensagem guardada");}
+function msgPausaRegresso(){return (data.comp&&data.comp.msgPausaRegresso)||"Olá {nome}, a tua pausa está quase a terminar! No dia {data} às {hora} terás o teu próximo Ponto de Situação. Até lá!";}
+function setPausaRegressoMsg(el){if(!podeDefsOnline()){toast("Sem autorização");return;}if(!data.comp)data.comp={};data.comp.msgPausaRegresso=el.value;persist();toast("Mensagem guardada");}
 function sigStart(evt){var cv=document.getElementById("sigCanvas");if(!cv)return;cv._sigDrawing=true;sigDraw(evt,true);}
 function sigMove(evt){var cv=document.getElementById("sigCanvas");if(!cv||!cv._sigDrawing)return;sigDraw(evt,false);}
 function sigEnd(){var cv=document.getElementById("sigCanvas");if(cv)cv._sigDrawing=false;}
@@ -3393,7 +3447,13 @@ function vOnline(){
      confirmada — editável pela Gestão e por quem a Gestão autorizar, tal como todos os outros
      textos automáticos deste painel. */
   const _entregaCertMsgHTML=podeDefsOnline()?('<div class="sec" style="padding:10px 16px"><b style="color:var(--azul)">🎓 E-mail de confirmação da entrega do certificado</b><div class="muted" style="margin-top:2px">Enviado ao formando assim que a entrega do certificado é confirmada (Certificados, Turma Online ou ficha do aluno, em qualquer aba). Usa <code>{nome}</code>.</div><div class="formgrid" style="margin-top:8px"><div style="grid-column:1/-1"><label>Mensagem</label><textarea id="msg_entrega_cert" rows="3" onchange="setEntregaCertMsg(this)">'+esc(msgEntregaCert())+'</textarea></div></div></div>'):'';
-  corpo=prazosDefsHTML+'<div class="sec" style="padding:10px 16px"><div class="flex" style="gap:10px;align-items:center;flex-wrap:wrap"><label style="margin:0">Gestora responsável pela Turma Online</label>'+(role==="admin"?respInputHTML("resp_online",respOnline,"—")+'<button class="btn-o" style="padding:5px 12px" onclick="setRespOnline()">Guardar</button>':'<b>'+esc(respOnline||"—")+'</b>')+'</div></div>'+_gestoraHistHTML+_formadoresDefHTML+_msgsHTML+_prazoAlertaHTML+_prazoExtHTML+_semPdsHTML+_nuncaPdsHTML+_entregaCertMsgHTML+_pdsHorarioHTML+(role!=="admin"&&!podeDefsOnline()?'<div class="muted" style="padding:0 16px">Prazo por nível, formadores e mensagens: só a Gestão (ou quem for autorizado) pode ver e alterar.</div>':'');
+  /* L104-4: e-mails de pausa — cancelamento (ao entrar em pausa) e aviso de regresso (2 dias antes). */
+  const _pausaMsgsHTML=podeDefsOnline()?('<div class="sec" style="padding:10px 16px"><b style="color:var(--azul)">⏸ E-mails da pausa</b>'
+   +'<div class="muted" style="margin-top:2px">Cancelamento — enviado ao aluno só quando pausar cancela mesmo algum PDS já marcado. Usa <code>{nome}</code> e <code>{ate}</code>.</div>'
+   +'<div class="formgrid" style="margin-top:6px"><div style="grid-column:1/-1"><textarea id="msg_pausa_canc" rows="3" onchange="setPausaCancMsg(this)">'+esc(msgPausaCancelado())+'</textarea></div></div>'
+   +'<div class="muted" style="margin-top:10px">Aviso de regresso — enviado 2 dias antes do fim da pausa, quando o sistema já marcou sozinho a 1ª sessão de regresso. Usa <code>{nome}</code>, <code>{data}</code> e <code>{hora}</code>.</div>'
+   +'<div class="formgrid" style="margin-top:6px"><div style="grid-column:1/-1"><textarea id="msg_pausa_regresso" rows="3" onchange="setPausaRegressoMsg(this)">'+esc(msgPausaRegresso())+'</textarea></div></div></div>'):'';
+  corpo=prazosDefsHTML+'<div class="sec" style="padding:10px 16px"><div class="flex" style="gap:10px;align-items:center;flex-wrap:wrap"><label style="margin:0">Gestora responsável pela Turma Online</label>'+(role==="admin"?respInputHTML("resp_online",respOnline,"—")+'<button class="btn-o" style="padding:5px 12px" onclick="setRespOnline()">Guardar</button>':'<b>'+esc(respOnline||"—")+'</b>')+'</div></div>'+_gestoraHistHTML+_formadoresDefHTML+_msgsHTML+_prazoAlertaHTML+_prazoExtHTML+_semPdsHTML+_nuncaPdsHTML+_entregaCertMsgHTML+_pausaMsgsHTML+_pdsHorarioHTML+(role!=="admin"&&!podeDefsOnline()?'<div class="muted" style="padding:0 16px">Prazo por nível, formadores e mensagens: só a Gestão (ou quem for autorizado) pode ver e alterar.</div>':'');
  }else{
   corpo=vOnlineAcompanhamentoHTML(hoje,wk,_theadTop);
  }
@@ -3675,17 +3735,47 @@ function setInicioPropostoGuard(i,key,el){
  o.historicoInicio.push({quando:new Date().toISOString(),quem:(currentUser&&currentUser.nome)||role,campo:key,de:o[key]||"",para:el.value});
  o[key]=el.value;persist();toast("Guardado");render();
 }
+/* L104-1: cancela (sistema + Google Calendar) todos os PDS já marcados do aluno cujas datas caiam
+   dentro da janela de pausa (hoje..pausaAte, inclusive), fica registo em o.historicoPausaCancelamentos,
+   e devolve quantos foram cancelados. Idempotente: se voltar a correr (ex.: pausa alargada) e não
+   houver mais nada novo dentro da janela, devolve 0 e nada acontece — por isso não há necessidade de
+   distinguir "primeira pausa" de "pausa alargada": o e-mail (L104-1b) só dispara quando count>0. */
+function _cancelarPdsDaPausa(o){
+ ensurePds(o);
+ var hoje=new Date().toISOString().slice(0,10);
+ var ate=o.pausaAte||hoje;
+ var cancelados=[];
+ o.pds=(o.pds||[]).filter(function(p){
+  if(p.data>=hoje&&p.data<=ate){cancelados.push(p);return false;}
+  return true;
+ });
+ if(cancelados.length){
+  if(!Array.isArray(o.historicoPausaCancelamentos))o.historicoPausaCancelamentos=[];
+  cancelados.forEach(function(p){
+   if(p.gcalRef)filaCancelarCalendario(p.gcalRef,"PDS — "+o.nome);
+   o.historicoPausaCancelamentos.push({data:p.data,hora:p.hora||"",quando:new Date().toISOString(),quem:(currentUser&&currentUser.nome)||role});
+  });
+  syncProx(o);
+ }
+ return cancelados.length;
+}
 function setStatusOnline(i){const o=data.online[i];if(!o)return;const eraParado=o.status==="Parado";const s=prompt("Estado do aluno ("+STATUS_ONLINE.join(" / ")+"):",o.status||"Em andamento");if(s===null)return;const sv=s.trim();if(STATUS_ONLINE.indexOf(sv)<0){toast("Estado inválido");return;}o.status=sv;
  if(sv==="Parado"){
   const r=prompt("Razão da pausa:",o.pausaRazao||"");if(r!==null)o.pausaRazao=r.trim();
-  const semP=prompt("Quantas semanas de pausa? (a agenda de PDS fica suspensa e retoma sozinha nessa data)",o.pausaSemanas||2);
+  const semP=prompt("Quantas semanas de pausa? (o sistema cancela os PDS já marcados dentro da pausa e não deixa marcar novos até ao regresso, automático nessa data)",o.pausaSemanas||2);
   const sem=semP===null?(+o.pausaSemanas||2):(+semP||2);
   o.pausaSemanas=sem;o.pausaTempo="";
   if(!o.pausaDesde)o.pausaDesde=new Date().toISOString().slice(0,10);
   o.pausaAte=calcPausaAte(o.pausaDesde,sem);
-  toast("Pausa registada até "+fmtDataCurta(o.pausaAte)+" — os PDS ficam suspensos até lá.");
+  o.avisoRegressoPausaEnviado=false;
+  var _nCanc=_cancelarPdsDaPausa(o);
+  if(_nCanc&&o.email){
+   var _corpoPz=msgPausaCancelado().replace(/\{nome\}/g,o.nome||"").replace(/\{ate\}/g,fmtDataCurta(o.pausaAte)).replace(/\n/g,"<br>");
+   filaEmail(o.email,"O teu Ponto de Situação foi cancelado — Knowledge Angola",_corpoPz);
+  }
+  toast("Pausa registada até "+fmtDataCurta(o.pausaAte)+(_nCanc?(" — "+_nCanc+" PDS já marcado(s) foram cancelados"):" — sem PDS marcados dentro da pausa")+".");
  }else if(eraParado){
-  o.pausaAte="";o.pausaSemanas=null;o.pausaDesde="";
+  o.pausaAte="";o.pausaSemanas=null;o.pausaDesde="";o.avisoRegressoPausaEnviado=false;
  }
  persist();render();}
 /* L78-4 — dias por nível, configuráveis pela Gestão nas Definições da própria aba Turma Online.
@@ -3769,7 +3859,11 @@ function marcarUmPDS(o,idx){idx=idx||0;ensurePds(o);var pds=o.pds[idx];
     de uma recorrência) sem verificar primeiro se já existe uma igual (mesma data+hora) — por
     isso um mesmo aluno podia acabar com dois PDS iguais na Agenda. As outras zonas (marcação
     manual, reparação de recorrências órfãs) já tinham este cuidado; falta juntar aqui. */
- if(pds){o.pds.splice(idx,1);if(pds.rec){var wd=new Date(pds.data).getDay();var recMatch=(o.recs||[]).find(function(r){return r.dia===wd;});if(recMatch){var nd=new Date(pds.data);nd.setDate(nd.getDate()+7);var ndISO=nd.toISOString().slice(0,10);if(!o.pds.some(function(p){return p.data===ndISO&&(p.hora||"")===(pds.hora||"");}))o.pds.push({data:ndISO,hora:pds.hora,rec:true,groupId:recMatch.groupId||null,parceiro:recMatch.parceiro||null});}}}
+ /* L104-2: enquanto o aluno estiver em pausa, o sistema não cria nenhum PDS novo — nem sequer a
+    ocorrência seguinte de uma recorrência semanal. A marcação manual já está bloqueada mais acima
+    (doPDS/agendarPDS/marcarPds); esta é a mesma regra aplicada ao ponto onde a recorrência avança
+    sozinha para a semana seguinte. */
+ if(pds){o.pds.splice(idx,1);if(pds.rec&&o.status!=="Parado"){var wd=new Date(pds.data).getDay();var recMatch=(o.recs||[]).find(function(r){return r.dia===wd;});if(recMatch){var nd=new Date(pds.data);nd.setDate(nd.getDate()+7);var ndISO=nd.toISOString().slice(0,10);if(!o.pds.some(function(p){return p.data===ndISO&&(p.hora||"")===(pds.hora||"");}))o.pds.push({data:ndISO,hora:pds.hora,rec:true,groupId:recMatch.groupId||null,parceiro:recMatch.parceiro||null});}}}
  syncProx(o);}
 function doPDS(i){const o=data.online[i];if(!o)return;if(o.status==="Parado"){toast("Aluno em pausa — não dá para marcar PDS");return;}var comb=prompt("O que ficou combinado até ao próximo encontro? (opcional)","");if(comb===null)return;comb=(comb||"").trim();ensurePds(o);syncProx(o);const alvo=o.pds[0];const gid=alvo?alvo.groupId:null;const ddAlvo=alvo?alvo.data:null;
  marcarUmPDS(o,0);o.combinado=comb;if(comb){if(!Array.isArray(o.combinadoHist))o.combinadoHist=[];o.combinadoHist.unshift({data:new Date().toISOString().slice(0,10),texto:comb});}
@@ -3824,7 +3918,12 @@ function _pdsChoqueFormador(formador,dataISO,hora,permitidos){
  });
  return choque;
 }
-function marcarPds(){if(pdsEdit===null)return;const o=data.online[pdsEdit];if(!o){pdsEdit=null;pdsEditIdx=null;render();return;}const dd=val("pds_data");const hh=val("pds_hora")||"19:30";if(!dd){toast("Escolhe a data");return;}ensurePds(o);
+function marcarPds(){if(pdsEdit===null)return;const o=data.online[pdsEdit];if(!o){pdsEdit=null;pdsEditIdx=null;render();return;}
+ /* L104-2: guarda defensiva — mesmo que este modal tenha sido aberto por outro caminho que não
+    agendarPDS()/doPDS() (que já bloqueiam à entrada), nunca se cria aqui um PDS novo com o aluno
+    em pausa. */
+ if(o.status==="Parado"){toast("Aluno em pausa — não é possível marcar PDS até ao regresso");pdsEdit=null;pdsEditIdx=null;render();return;}
+ const dd=val("pds_data");const hh=val("pds_hora")||"19:30";if(!dd){toast("Escolhe a data");return;}ensurePds(o);
  const durMin=+val("pds_dur")||60;
  if(pdsEditIdx!==null){
   const alvo=o.pds[pdsEditIdx];if(!alvo){pdsEdit=null;pdsEditIdx=null;render();return;}
@@ -4206,7 +4305,7 @@ function formadorGradeHTML(nome){
    var conteudo;
    if(est==="ocupado"){
     var itensHtml=ocs.map(function(oc){
-     return '<button type="button" style="display:block;width:100%;text-align:left;border:none;background:none;cursor:pointer;padding:1px 0" onclick="abrirDetalheMarcacaoGrade('+oc.oi+',\''+diso+'\',\''+oc.hora+'\')" title="Ver detalhe / editar esta marcação">'
+     return '<button type="button" style="display:block;width:100%;text-align:center;border:none;background:none;cursor:pointer;padding:1px 0" onclick="abrirDetalheMarcacaoGrade('+oc.oi+',\''+diso+'\',\''+oc.hora+'\')" title="Ver detalhe / editar esta marcação">'
       +'<span class="pill p-verm" style="padding:2px 6px;font-size:10px;display:inline-block;max-width:100%;white-space:normal'+(oc.prevista?';opacity:.6':'')+'">👁 '+esc(oc.nome)+(oc.parceiro?' + '+esc(oc.parceiro):'')+'<br><span style="font-size:9px">'+_fmtHoraExtenso(oc.hora)+(oc.prevista?" (previsto)":"")+'</span></span></button>';
     }).join("");
     var topoLivre=!ocs.some(function(oc){return oc.hora===hh;});
