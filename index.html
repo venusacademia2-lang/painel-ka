@@ -824,7 +824,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.21";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.22";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -3598,10 +3598,11 @@ function _dedupPds(o){
 }
 function repararRecorrenciasOrfas(){
  var hoje=new Date().toISOString().slice(0,10);
+ var houveMudanca=false;
  (data.online||[]).forEach(function(o){
   ensurePds(o);
   var mudou=_dedupPds(o);
-  if(o.status==="Transferido"||o.status==="Concluído"){if(mudou)syncProx(o);return;}
+  if(o.status==="Transferido"||o.status==="Concluído"){if(mudou){syncProx(o);houveMudanca=true;}return;}
   (o.recs||[]).forEach(function(r){
    var temAlguma=(o.pds||[]).some(function(p){return p.rec&&new Date(p.data+"T00:00:00").getDay()===r.dia;});
    if(!temAlguma){
@@ -3610,8 +3611,13 @@ function repararRecorrenciasOrfas(){
     mudou=true;
    }
   });
-  if(mudou)syncProx(o);
+  if(mudou){syncProx(o);houveMudanca=true;}
  });
+ /* L98-2: antes esta reparação só corrigia a cópia em memória — nunca gravava de volta na base
+    de dados partilhada, por isso um duplicado antigo podia continuar lá e reaparecer noutra
+    sessão/dispositivo. Agora, se corrigiu mesmo alguma coisa, grava logo (persist() já tem
+    debounce próprio, é seguro chamar aqui). */
+ if(houveMudanca){try{persist();}catch(e){}}
 }
 /* L92-2: repara em quem já tinha PDS feitos antes desta regra existir (o.inicio ficava vazio
    porque dependia do campo manual "Início proposto"). Aproximação: usa a data do último PDS
@@ -3629,7 +3635,11 @@ function marcarUmPDS(o,idx){idx=idx||0;ensurePds(o);var pds=o.pds[idx];
     branco ("—") mesmo com o aluno já em andamento. Só define se ainda não houver data. */
  if(!o.inicio)o.inicio=new Date().toISOString().slice(0,10);
  o.ultimoPDS=new Date().toISOString().slice(0,10);o.pdsFeitos=(+o.pdsFeitos||0)+1;
- if(pds){o.pds.splice(idx,1);if(pds.rec){var wd=new Date(pds.data).getDay();var recMatch=(o.recs||[]).find(function(r){return r.dia===wd;});if(recMatch){var nd=new Date(pds.data);nd.setDate(nd.getDate()+7);o.pds.push({data:nd.toISOString().slice(0,10),hora:pds.hora,rec:true,groupId:recMatch.groupId||null,parceiro:recMatch.parceiro||null});}}}
+ /* L98-1: esta era a única zona do código a criar uma ocorrência de PDS (a da semana seguinte,
+    de uma recorrência) sem verificar primeiro se já existe uma igual (mesma data+hora) — por
+    isso um mesmo aluno podia acabar com dois PDS iguais na Agenda. As outras zonas (marcação
+    manual, reparação de recorrências órfãs) já tinham este cuidado; falta juntar aqui. */
+ if(pds){o.pds.splice(idx,1);if(pds.rec){var wd=new Date(pds.data).getDay();var recMatch=(o.recs||[]).find(function(r){return r.dia===wd;});if(recMatch){var nd=new Date(pds.data);nd.setDate(nd.getDate()+7);var ndISO=nd.toISOString().slice(0,10);if(!o.pds.some(function(p){return p.data===ndISO&&(p.hora||"")===(pds.hora||"");}))o.pds.push({data:ndISO,hora:pds.hora,rec:true,groupId:recMatch.groupId||null,parceiro:recMatch.parceiro||null});}}}
  syncProx(o);}
 function doPDS(i){const o=data.online[i];if(!o)return;if(o.status==="Parado"){toast("Aluno em pausa — não dá para marcar PDS");return;}var comb=prompt("O que ficou combinado até ao próximo encontro? (opcional)","");if(comb===null)return;comb=(comb||"").trim();ensurePds(o);syncProx(o);const alvo=o.pds[0];const gid=alvo?alvo.groupId:null;const ddAlvo=alvo?alvo.data:null;
  marcarUmPDS(o,0);o.combinado=comb;if(comb){if(!Array.isArray(o.combinadoHist))o.combinadoHist=[];o.combinadoHist.unshift({data:new Date().toISOString().slice(0,10),texto:comb});}
