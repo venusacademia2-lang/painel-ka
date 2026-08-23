@@ -277,7 +277,7 @@ div[style*="position:fixed"][style*="place-items:center"]>.card{resize:both;over
   </aside>
   <div id="navmask" onclick="closeNav()"></div>
   <div id="main">
-    <div class="topbar"><button class="mob-menu" onclick="toggleNav()" aria-label="Menu">☰</button><svg class="top-k" viewBox="0 0 100 100" width="30" height="30" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="48" fill="#1F3864"/><circle cx="50" cy="21" r="4" fill="#BF9000"/><text x="50" y="53" text-anchor="middle" dominant-baseline="central" font-family="Georgia,'Times New Roman',serif" font-size="52" font-weight="700" fill="#fff">K</text></svg><div style="flex:1"><h1 id="ptitle"></h1><div class="muted sub" id="psub"></div></div><span id="topclock" class="muted" style="font-size:12.5px;margin-right:10px;white-space:nowrap;font-weight:600"></span><button class="btn-o" onclick="actualizarDados()" title="Actualizar os dados sem sair da sessão" style="padding:6px 11px;font-size:12.5px;margin-right:8px">↻ Actualizar</button><button id="ocultBtn" class="btn-o" onclick="toggleOcultar()" style="padding:6px 11px;font-size:12.5px;margin-right:8px;display:inline-flex;align-items:center;gap:6px"></button><button class="tema-toggle" onclick="toggleTema()" title="Modo claro/escuro" aria-label="Modo claro/escuro"><span class="tema-track"><span class="tema-thumb"></span></span></button><span id="topavatar" title="" style="width:32px;height:32px;border-radius:50%;background-color:#2a3f6b;background-size:cover;background-position:center;display:none;margin:0 8px;border:1px solid rgba(255,255,255,.4);align-self:center"></span><button class="btn-o mob-sair" onclick="logout()">Sair</button></div>
+    <div class="topbar"><button class="mob-menu" onclick="toggleNav()" aria-label="Menu">☰</button><button id="backBtn" class="btn-o" onclick="voltarAba()" style="display:none;align-items:center;gap:3px;padding:6px 10px;font-size:12.5px;margin-right:6px;white-space:nowrap" title="Voltar">‹ <span id="backBtnLabel"></span></button><svg class="top-k" viewBox="0 0 100 100" width="30" height="30" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="48" fill="#1F3864"/><circle cx="50" cy="21" r="4" fill="#BF9000"/><text x="50" y="53" text-anchor="middle" dominant-baseline="central" font-family="Georgia,'Times New Roman',serif" font-size="52" font-weight="700" fill="#fff">K</text></svg><div style="flex:1"><h1 id="ptitle"></h1><div class="muted sub" id="psub"></div></div><span id="topclock" class="muted" style="font-size:12.5px;margin-right:10px;white-space:nowrap;font-weight:600"></span><button class="btn-o" onclick="actualizarDados()" title="Actualizar os dados sem sair da sessão" style="padding:6px 11px;font-size:12.5px;margin-right:8px">↻ Actualizar</button><button id="ocultBtn" class="btn-o" onclick="toggleOcultar()" style="padding:6px 11px;font-size:12.5px;margin-right:8px;display:inline-flex;align-items:center;gap:6px"></button><button class="tema-toggle" onclick="toggleTema()" title="Modo claro/escuro" aria-label="Modo claro/escuro"><span class="tema-track"><span class="tema-thumb"></span></span></button><span id="topavatar" title="" style="width:32px;height:32px;border-radius:50%;background-color:#2a3f6b;background-size:cover;background-position:center;display:none;margin:0 8px;border:1px solid rgba(255,255,255,.4);align-self:center"></span><button class="btn-o mob-sair" onclick="logout()">Sair</button></div>
     <div id="globalAlert" onclick="show('notas')" style="display:none;cursor:pointer;background:#fbe9e7;color:#a3311f;border-bottom:2px solid #C0392B;padding:8px 16px;font-size:13px;font-weight:700;text-align:center"></div>
     <main id="views"></main>
     <footer id="rodape" style="padding:16px 26px;margin-top:8px;color:#5b6577;font-size:13px;font-weight:600;border-top:1px solid var(--linha);background:var(--cinza);text-align:center"></footer>
@@ -800,11 +800,16 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.10";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.11";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
 let current="";try{current=sessionStorage.getItem("ka_current")||"";}catch(e){}
+/* L89 — histórico de navegação entre abas, tipo iPhone: cada troca de aba principal empilha a
+   aba de origem; "‹ Voltar" no canto superior esquerdo do topbar desempilha e volta a essa aba,
+   podendo repetir-se para vários níveis. Persistido em sessionStorage junto de ka_current (L28-1),
+   por isso sobrevive a recarregar a página, mas não a fechar a sessão (tal como a aba actual). */
+let _abaHist=[];try{_abaHist=JSON.parse(sessionStorage.getItem("ka_hist"))||[];}catch(e){_abaHist=[];}
 const NAVICON={
  notificacoes:'<path d="M11 3a5 5 0 0 0-5 5v3l-1.4 2.3a1 1 0 0 0 .9 1.5h11a1 1 0 0 0 .9-1.5L16 11V8a5 5 0 0 0-5-5z"/><path d="M9.5 18a1.5 1.5 0 0 0 3 0"/>',
  financas:'<rect x="3" y="6" width="16" height="12" rx="2"/><path d="M3 10h16"/><circle cx="15" cy="14" r="1.2"/>',
@@ -868,8 +873,13 @@ function buildNav(){
  if(current&&items.indexOf(current)>=0){[...nav.querySelectorAll("details.navgrp")].forEach(function(d){if([...d.querySelectorAll(".navbtn")].some(function(b){return b.dataset.id===current;}))d.open=true;});show(current);}
  else if(first)show(first);
 }
-function show(id){current=id;try{sessionStorage.setItem("ka_current",id);}catch(e){}[...document.querySelectorAll('.navbtn')].forEach(b=>b.classList.toggle("active",b.dataset.id===id));
- document.getElementById("ptitle").textContent=PAGES[id][0];document.getElementById("psub").textContent=PAGES[id][1];var _a=document.getElementById("app");if(_a)_a.classList.remove("navopen");if(typeof updateTopAvatar==="function")updateTopAvatar();render()}
+function _aplicarAba(id){current=id;try{sessionStorage.setItem("ka_current",id);}catch(e){}[...document.querySelectorAll('.navbtn')].forEach(b=>b.classList.toggle("active",b.dataset.id===id));
+ document.getElementById("ptitle").textContent=PAGES[id][0];document.getElementById("psub").textContent=PAGES[id][1];var _a=document.getElementById("app");if(_a)_a.classList.remove("navopen");if(typeof updateTopAvatar==="function")updateTopAvatar();atualizarBackBtn();render()}
+function show(id){if(current&&current!==id){_abaHist.push(current);if(_abaHist.length>15)_abaHist.shift();try{sessionStorage.setItem("ka_hist",JSON.stringify(_abaHist));}catch(e){}}_aplicarAba(id);}
+/* Volta à aba anterior da pilha (pode repetir-se, tal como o botão "‹" do iPhone). Ao contrário
+   de show(), não empilha nada — está a desempilhar. */
+function voltarAba(){if(!_abaHist.length)return;var prev=_abaHist.pop();try{sessionStorage.setItem("ka_hist",JSON.stringify(_abaHist));}catch(e){}if(!PAGES[prev]){atualizarBackBtn();return;}_aplicarAba(prev);}
+function atualizarBackBtn(){var b=document.getElementById("backBtn");if(!b)return;if(_abaHist.length){var prevId=_abaHist[_abaHist.length-1];var lbl=(PAGES[prevId]&&PAGES[prevId][0])||prevId;b.style.display="inline-flex";var sp=document.getElementById("backBtnLabel");if(sp)sp.textContent=lbl;b.title="Voltar a "+lbl;}else{b.style.display="none";}}
 function updateTopAvatar(){var el=document.getElementById("topavatar");if(!el)return;var nome=(currentUser&&currentUser.nome)||"";var p=(data.perfis||[]).find(function(x){return x.nome===nome;});if(p&&p.foto){el.style.backgroundImage="url("+p.foto+")";el.style.display="inline-block";el.title=nome;}else{el.style.display="none";}}
 let _refocus=null;function refocusSearch(id){_refocus=id;}
 let _renderT=null;function renderDebounced(){if(_renderT)clearTimeout(_renderT);_renderT=setTimeout(function(){_renderT=null;render();},200);}
