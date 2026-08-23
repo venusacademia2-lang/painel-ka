@@ -288,7 +288,7 @@ div[style*="position:fixed"][style*="place-items:center"]>.card{resize:both;over
   <div id="navmask" onclick="closeNav()"></div>
   <div id="main">
     <div class="topbar"><button class="mob-menu" onclick="toggleNav()" aria-label="Menu">☰</button><button id="backBtn" class="btn-o" onclick="voltarAba()" style="display:none;align-items:center;gap:3px;padding:6px 10px;font-size:12.5px;margin-right:6px;white-space:nowrap" title="Voltar">‹ <span id="backBtnLabel"></span></button><svg class="top-k" viewBox="0 0 100 100" width="30" height="30" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="48" fill="#1F3864"/><circle cx="50" cy="21" r="4" fill="#BF9000"/><text x="50" y="53" text-anchor="middle" dominant-baseline="central" font-family="Georgia,'Times New Roman',serif" font-size="52" font-weight="700" fill="#fff">K</text></svg><div style="flex:1"><h1 id="ptitle"></h1><div class="muted sub" id="psub"></div></div><span id="topclock" class="muted" style="font-size:12.5px;margin-right:10px;white-space:nowrap;font-weight:600"></span><button class="btn-o" onclick="actualizarDados()" title="Actualizar os dados sem sair da sessão" style="padding:6px 11px;font-size:12.5px;margin-right:8px">↻ Actualizar</button><button id="ocultBtn" class="btn-o" onclick="toggleOcultar()" style="padding:6px 11px;font-size:12.5px;margin-right:8px;display:inline-flex;align-items:center;gap:6px"></button><button class="tema-toggle" onclick="toggleTema()" title="Modo claro/escuro" aria-label="Modo claro/escuro"><span class="tema-track"><span class="tema-thumb"></span></span></button><span id="topavatar" title="" style="width:32px;height:32px;border-radius:50%;background-color:#2a3f6b;background-size:cover;background-position:center;display:none;margin:0 8px;border:1px solid rgba(255,255,255,.4);align-self:center"></span><button class="btn-o mob-sair" onclick="logout()">Sair</button></div>
-    <div id="globalAlert" onclick="show('notas')" style="display:none;cursor:pointer;background:#fbe9e7;color:#a3311f;border-bottom:2px solid #C0392B;padding:8px 16px;font-size:13px;font-weight:700;text-align:center"></div>
+    <div id="globalAlert" onclick="show('notas')" style="display:none;cursor:pointer;background:#fbe9e7;color:#a3311f;border-bottom:2px solid #C0392B;padding:8px 16px;font-size:13px;font-weight:700;text-align:center;position:relative;z-index:11;pointer-events:auto"></div>
     <main id="views"></main>
     <footer id="rodape" style="padding:16px 26px;margin-top:8px;color:#5b6577;font-size:13px;font-weight:600;border-top:1px solid var(--linha);background:var(--cinza);text-align:center"></footer>
   </div>
@@ -419,7 +419,20 @@ function carregarDuvidas(){if(_duvidasWatching)return;if(!(window.firebase&&fire
    data.leads.unshift({data:hoje,ultimoMov:hoje,nome:r.nome||"(sem nome)",tel:r.tel||"",canal:"Dúvida",curso:r.curso||"",estado:"Novo",resp:"",fonte:r.fonte||"",criadoEm:r.quando||new Date().toISOString(),notas:"Dúvida antes da inscrição: \""+(r.duvida||"")+"\""});
    data.duvidasVistas.push(k);novo=true;});
   if(novo){persist();if(current==="leads")render();}});}catch(e){}}
-function _watchEstado(){if(!_fbRef)return;try{_fbRef.on("value",function(snap){var s=snap.val();if(s==null)return;var str=""+s;if(str===_lastRemote)return;_lastRemote=str;if(str===JSON.stringify(data))return;var ae=document.activeElement;if(ae&&/^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName||""))return;if(_saveT)return;try{var d2=JSON.parse(str);data=d2;ensure();render();}catch(e){}});}catch(e){}}
+/* L109: raiz do "PDS a duplicar-se sozinho outra vez a cada deploy" (e do risco de um aluno em
+   pausa receber o aviso de regresso em duplicado): ensure() corre não só no carregamento deste
+   cliente, mas também sempre que QUALQUER outro cliente ligado grava algo (aqui, no merge remoto).
+   As funções de reparação/aviso automático (repararRecorrenciasOrfas, processarAvisosRegressoPausa)
+   fazem "verifica se já existe → senão, cria e persiste" — com muitas pessoas ligadas ao mesmo
+   tempo (típico logo a seguir a um deploy, quando todos recarregam a página por perto), dois
+   clientes podem fazer essa verificação ao mesmo tempo, antes de qualquer um ver a gravação do
+   outro, e ambos concluir "não existe" e criar/enviar em duplicado. _viaMergeRemoto assinala este
+   caso: o ensure() disparado por um merge remoto só faz limpeza (remove duplicados já existentes),
+   nunca cria nem envia nada de novo — só o próprio carregamento inicial de um cliente (ou um
+   "Actualizar" manual) tem autoridade para gerar/enviar. */
+var _viaMergeRemoto=false;
+function _dedupTodosPds(){var mudou=false;(data.online||[]).forEach(function(o){if(Array.isArray(o.pds)&&_dedupPds(o)){syncProx(o);mudou=true;}});return mudou;}
+function _watchEstado(){if(!_fbRef)return;try{_fbRef.on("value",function(snap){var s=snap.val();if(s==null)return;var str=""+s;if(str===_lastRemote)return;_lastRemote=str;if(str===JSON.stringify(data))return;var ae=document.activeElement;if(ae&&/^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName||""))return;if(_saveT)return;try{var d2=JSON.parse(str);data=d2;_viaMergeRemoto=true;try{ensure();}finally{_viaMergeRemoto=false;}render();}catch(e){}});}catch(e){}}
 const DONOS=["venusacademia2@gmail.com"];
 function _authInit(){try{if(typeof firebase==="undefined"||!firebase.auth)return;firebase.auth().onAuthStateChanged(function(user){if(!user)return;var email=((user.email)||"").toLowerCase();if(!_fbRef){autorizarGoogle(email);return;}_fbRef.once("value").then(function(snap){var s=snap.val();if(s&&(""+s).length){try{data=JSON.parse(s);ensure();}catch(e){}}autorizarGoogle(email);}).catch(function(){autorizarGoogle(email);});});}catch(e){}}
 function autorizarGoogle(email){if(currentUser)return;var p=(data.perfis||[]).find(function(x){return ((x.email||"").toLowerCase())===email;});
@@ -496,11 +509,17 @@ if(!data.perfis.length)data.perfis.push({nome:"Ventura Camilo",funcao:"Gestor",e
  try{migrarHorariosFormandos();}catch(e){}
  try{migrarContasBanco();}catch(e){}
  try{limparContasEnvelopeAntigas();}catch(e){}
- try{autoFecharTurmas();}catch(e){}
- try{processarAvisosRegressoPausa();}catch(e){}
- try{autoResumirPausas();}catch(e){}
- try{repararRecorrenciasOrfas();}catch(e){}
- try{repararInicioOnline();}catch(e){}
+ /* L109: as 5 chamadas abaixo criam dados novos e/ou enviam e-mails (ver nota junto a
+    _viaMergeRemoto, perto de _watchEstado). Num merge vindo de outro cliente ligado ao mesmo
+    tempo, só se faz limpeza de duplicados já existentes — nunca se gera nem envia nada de novo. */
+ if(_viaMergeRemoto){try{_dedupTodosPds();}catch(e){}}
+ else{
+  try{autoFecharTurmas();}catch(e){}
+  try{processarAvisosRegressoPausa();}catch(e){}
+  try{autoResumirPausas();}catch(e){}
+  try{repararRecorrenciasOrfas();}catch(e){}
+  try{repararInicioOnline();}catch(e){}
+ }
  /* L95-1: garante que todo o nome de formador já usado nos alunos da Turma Online tem um perfil
     próprio (mesmo que em branco, por preencher depois) em data.formadoresOnline — antes "formador"
     era só texto livre em cada aluno, sem registo central. */
@@ -847,7 +866,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.32";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.33";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -1922,7 +1941,14 @@ function atualizarAlertaGlobal(){
   if(incMetaGlobal.length){partes.push(incMetaGlobal.length+" meta(s) de tarefa do dia não cumprida(s) ontem");destino="tarefasdia";}
  }
  if(!partes.length){el.style.display="none";return;}
- el.textContent="⚠️ "+partes.join(" · ")+" — clica para ver.";
+ /* L110: "clica para ver" tinha deixado de responder ao clique. A frase estava só como texto
+    simples (textContent) dentro do banner — sem sublinhado nem qualquer sinal visual de link — e
+    o único onclick estava no <div> pai. Para além de reforçar o estilo (position:relative,
+    z-index acima da barra do topo, pointer-events explícito, junto do <div> no HTML), a frase
+    "clica para ver" passa a ficar dentro do seu próprio <span> sublinhado, clicável por si, e o
+    onclick volta a ser reatribuído a cada render (nunca fica preso a um destino antigo). */
+ el.innerHTML="⚠️ "+esc(partes.join(" · "))+' — <span style="text-decoration:underline">clica para ver</span>.';
+ el.style.pointerEvents="auto";
  el.onclick=function(){show(destino);};
  el.style.display="block";
 }
@@ -2089,6 +2115,16 @@ function maskMil(el){
 function numVal(id){return parseInt((val(id)||"").replace(/\D/g,""))||0;}
 function _perfisPorFuncao(re){return [...new Set((data.perfis||[]).filter(p=>re.test(p.funcao||"")).map(p=>p.nome).filter(Boolean))];}
 function formadoresOpts(sel){var nomes=todosColaboradores();return '<option value="">—</option>'+nomes.map(n=>`<option ${sel===n?"selected":""}>${esc(n)}</option>`).join("");}
+/* L108-5: as 3 escolhas de formador ESPECÍFICAS da Turma Online (inscrever aluno, trocar formador,
+   passar de presencial para online) só devem listar quem já tem perfil de Formador criado em
+   Definições → Formadores (data.formadoresOnline) — evita escolher, por engano, alguém que nunca
+   deu aulas online e cuja disponibilidade/perfil nem sequer existe no sistema. Propositadamente
+   à parte de formadoresOpts()/respInputHTML() (usados noutros sítios sem relação com este perfil:
+   turno presencial, B2B, "Responsável" de conteúdos de marketing) — mexer nesses quebraria essas
+   outras áreas. Se o valor actual do aluno não tiver perfil (dado antigo), mantém-se na lista na
+   mesma, para não se perder a visibilidade do que já estava registado. */
+function formadoresComPerfilOnline(){return (data.formadoresOnline||[]).map(function(p){return p.nome;}).filter(Boolean).sort(function(a,b){return a.localeCompare(b);});}
+function formadoresOnlineOpts(sel){var nomes=formadoresComPerfilOnline();if(sel&&nomes.indexOf(sel)<0)nomes=[sel].concat(nomes);return '<option value="">—</option>'+nomes.map(function(n){return '<option '+(sel===n?"selected":"")+'>'+esc(n)+'</option>';}).join("");}
 function gestorasOpts(sel){var nomes=todosColaboradores();return '<option value="">—</option>'+nomes.map(n=>`<option ${sel===n?"selected":""}>${esc(n)}</option>`).join("");}
 /* Quem gere carteira de clientes: marcado explicitamente em Permissões, ou (por omissão, se nunca foi definido) quem tem função de Gestor/Gestora — assim as assistentes marcadas como gestoras de carteira aparecem aqui também. */
 function _perfisComCarteira(){var base=(data.perfis||[]).filter(p=>p.gereCarteira!==false&&!estaArquivado(p.nome)).map(p=>p.nome);var resps=(data.leads||[]).map(l=>l.resp).filter(Boolean);return [...new Set(base.concat(resps.filter(n=>!estaArquivado(n))))].filter(Boolean).sort();}
@@ -2108,9 +2144,9 @@ function vRegistoForm(){const pre=regAlvo||{};regAlvo=null;return `<details clas
    <div id="wf_turma"><label>Turma / Edição</label><select id="f_turma" onchange="onDispo();edPeriodo()"><option value="">—</option>${data.turmas.map(t=>`<option value="${esc(t.cod)}">${esc(t.ed)}ª Ed. — ${esc(t.curso)}</option>`).join("")}</select></div>
    <div id="wf_turno"><label>Turno</label><select id="f_turno"><option value="">Escolhe a edição primeiro</option></select></div>
    <div id="wf_onl_nivel" style="display:none"><label>Nível actual (online)</label><select id="f_onivel">${NIVEIS.map(n=>`<option>${n}</option>`).join("")}</select></div>
-   <div id="wf_onl_form" style="display:none"><label>Formador (online)</label><select id="f_oform">${formadoresOpts("")}</select></div>
+   <div id="wf_onl_form" style="display:none"><label>Formador (online)</label><select id="f_oform">${formadoresOnlineOpts("")}</select></div>
    <div id="wf_onl_modo" style="display:none"><label>Modo (online)</label><select id="f_omodo">${FASES.map(f=>`<option>${f}</option>`).join("")}</select></div>
-   <div id="wf_onl_inicio" style="display:none"><label>Data de início (online)</label><input id="f_oinicio" type="date"></div><div id="wf_onl_horario" style="display:none"><label>Horário proposto de início (opcional)</label><input id="f_ohorario" type="time"></div>
+   <div id="wf_onl_inicio" style="display:none"><label>Data de início (online)</label><input id="f_oinicio" type="date"></div><div id="wf_onl_horario" style="display:none"><label>Horário proposto de início (opcional)</label><input id="f_ohorario" type="time" lang="pt-PT"></div>
    <div><label>Valor total (Kz)</label><input id="f_total" type="text" inputmode="numeric" value="${fmtMil(precoDe(CURSOS[0])||0)}" ${role==="admin"?"":"readonly"} oninput="maskMil(this);promToggle()">${role==="admin"?"":'<div class="muted" style="margin-top:3px">Definido pela gestão.</div>'}</div>
    <div><label>Valor recebido (Kz)</label><input id="f_pago" type="text" inputmode="numeric" placeholder="0" oninput="maskMil(this);promToggle()"><div class="muted" style="margin-top:3px">Se for menos que o total, fica em prestações.</div></div>
    <div><label>Código promocional (opcional)</label><input id="f_cupom" placeholder="Ex.: PROMO10" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase();aplicarCupomVenda()"><div id="f_cupom_hint" class="muted" style="margin-top:3px"></div></div>
@@ -2965,7 +3001,7 @@ function vChamadas(){const hoje=new Date(new Date().toDateString());const me=(cu
    <div><label>Resultado</label><select id="c_res">${CALL_RESULT.map(r=>`<option>${r}</option>`).join("")}</select></div>
    <div><label>Sentido da chamada</label><select id="c_sentido"><option>Efectuada</option><option>Recebida</option></select></div>
    <div><label>Próximo seguimento</label><input id="c_seg" type="date"></div>
-   <div><label>Hora que pediu para ser contactado</label><input id="c_horaped" type="time"></div>
+   <div><label>Hora que pediu para ser contactado</label><input id="c_horaped" type="time" lang="pt-PT"></div>
    <div><label>Responsável</label>${respInputHTML("c_resp","","Vendas")}</div><div><label>Notas</label><input id="c_notas" placeholder="o que ficou combinado" autocomplete="off"></div></div>
   <div id="c_hint" class="muted" style="margin-top:6px"></div>
   <label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-weight:600"><input type="checkbox" id="c_insc"> Já vou inscrever agora (abre o formulário de inscrição abaixo)</label>
@@ -3077,7 +3113,7 @@ function reuniaoSemanalDefsHTML(){if(role!=="admin")return"";var rs=reuniaoSeman
  +(rs.activa?'<div class="note" style="background:#eaf7ee;border-color:#b7e0c4;color:#1E7B45;margin-top:8px">✓ Activa — todas as '+esc(DIAS_NOME[rs.dia])+'-feiras às '+esc(rs.hora)+', com '+(rs.participantes||[]).length+' participante(s).</div>':'')
  +'<div class="formgrid" style="margin-top:10px"><div><label>Título</label><input id="rs_titulo" value="'+esc(rs.titulo||"Reunião de equipa")+'"></div>'
  +'<div><label>Dia da semana</label><select id="rs_dia">'+DIAS_NOME.map(function(d,ix){return '<option value="'+ix+'" '+(rs.dia===ix?"selected":"")+'>'+d+'-feira</option>';}).join("")+'</select></div>'
- +'<div><label>Hora</label><input id="rs_hora" type="time" value="'+esc(rs.hora||"09:00")+'"></div>'
+ +'<div><label>Hora</label><input id="rs_hora" type="time" lang="pt-PT" value="'+esc(rs.hora||"09:00")+'"></div>'
  +'<div><label>Duração (minutos)</label><input id="rs_dur" type="number" value="'+(rs.duracao||60)+'"></div>'
  +'<div style="grid-column:1/-1"><label>Nota (opcional)</label><input id="rs_nota" value="'+esc(rs.nota||"")+'" placeholder="Agenda, link de videochamada, etc."></div></div>'
  +'<div style="margin-top:10px"><label style="display:block;font-weight:700;font-size:12px;color:var(--azul);text-transform:uppercase;margin-bottom:6px">Participantes</label>'
@@ -3221,6 +3257,18 @@ function combinarCertContacto(ci,tipo){
  else{toast("Combinado: enviar por e-mail — falta anexar a captura depois de enviares");}
  persist();render();
 }
+/* L108-7: abre a caixa de Gmail da própria pessoa (não um envio automático do sistema — é o
+   browser a abrir compose.gmail.com com os campos já preenchidos; quem envia, e a partir de que
+   conta, é sempre a pessoa que clica). */
+function abrirGmailCertContacto(ci){
+ var c=data.certificados[ci];if(!c)return;
+ var o=(data.online||[]).find(function(x){return ensureOnlineCod(x)===c.cod;});
+ if(!o||!o.email){toast("Este aluno não tem e-mail registado — copia a frase e envia manualmente");return;}
+ var frase=fraseCertContactoEmail(o);
+ var cc=emailCCCert();
+ var url="https://mail.google.com/mail/?view=cm&fs=1&to="+encodeURIComponent(o.email)+(cc?"&cc="+encodeURIComponent(cc):"")+"&su="+encodeURIComponent("O teu certificado — Knowledge Angola")+"&body="+encodeURIComponent(frase);
+ window.open(url,"_blank");
+}
 function onCertContactoCaptura(ci,inp){
  var f=inp.files&&inp.files[0];if(!f)return;
  var c=data.certificados[ci];if(!c)return;
@@ -3252,9 +3300,16 @@ function certContactoHTML(ci,o){
      +'<div class="flex" style="gap:8px;flex-wrap:wrap"><button class="btn-o" style="padding:4px 10px" onclick="combinarCertContacto('+ci+',\'Presencial\')">Vai levantar presencialmente</button><button class="btn-o" style="padding:4px 10px" onclick="combinarCertContacto('+ci+',\'Email\')">Vai receber por e-mail</button></div>';
  }else if(c.contactoCombinado==="Email"&&!c.contactoCapturaEmail){
   var frase=fraseCertContactoEmail(o);
+  /* L108-7/8: além de copiar a frase à mão, um botão que já abre a caixa de Gmail da própria
+     pessoa (com o seu e-mail pessoal, sessão já autenticada no browser) com Para/CC/Assunto/Corpo
+     pré-preenchidos — poupa o passo de colar tudo manualmente. Como nenhum link de e-mail consegue
+     anexar um ficheiro sozinho (limitação do próprio Gmail/browser, não do sistema), fica um aviso
+     bem visível, sempre por perto do botão, a lembrar de anexar o certificado digitalizado antes
+     de enviar. */
   box+='<div style="margin-bottom:6px"><b>Copia esta frase e envia por e-mail ao formando, lembra-te de anexar o certificado:</b></div>'
      +'<textarea readonly style="width:100%;font-size:12px;margin-bottom:6px" rows="3">'+esc(frase)+'</textarea>'
-     +'<div class="flex" style="gap:8px;margin-bottom:8px"><button class="btn-o" style="padding:4px 10px" onclick="copiarFraseCertContacto('+ci+')">📋 Copiar frase</button></div>'
+     +'<div class="flex" style="gap:8px;margin-bottom:6px;flex-wrap:wrap"><button class="btn-o" style="padding:4px 10px" onclick="copiarFraseCertContacto('+ci+')">📋 Copiar frase</button>'+(o.email?('<button class="btn-o" style="padding:4px 10px" onclick="abrirGmailCertContacto('+ci+')">✉️ Abrir no Gmail</button>'):'')+'</div>'
+     +'<div style="margin-bottom:6px;padding:6px 8px;background:#fde8e8;border:1px solid #eab5b5;border-radius:6px;color:#a3311f;font-weight:600">📎 Antes de enviares: anexa o certificado digitalizado (PDF/imagem) — o Gmail não o anexa sozinho.</div>'
      +'<div class="muted" style="margin-bottom:6px">⚠️ Não te esqueças de pôr sempre em cópia (CC): <b>'+esc(emailCCCert())+'</b></div>'
      +'<div style="margin-bottom:4px">Depois de enviares, anexa aqui a captura de ecrã do e-mail enviado (obrigatório para fechar este caso):</div>'
      +'<input type="file" accept="image/*" onchange="onCertContactoCaptura('+ci+',this)">';
@@ -3419,7 +3474,7 @@ function vNotas(){const abertas=data.notas.filter(n=>!n.feito),feitas=data.notas
    <div><label>E-mail do responsável</label><input id="nota_email" placeholder="nome@knowledge.ao"></div>
    <div><label>Telemóvel do responsável</label><input id="nota_tel" placeholder="9XX XXX XXX"></div>
    <div><label>Prazo (data)</label><input id="nota_prazo" type="date"></div>
-   <div><label>Prazo (hora)</label><input id="nota_prazoh" type="time"></div></div>
+   <div><label>Prazo (hora)</label><input id="nota_prazoh" type="time" lang="pt-PT"></div></div>
   <div class="row-actions"><button class="btn-p" onclick="addNota()">Adicionar</button></div></details>
   <div style="margin-top:14px">${abertas.map(item).join("")||'<div class="muted" style="padding:10px 0">Nada por resolver. 🎉</div>'}</div>
   ${feitas.length?`<div style="margin-top:18px"><div class="muted" style="font-weight:700;margin-bottom:4px">Resolvidas (${feitas.length})</div>${feitas.map(item).join("")}</div>`:""}
@@ -3521,7 +3576,7 @@ function vOnline(){
      "Formandos que concluíram", dedicado a isso (ver vOnlineConcluidosHTML()). */
   const _formadoresByName={};ativos.forEach(function(o){var n=o.formador||"—";if(n==="—")return;if(!_formadoresByName[n])_formadoresByName[n]=0;_formadoresByName[n]++;});
   const _formNomes=Object.keys(_formadoresByName).sort();
-  const _formadoresDefHTML=role==="admin"?('<div class="sec" style="padding:10px 16px"><b style="color:var(--azul)">Formadores na Turma Online</b><div class="muted" style="margin-top:2px">Desvincular só remove a ligação à Turma Online — o colaborador continua a existir e pode dar aulas presenciais. Os alunos que tinha ficam com o campo Formador em branco (usa "Atribuir formador" na Acompanhamento para reatribuir).</div><div style="margin-top:8px">'+(_formNomes.length?_formNomes.map(function(n){return '<div class="flex" style="justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--linha)"><div>'+esc(n)+' <span class="muted">('+_formadoresByName[n]+' aluno(s))</span></div><button class="btn-o" style="padding:3px 9px" onclick="desvincularFormadorOnline(\''+n.replace(/\'/g,"\\'")+'\')">Desvincular</button></div>';}).join(""):'<div class="muted">Sem formadores com alunos activos na Turma Online.</div>')+'</div>'
+  const _formadoresDefHTML=role==="admin"?('<div class="sec" style="padding:10px 16px"><b style="color:var(--azul)">Formadores na Turma Online</b><div class="muted" style="margin-top:2px">Desvincular só remove a ligação à Turma Online — o colaborador continua a existir e pode dar aulas presenciais. Os alunos que tinha ficam com o campo Formador em branco (usa "Atribuir formador" na Acompanhamento para reatribuir).</div><div style="margin-top:8px">'+(_formNomes.length?_formNomes.map(function(n){var _pInc=formadorPerfilIncompleto(formadorPerfilByNome(n));return '<div class="flex" style="justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--linha)"><div>'+esc(n)+' <span class="muted">('+_formadoresByName[n]+' aluno(s))</span>'+(_pInc?' <span class="pill p-dour" title="Sem dias/horário contratado configurados — nunca vai aparecer como disponível na pesquisa">⚠ perfil incompleto</span>':'')+'</div><button class="btn-o" style="padding:3px 9px" onclick="desvincularFormadorOnline(\''+n.replace(/\'/g,"\\'")+'\')">Desvincular</button></div>';}).join(""):'<div class="muted">Sem formadores com alunos activos na Turma Online.</div>')+'</div>'
    +'<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--linha)"><label>Código para trocar formador (autoriza quem não tem a permissão activada em Permissões)</label><input id="cf_codform" value="'+esc((data.comp&&data.comp.codFormador)||'')+'" placeholder="Vazio = só Gestão ou quem tem autorização activada. Ex.: 1357" onchange="setCodFormador(this)"></div>'
    +'<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--linha)"><label>Código para eliminar formando / reeditar Início e Horário propostos (próprio, diferente do de cima)</label><input id="cf_codficha" value="'+esc((data.comp&&data.comp.codFichaFormando)||'')+'" placeholder="Vazio = só Gestão. Ex.: 2468" onchange="setCodFichaFormando(this)"></div></div>'):'';
   /* L90-4: as duas mensagens automáticas por e-mail (progressão de nível / boas-vindas), em texto
@@ -3536,7 +3591,7 @@ function vOnline(){
      (semana actual). Horários editáveis pela Gestão e por quem a Gestão autorizar (podeDefsOnline),
      nunca fixos no código. O aviso no sistema (banner) está sempre activo; só o envio automático
      por e-mail tem interruptor próprio. */
-  const _semPdsHTML=podeDefsOnline()?('<div class="sec" style="padding:10px 16px"><b style="color:var(--azul)">📆 Alerta semanal — alunos sem PDS</b><div class="muted" style="margin-top:2px">O aviso no sistema (à Gestora de Formação e a cada formador, sobre os seus alunos) está sempre a funcionar. O e-mail automático dispara duas vezes por semana, quando o painel estiver aberto nesse dia à hora (ou depois): segunda-feira de manhã, por referência à semana passada, e quinta-feira à tarde, por referência a esta semana. Usa <code>{lista}</code> e <code>{periodo}</code>.</div><div class="formgrid" style="margin-top:8px"><div><label>Envio automático por e-mail</label><label class="flex" style="gap:8px;align-items:center;font-weight:400"><input type="checkbox" '+(data.comp&&data.comp.alertaSemPdsActivo?"checked":"")+' onchange="setSemPdsActivo(this)"> Ligado</label></div><div><label>Horário de segunda-feira (semana passada)</label><input type="time" value="'+esc((data.comp&&data.comp.alertaSemPdsHoraSeg)||"08:00")+'" onchange="setSemPdsHora(\'Seg\',this)"></div><div><label>Horário de quinta-feira (semana actual)</label><input type="time" value="'+esc((data.comp&&data.comp.alertaSemPdsHoraQui)||"15:00")+'" onchange="setSemPdsHora(\'Qui\',this)"></div><div style="grid-column:1/-1"><label>Mensagem</label><textarea id="msg_sem_pds" rows="3" onchange="setSemPdsMsg(this)">'+esc(msgSemPds())+'</textarea></div></div></div>'):'';
+  const _semPdsHTML=podeDefsOnline()?('<div class="sec" style="padding:10px 16px"><b style="color:var(--azul)">📆 Alerta semanal — alunos sem PDS</b><div class="muted" style="margin-top:2px">O aviso no sistema (à Gestora de Formação e a cada formador, sobre os seus alunos) está sempre a funcionar. O e-mail automático dispara duas vezes por semana, quando o painel estiver aberto nesse dia à hora (ou depois): segunda-feira de manhã, por referência à semana passada, e quinta-feira à tarde, por referência a esta semana. Usa <code>{lista}</code> e <code>{periodo}</code>.</div><div class="formgrid" style="margin-top:8px"><div><label>Envio automático por e-mail</label><label class="flex" style="gap:8px;align-items:center;font-weight:400"><input type="checkbox" '+(data.comp&&data.comp.alertaSemPdsActivo?"checked":"")+' onchange="setSemPdsActivo(this)"> Ligado</label></div><div><label>Horário de segunda-feira (semana passada)</label><input type="time" lang="pt-PT" value="'+esc((data.comp&&data.comp.alertaSemPdsHoraSeg)||"08:00")+'" onchange="setSemPdsHora(\'Seg\',this)"></div><div><label>Horário de quinta-feira (semana actual)</label><input type="time" lang="pt-PT" value="'+esc((data.comp&&data.comp.alertaSemPdsHoraQui)||"15:00")+'" onchange="setSemPdsHora(\'Qui\',this)"></div><div style="grid-column:1/-1"><label>Mensagem</label><textarea id="msg_sem_pds" rows="3" onchange="setSemPdsMsg(this)">'+esc(msgSemPds())+'</textarea></div></div></div>'):'';
   /* L93-3: alerta de aluno que nunca teve nenhum PDS — só X dias (defeito 4, configurável) depois
      do registo, nunca no dia seguinte. Banner sempre activo; e-mail com interruptor próprio
      (desligado por defeito, mesma cautela dos outros envios automáticos). */
@@ -3624,11 +3679,15 @@ function vOnlineAcompanhamentoHTML(hoje,wk,theadTop){
  data.online.forEach(function(o){if(o.status==="Concluído"||o.status==="Transferido")return;ensurePds(o);(o.pds||[]).forEach(function(p,pidx){var k=p.groupId?p.groupId+"|"+p.data:null;if(k&&_seen[k])return;if(k)_seen[k]=true;_ag.push({o:o,idx:pidx,data:p.data,hora:p.hora,rec:p.rec,parceiro:p.parceiro});});});
  _ag.sort(function(a,b){return (a.data+(a.hora||"")).localeCompare(b.data+(b.hora||""));});
  /* L96-5/6: dentro da Agenda de PDS, "Não realizado" passa a "PDS não realizado" (L101-3: legenda
-    explicativa removida — o nome do botão já é claro sozinho). O cabeçalho (Data/Hora/Aluno/
-    Formador) usa .stickyhead-on (L101-2/4: variáveis CSS recalculadas depois do DOM actualizar,
-    em vez de um offset em pixels calculado durante a própria construção da HTML — isso é que
-    fazia o pill "hoje" aparecer cortado, por o cabeçalho ficar ligeiramente desalinhado). */
- const agendaHtml=`<details class="sec accdet"><summary>Agenda de PDS <span class="pill p-cinza">${_ag.length}</span></summary><table><thead><tr>${['Data','Hora','Aluno','Formador',''].map(function(h){return '<th class="stickyhead-on">'+h+'</th>';}).join('')}</tr></thead><tbody>${_ag.map(function(x){var atras=x.data<_hs,hj=x.data===_hs;var oi=data.online.indexOf(x.o);return '<tr><td style="white-space:nowrap"><div class="flex" style="gap:4px;align-items:center;flex-wrap:wrap">'+fmtDataCurta(x.data)+(atras?'<span class="pill p-verm">atraso</span>':(hj?'<span class="pill p-dour">hoje</span>':''))+'</div></td><td>'+esc(x.hora||"—")+'</td><td>'+esc(x.o.nome)+(x.parceiro?' 🤝 '+esc(x.parceiro):'')+(x.rec?' ♻':'')+(x.o.combinado?'<br><span class="muted" style="font-size:11px">📝 Combinado: '+esc(x.o.combinado)+'</span>':'')+'</td><td>'+esc(x.o.formador||"—")+'</td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:4px 8px" onclick="verDetalhe('+oi+')">Ver perfil</button><button class="btn-g" style="padding:4px 8px" onclick="doPDS('+oi+')">PDS feito</button><button class="btn-o" style="padding:4px 8px" onclick="naoRealizadoPDS('+oi+')">PDS não realizado</button><button class="btn-o" style="padding:4px 8px" onclick="editarPdsItem('+oi+','+x.idx+')">Editar</button><button class="btn-o" style="padding:4px 8px" onclick="cancelPdsItem('+oi+','+x.idx+')">Cancelar</button></td></tr>';}).join("")||'<tr><td colspan="5" class="muted">Sem PDS agendados.</td></tr>'}</tbody></table></details>`;
+    explicativa removida — o nome do botão já é claro sozinho).
+    L110: o cabeçalho desta tabela (Data/Hora/Aluno/Formador) tinha .stickyhead-on, a mesma classe
+    "sticky" (posição fixa ao rolar) da grande tabela de Acompanhamento logo abaixo (linha ~3665).
+    Por esta tabela viver dentro de um <details> (secção que abre/fecha) com linhas de altura
+    variável (nota "Combinado" a ocupar 2 linhas, pill "atraso/hoje", etc.), o deslocamento fixo
+    calculado para a tabela grande ficava errado aqui, fazendo o cabeçalho aparecer preso a meio
+    da lista em vez de no topo. Como esta lista é normalmente curta, tira-se o "sticky" — o
+    cabeçalho passa a ficar sempre e só no topo da própria tabela, sem ambiguidade possível. */
+ const agendaHtml=`<details class="sec accdet"><summary>Agenda de PDS <span class="pill p-cinza">${_ag.length}</span></summary><table><thead><tr>${['Data','Hora','Aluno','Formador',''].map(function(h){return '<th>'+h+'</th>';}).join('')}</tr></thead><tbody>${_ag.map(function(x){var atras=x.data<_hs,hj=x.data===_hs;var oi=data.online.indexOf(x.o);return '<tr><td style="white-space:nowrap"><div class="flex" style="gap:4px;align-items:center;flex-wrap:wrap">'+fmtDataCurta(x.data)+(atras?'<span class="pill p-verm">atraso</span>':(hj?'<span class="pill p-dour">hoje</span>':''))+'</div></td><td>'+esc(x.hora||"—")+'</td><td>'+esc(x.o.nome)+(x.parceiro?' 🤝 '+esc(x.parceiro):'')+(x.rec?' ♻':'')+(x.o.combinado?'<br><span class="muted" style="font-size:11px">📝 Combinado: '+esc(x.o.combinado)+'</span>':'')+'</td><td>'+esc(x.o.formador||"—")+'</td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:4px 8px" onclick="verDetalhe('+oi+')">Ver perfil</button><button class="btn-g" style="padding:4px 8px" onclick="doPDS('+oi+')">PDS feito</button><button class="btn-o" style="padding:4px 8px" onclick="naoRealizadoPDS('+oi+')">PDS não realizado</button><button class="btn-o" style="padding:4px 8px" onclick="editarPdsItem('+oi+','+x.idx+')">Editar</button><button class="btn-o" style="padding:4px 8px" onclick="cancelPdsItem('+oi+','+x.idx+')">Cancelar</button></td></tr>';}).join("")||'<tr><td colspan="5" class="muted">Sem PDS agendados.</td></tr>'}</tbody></table></details>`;
  const _real=data.online.filter(function(o){return o.ultimoPDS===_hs;});
  const realizadosHtml=_real.length?`<details class="sec accdet"><summary>PDS realizados hoje <span class="pill p-cinza">${_real.length}</span></summary><table><thead><tr><th>Aluno</th><th>Formador</th><th>Combinado</th></tr></thead><tbody>${_real.map(function(o){return '<tr><td>'+esc(o.nome)+'</td><td>'+esc(o.formador||"—")+'</td><td>'+(o.combinado?esc(o.combinado):'<span class="muted">—</span>')+'</td></tr>';}).join("")}</tbody></table></details>`:'';
 
@@ -3670,16 +3729,34 @@ function vOnlineFormadoresHTML(ativos){
  }
  var buscaAlunoHtml='<div style="margin:10px 0 4px"><input class="search" placeholder="Pesquisar formando…" value="'+esc(onFormBuscaAluno)+'" oninput="onFormBuscaAluno=this.value;renderDebounced()"></div>'+(qAluno&&!nomesFiltrados.length?'<div class="muted" style="font-size:12px">Nenhum formando encontrado com esse nome.</div>':"");
  var headerHtml='<div class="flex" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><h2 style="margin:0">Formadores</h2><div class="flex" style="gap:8px;align-items:center"><span class="pill p-cinza">'+nomes.length+' formador'+(nomes.length===1?"":"es")+'</span>'+(role==="admin"?'<button class="btn" style="padding:6px 12px" onclick="abrirFormadorPerfil(null)">+ Novo perfil de formador</button>':'')+'</div></div>';
+ /* L108-2/3: engrenagem de acesso directo ao perfil em cada cartão (sem precisar de seleccionar
+    primeiro) — e o grupo "—" (alunos sem formador atribuído) deixa de aparecer disfarçado de
+    formador "sem perfil": não é um formador por completar, é a ausência de um. */
  var chipsHtml='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin:10px 0 16px">'+nomesFiltrados.map(function(n){
   var email=emailDoColaborador(n);
   var temPerfil=!!formadorPerfilByNome(n);
-  return '<button class="btn-'+(onFormSel===n?"p":"o")+'" style="padding:10px 12px;text-align:left" onclick="onFormSel=\''+n.replace(/\'/g,"\\'")+'\';render()"><div style="font-weight:700">'+esc(n)+(temPerfil?'':' <span class="pill p-cinza" style="font-size:9.5px;padding:1px 5px;vertical-align:middle">sem perfil</span>')+'</div><div class="muted" style="font-size:11px">'+(email?esc(email)+' · ':'')+byF[n].tot+' aluno(s)</div></button>';
+  var semFormador=(n==="—");
+  var nEsc=n.replace(/\'/g,"\\'");
+  var gearBtn=(!semFormador&&podeEditarPerfisFormador())?('<span title="'+(temPerfil?"Editar perfil":"Criar perfil")+'" style="cursor:pointer;float:right;opacity:.75" onclick="event.stopPropagation();abrirFormadorPerfil(\''+nEsc+'\')">⚙</span>'):'';
+  var nomeLabel=semFormador?'<span class="muted">Alunos sem formador atribuído</span>':(esc(n)+(temPerfil?'':' <span class="pill p-cinza" style="font-size:9.5px;padding:1px 5px;vertical-align:middle">sem perfil</span>'));
+  return '<button class="btn-'+(onFormSel===n?"p":"o")+'" style="padding:10px 12px;text-align:left" onclick="onFormSel=\''+nEsc+'\';render()"><div style="font-weight:700">'+gearBtn+nomeLabel+'</div><div class="muted" style="font-size:11px">'+(email?esc(email)+' · ':'')+byF[n].tot+' aluno(s)</div></button>';
  }).join("")+'</div>';
  var sel=byF[onFormSel];
  var perfil=onFormSel?formadorPerfilByNome(onFormSel):null;
  var perfilHtml="";
- if(onFormSel){
+ if(onFormSel==="—"){
+  /* L108-3: "—" é o grupo de alunos sem formador atribuído, não um formador — não faz sentido
+     oferecer "Criar Perfil" aqui. */
+  perfilHtml='<div class="sec" style="padding:12px 16px;margin-bottom:12px"><div class="muted">Estes alunos ainda não têm formador atribuído — usa "Atribuir formador" na ficha de cada um (ou em Acompanhamento) para lhes dares um formador.</div></div>';
+ }else if(onFormSel){
   var nomeEsc=onFormSel.replace(/\'/g,"\\'");
+  /* L108-4: cruzamento com o resto do sistema — se esta pessoa também é colaboradora com login, ou
+     também dá aulas presenciais, mostra-se aqui, para a Gestão ver tudo sobre ela num só sítio. */
+  var _colabInfo=(data.perfis||[]).find(function(p){return p.nome===onFormSel;});
+  var _turmasPres=(typeof _turmasComoFormadorDe==="function")?_turmasComoFormadorDe(onFormSel):[];
+  var _crossHtml='';
+  if(_colabInfo)_crossHtml+='<div class="muted" style="font-size:12px;margin-top:4px">👤 Também é colaborador(a) do sistema'+(_colabInfo.departamento?' — '+esc(_colabInfo.departamento):'')+'.</div>';
+  if(_turmasPres.length)_crossHtml+='<div class="muted" style="font-size:12px;margin-top:2px">🏫 Também é formador presencial em: '+_turmasPres.map(function(t){return esc((t.curso||"turma")+" (Ed."+(t.ed||t.cod||"?")+")");}).join(", ")+'.</div>';
   if(perfil){
    var diasTxt=(Array.isArray(perfil.diasContratados)&&perfil.diasContratados.length)?perfil.diasContratados.slice().sort(function(a,b){return a-b;}).map(function(d){return DIAS_NOME[d];}).join(", "):"—";
    var contratoTxt=perfil.contratoSemTermo?"Sem termo":((perfil.contratoInicio?fmtDataCurta(perfil.contratoInicio):"?")+" a "+(perfil.contratoFim?fmtDataCurta(perfil.contratoFim):"?"));
@@ -3689,12 +3766,13 @@ function vOnlineFormadoresHTML(ativos){
     +(perfil.qualificacao?('<div class="muted" style="font-size:12.5px;margin-top:2px">'+esc(perfil.qualificacao)+'</div>'):'')
     +(perfil.resumo?('<div style="font-size:12.5px;margin-top:4px">'+esc(perfil.resumo)+'</div>'):'')
     +'<div class="muted" style="font-size:12px;margin-top:6px">Dias contratados: '+diasTxt+' · Contrato: '+contratoTxt+'</div>'
+    +_crossHtml
     +'</div></div>'
     +'<div class="flex" style="gap:8px;margin-top:10px;flex-wrap:wrap">'+(podeEditarPerfisFormador()?'<button class="btn-o" onclick="abrirFormadorPerfil(\''+nomeEsc+'\')">Editar Perfil</button>':'<span class="pill p-cinza" title="Só a Gestão ou quem tiver autorização pode editar">Sem autorização para editar</span>')+'<button class="btn-o" onclick="abrirFormadorIndisp(\''+nomeEsc+'\')">Marcar indisponibilidade</button></div>'
     +formadorGradeHTML(onFormSel)
     +'</div>';
   }else{
-   perfilHtml='<div class="sec" style="padding:12px 16px;margin-bottom:12px"><div class="muted">Ainda sem perfil registado para '+esc(onFormSel)+'.</div>'+(podeEditarPerfisFormador()?('<button class="btn" style="margin-top:8px" onclick="abrirFormadorPerfil(\''+nomeEsc+'\')">Criar Perfil</button>'):'<div class="muted" style="margin-top:8px;font-size:12px">Sem autorização para criar perfil — pede à Gestão.</div>')+'</div>';
+   perfilHtml='<div class="sec" style="padding:12px 16px;margin-bottom:12px"><div class="muted">Ainda sem perfil registado para '+esc(onFormSel)+'.</div>'+_crossHtml+(podeEditarPerfisFormador()?('<button class="btn" style="margin-top:8px" onclick="abrirFormadorPerfil(\''+nomeEsc+'\')">Criar Perfil</button>'):'<div class="muted" style="margin-top:8px;font-size:12px">Sem autorização para criar perfil — pede à Gestão.</div>')+'</div>';
   }
  }
  var alunosSel=sel?sel.alunos.filter(function(o){return !qAluno||(o.nome||"").toLowerCase().includes(qAluno);}):[];
@@ -4114,7 +4192,7 @@ function marcarPds(){if(pdsEdit===null)return;const o=data.online[pdsEdit];if(!o
  if(_emailForm)filaEmail(_emailForm,"PDS agendado — "+o.nome+" — Knowledge Angola","Olá "+esc(o.formador)+",<br><br>O PDS de <b>"+esc(o.nome)+"</b> ficou marcado para <b>"+esc(dd)+" às "+esc(hh)+"</b>"+(comp?" (em conjunto com "+esc(comp.nome)+")":"")+". Foste convidado(a) automaticamente — o evento já está no teu Google Calendar, com o link para participar.<br><br>Knowledge Angola");
  pdsEdit=null;toast("PDS marcado p/ "+dd+" "+hh+(comp?" com "+comp.nome:"")+(recCk?" ("+diasCk.map(d=>DIAS_NOME[d]).join("+")+", semanal)":""));render();}
 function pdsCompanionOptions(selfIdx){return '<option value="">— ninguém, PDS individual —</option>'+data.online.map(function(x,xi){return xi===selfIdx||x.status==="Concluído"?"":'<option value="'+xi+'">'+esc(x.nome)+'</option>';}).join("");}
-function pdsPickerHTML(){if(pdsEdit===null)return"";const o=data.online[pdsEdit];if(!o)return"";const editando=pdsEditIdx!==null;const alvo=editando?(o.pds||[])[pdsEditIdx]:null;const dd0=(alvo&&alvo.data)||o.proximoPDS||nextTuesday();const wd0=new Date(dd0).getDay();return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)cancelPds()"><div class="card" style="padding:22px;width:380px;max-width:94vw;max-height:88vh;overflow:auto"><h3 style="color:var(--azul);margin-bottom:2px">${editando?"Editar PDS":"Marcar PDS"}</h3><div class="muted" style="margin-bottom:12px">${esc(o.nome)}${o.formador?' · '+esc(o.formador):''}</div><label>Data</label><input id="pds_data" type="date" value="${esc(dd0)}"><label style="margin-top:8px">Hora</label><input id="pds_hora" type="time" value="${esc((alvo&&alvo.hora)||o.proximoHora||'19:30')}">
+function pdsPickerHTML(){if(pdsEdit===null)return"";const o=data.online[pdsEdit];if(!o)return"";const editando=pdsEditIdx!==null;const alvo=editando?(o.pds||[])[pdsEditIdx]:null;const dd0=(alvo&&alvo.data)||o.proximoPDS||nextTuesday();const wd0=new Date(dd0).getDay();return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)cancelPds()"><div class="card" style="padding:22px;width:380px;max-width:94vw;max-height:88vh;overflow:auto"><h3 style="color:var(--azul);margin-bottom:2px">${editando?"Editar PDS":"Marcar PDS"}</h3><div class="muted" style="margin-bottom:12px">${esc(o.nome)}${o.formador?' · '+esc(o.formador):''}</div><label>Data</label><input id="pds_data" type="date" value="${esc(dd0)}"><label style="margin-top:8px">Hora</label><input id="pds_hora" type="time" lang="pt-PT" value="${esc((alvo&&alvo.hora)||o.proximoHora||'19:30')}">
   <label style="margin-top:8px">Duração (minutos)</label><input id="pds_dur" type="number" step="5" value="${(alvo&&alvo.duracao)||60}">
   ${editando?"":`<label style="margin-top:10px">Juntar outra pessoa neste PDS (opcional)</label><select id="pds_comp">${pdsCompanionOptions(pdsEdit)}</select><div class="muted" style="margin-top:2px">Ao marcar "PDS feito", os dois recebem o PDS em conjunto.</div>
   <label style="margin-top:10px;display:flex;align-items:center;gap:8px;font-weight:600"><input type="checkbox" id="pds_rec" onchange="document.getElementById('pds_dias_wrap').style.display=this.checked?'block':'none'"> Repetir semanalmente</label>
@@ -4132,9 +4210,12 @@ function delOnline(i){const o=data.online[i];if(!o)return;if(!podeFichaFormandoF
 function maisOpcoesFichaHTML(i,o){
  var done=o.status==="Concluído";
  var itens='';
- itens+=done
-  ?'<div class="muted" style="padding:4px 0" title="Aluno já concluiu — não é possível trocar o formador">🔁 Trocar formador (indisponível)</div>'
-  :'<button class="btn-o" style="padding:5px 10px;font-size:12.5px;margin:2px 6px 2px 0" onclick="abrirAtribuirFormador('+i+')">🔁 Trocar formador</button>';
+ /* L108-9: esta ficha bloqueava por completo "Trocar formador" para quem já concluiu — mas o
+    menu "Definições" (junto ao nome, na lista) já permitia isto mesmo com o aluno concluído,
+    pedindo o código da Gestão (abrirAtribuirFormador() já trata esse caso sozinho). Ficava
+    inconsistente: dava para trocar por um sítio e não pelo outro. Agora esta ficha segue a mesma
+    regra — botão sempre visível, com a mesma nota informativa. */
+ itens+='<button class="btn-o" style="padding:5px 10px;font-size:12.5px;margin:2px 6px 2px 0" onclick="abrirAtribuirFormador('+i+')">🔁 Trocar formador'+(done?' <span class="muted" style="font-size:11px">(concluído — pede código da Gestão)</span>':'')+'</button>';
  if(o.inicio)itens+='<button class="btn-o" style="padding:5px 10px;font-size:12.5px;margin:2px 6px 2px 0" onclick="abrirIniProp('+i+')">📅 Editar Início/Horário propostos</button>';
  itens+='<button class="btn-o" style="padding:5px 10px;font-size:12.5px;margin:2px 6px 2px 0;color:#a3311f;border-color:#e5b8ac" onclick="delOnline('+i+')">🗑 Eliminar formando</button>';
  return '<details class="sec accdet" style="margin-top:14px"><summary>⚙️ Mais opções</summary><div style="padding:8px 2px 2px">'+itens+'</div></details>';
@@ -4163,7 +4244,7 @@ function iniPropModalHTML(){
  return '<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharIniProp()"><div class="card" style="padding:22px;width:420px;max-width:94vw">'
   +'<div class="flex"><h2 style="color:var(--azul)">Início e horário propostos</h2><div class="spacer"></div><button class="btn-o" style="padding:4px 10px" onclick="fecharIniProp()">Fechar ✕</button></div>'
   +'<div class="muted" style="margin:2px 0 10px;font-size:12.5px">'+esc(o.nome)+' — só aparece no comprovativo se a data estiver preenchida.</div>'
-  +'<div class="formgrid"><div><label>Data</label><input id="ip_data" type="date" value="'+esc(o.inicio||"")+'"></div><div><label>Horário</label><input id="ip_hora" type="time" value="'+esc(o.horarioProposto||"")+'"></div></div>'
+  +'<div class="formgrid"><div><label>Data</label><input id="ip_data" type="date" value="'+esc(o.inicio||"")+'"></div><div><label>Horário</label><input id="ip_hora" type="time" lang="pt-PT" value="'+esc(o.horarioProposto||"")+'"></div></div>'
   +'<div class="flex" style="gap:8px;margin-top:16px;justify-content:flex-end"><button class="btn" onclick="salvarIniProp()">Gravar</button></div>'
   +'</div></div>';
 }
@@ -4196,6 +4277,16 @@ function formadorPerfilVazio(nome){
  return {id:"fo_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),nome:nome||"",foto:"",email:"",qualificacao:"",resumo:"",jaFoiAluno:false,horarioPorDia:{},diasContratados:[],contratoInicio:"",contratoFim:"",contratoSemTermo:true,valorTipo:"mes",valorKz:0,exclusivoFormador:false,acessoPresencial:false,indisponibilidades:[],criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role};
 }
 function formadorPerfilByNome(nome){return (data.formadoresOnline||[]).find(function(p){return p.nome===nome;})||null;}
+/* L108-1: diagnóstico de perfil incompleto — sem "Dias contratados"+"Horário" preenchidos para
+   pelo menos um dia, a pesquisa de disponibilidade nunca vai considerar este formador "livre"
+   (fica sempre "fora do horário contratado"), mesmo estando de facto disponível. Isto explica o
+   "ninguém disponível" quando há formadores reais na lista. */
+function formadorPerfilIncompleto(p){
+ if(!p)return true;
+ if(!Array.isArray(p.diasContratados)||!p.diasContratados.length)return true;
+ var h=p.horarioPorDia||{};
+ return !p.diasContratados.some(function(d){var x=h[d];return x&&x.inicio&&x.fim;});
+}
 function formadorPerfilIdx(nome){return (data.formadoresOnline||[]).findIndex(function(p){return p.nome===nome;});}
 function todosNomesFormadoresOnline(){
  var s={};
@@ -4466,17 +4557,22 @@ function buscarFormadorDisponivelHTML(){
  var resultado="";
  if(dispBuscaFeita&&dispBuscaData&&dispBuscaHora){
   var livres=formadoresDisponiveisEm(dispBuscaData,dispBuscaHora);
+  /* L108-1: quando não aparece ninguém, ajuda a perceber porquê — se houver formadores com o
+     perfil incompleto (sem dias/horário contratado configurados), eles NUNCA vão aparecer como
+     livres, mesmo estando de facto disponíveis — isto não é um bug de cálculo, é falta de
+     configuração, e antes o texto genérico não dava essa pista. */
+  var _incompletos=livres.length?[]:todosNomesFormadoresOnline().filter(function(n){return n!=="—"&&formadorPerfilIncompleto(formadorPerfilByNome(n));});
   resultado='<div style="margin-top:10px">'+(livres.length?('<div style="display:flex;flex-direction:column;gap:6px">'+livres.map(function(n){
     var prox=formadorPdsProximo(n,dispBuscaData,dispBuscaHora);
     return '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--linha);border-radius:8px">'
      +'<span class="pill p-verde">Livre</span><b style="flex:1">'+esc(n)+'</b>'
      +(prox?'<span class="muted" style="font-size:11.5px;color:#b8860b">⚠ já tem PDS com '+esc(prox.nome)+' às '+_fmtHoraExtenso(prox.hora)+' nesse dia</span>':'')
      +'</div>';
-   }).join("")+'</div>'):'<span class="muted">Ninguém disponível neste dia/hora (dentro do horário contratado, sem PDS nem indisponibilidade).</span>')
+   }).join("")+'</div>'):('<span class="muted">Ninguém disponível neste dia/hora (dentro do horário contratado, sem PDS nem indisponibilidade).</span>'+(_incompletos.length?'<div class="muted" style="margin-top:6px;color:#b8860b">⚠ '+_incompletos.length+' formador(es) têm o perfil incompleto (sem dias/horário contratado configurados) — por isso nunca aparecem aqui: '+_incompletos.map(esc).join(", ")+'. Completa o perfil em Definições → Formadores.</div>':'')))
    +'<button class="btn-o" style="padding:4px 10px;margin-top:8px" onclick="limparDispBusca()">‹ Voltar à lista de formadores</button></div>';
  }
  return '<div class="sec" style="padding:10px 16px;margin-bottom:12px"><b style="color:var(--azul)">🔎 Procurar formador disponível</b><div class="muted" style="margin-top:2px;font-size:12px">Escolhe um dia e uma hora para ver quem está livre para dar suporte.</div>'
-  +'<div class="flex" style="gap:8px;margin-top:8px;flex-wrap:wrap;align-items:flex-end"><div><label style="font-size:12px">Dia</label><input type="date" value="'+esc(dispBuscaData)+'" onchange="setDispBusca(\'data\',this);render()"></div><div><label style="font-size:12px">Hora</label><input type="time" value="'+esc(dispBuscaHora)+'" onchange="setDispBusca(\'hora\',this);render()"></div><button class="btn" style="padding:6px 12px" onclick="pesquisarDispBusca()">🔎 Pesquisar disponibilidade</button></div>'
+  +'<div class="flex" style="gap:8px;margin-top:8px;flex-wrap:wrap;align-items:flex-end"><div><label style="font-size:12px">Dia</label><input type="date" value="'+esc(dispBuscaData)+'" onchange="setDispBusca(\'data\',this);render()"></div><div><label style="font-size:12px">Hora</label><input type="time" lang="pt-PT" value="'+esc(dispBuscaHora)+'" onchange="setDispBusca(\'hora\',this);render()"></div><button class="btn" style="padding:6px 12px" onclick="pesquisarDispBusca()">🔎 Pesquisar disponibilidade</button></div>'
   +resultado+'</div>';
 }
 /* ---- Modal: Gravar/Editar Perfil do Formador ---- */
@@ -4488,7 +4584,7 @@ function formadorPerfilModalHTML(){
   var h=(b.horarioPorDia&&b.horarioPorDia[idx])||{inicio:"08:00",fim:"17:00"};
   return '<div class="flex" style="gap:8px;align-items:center;margin-bottom:4px;flex-wrap:wrap">'
    +'<label style="width:96px;display:flex;gap:4px;align-items:center"><input type="checkbox" '+(activo?"checked":"")+' onchange="toggleFormadorPerfilDia('+idx+')"> '+nomeDia+'</label>'
-   +(activo?('<input type="time" value="'+esc(h.inicio)+'" onchange="setFormadorPerfilHorario('+idx+',\'inicio\',this)" style="width:100px"> às <input type="time" value="'+esc(h.fim)+'" onchange="setFormadorPerfilHorario('+idx+',\'fim\',this)" style="width:100px">'):'<span class="muted" style="font-size:12px">não contratado</span>')
+   +(activo?('<input type="time" lang="pt-PT" value="'+esc(h.inicio)+'" onchange="setFormadorPerfilHorario('+idx+',\'inicio\',this)" style="width:100px"> às <input type="time" lang="pt-PT" value="'+esc(h.fim)+'" onchange="setFormadorPerfilHorario('+idx+',\'fim\',this)" style="width:100px">'):'<span class="muted" style="font-size:12px">não contratado</span>')
    +'</div>';
  }).join("");
  var valorHtml=formadorPerfilVerValor
@@ -4527,7 +4623,7 @@ function formadorIndispModalHTML(){
  return '<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharFormadorIndisp()"><div class="card" style="padding:22px;width:560px;max-width:96vw;max-height:88vh;overflow:auto">'
   +'<div class="flex"><h2 style="color:var(--azul)">Indisponibilidade — '+esc(formadorIndispNome)+'</h2><div class="spacer"></div><button class="btn-o" style="padding:4px 10px" onclick="fecharFormadorIndisp()">Fechar ✕</button></div>'
   +'<div class="muted" style="font-size:12px;margin:2px 0 10px">Marca um bloco em que este formador não está disponível apesar do horário contratado (ex.: já dá aula presencial nesse horário). Fica sempre registado quem marcou e quando.</div>'
-  +'<div class="flex" style="gap:8px;flex-wrap:wrap;align-items:flex-end"><div><label style="font-size:12px">Data</label><input id="fi_data" type="date"></div><div><label style="font-size:12px">Das</label><input id="fi_ini" type="time"></div><div><label style="font-size:12px">Até</label><input id="fi_fim" type="time"></div><div style="flex:1;min-width:160px"><label style="font-size:12px">Motivo (opcional)</label><input id="fi_motivo" placeholder="Ex.: aula presencial"></div><button class="btn" onclick="salvarFormadorIndisp()">Marcar</button></div>'
+  +'<div class="flex" style="gap:8px;flex-wrap:wrap;align-items:flex-end"><div><label style="font-size:12px">Data</label><input id="fi_data" type="date"></div><div><label style="font-size:12px">Das</label><input id="fi_ini" type="time" lang="pt-PT"></div><div><label style="font-size:12px">Até</label><input id="fi_fim" type="time" lang="pt-PT"></div><div style="flex:1;min-width:160px"><label style="font-size:12px">Motivo (opcional)</label><input id="fi_motivo" placeholder="Ex.: aula presencial"></div><button class="btn" onclick="salvarFormadorIndisp()">Marcar</button></div>'
   +listaHtml
   +'</div></div>';
 }
@@ -4594,7 +4690,11 @@ function salvarAtribuirFormador(){if(atribFormEdit===null)return;var o=data.onli
 function atribuirFormadorModalHTML(){
  if(atribFormEdit===null)return"";
  var o=data.online[atribFormEdit];if(!o)return"";
- var pessoas=[...new Set([...(data.perfis||[]).map(function(p){return p.nome;}),...pessoasKA()])].filter(Boolean).filter(function(n){return !estaArquivado(n);}).sort();
+ /* L108-5: esta lista era todos os colaboradores/pessoas da KA — passa a ser só quem tem perfil de
+    Formador (data.formadoresOnline), mantendo o formador actual do aluno na lista mesmo sem perfil
+    (dado antigo), para não desaparecer da vista quem já lá estava. */
+ var pessoas=formadoresComPerfilOnline();
+ if(o.formador&&pessoas.indexOf(o.formador)<0)pessoas=[o.formador].concat(pessoas);
  return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharAtribuirFormador()"><div class="card" style="padding:22px;width:360px;max-width:94vw"><h3 style="color:var(--azul);margin-bottom:2px">Atribuir formador</h3><div class="muted" style="margin-bottom:12px">${esc(o.nome)}${o.formador?' · actual: '+esc(o.formador):' · sem formador atribuído'}</div><label>Novo formador</label><select id="af_form"><option value="">— em branco —</option>${pessoas.map(function(n){return '<option '+(n===o.formador?"selected":"")+'>'+esc(n)+'</option>';}).join("")}</select><div class="flex" style="margin-top:14px"><button class="btn-p" onclick="salvarAtribuirFormador()">Guardar</button><button class="btn-o" onclick="fecharAtribuirFormador()">Cancelar</button></div></div></div>`;
 }
 let onDetail=null;
@@ -4644,7 +4744,7 @@ function avalModalHTML(){if(onDetail===null)return"";const o=data.online[onDetai
   ${o.inicio
    ?`<div class="muted" style="margin-top:12px;font-size:12px">Início proposto</div><div style="font-weight:600">${esc(formatarDataExtensa(o.inicio))}${o.horarioProposto?' · '+esc(o.horarioProposto):''}</div><div class="muted" style="margin-top:2px;font-size:12px">Só aparece no comprovativo. Já está definido — para mudar, usa "Mais opções" mais abaixo.</div>`
    :(podeEditarPrazo()
-    ?`<div class="formgrid" style="margin-top:12px"><div><label>Início proposto (data)</label><input type="date" value="" onchange="setInicioPropostoGuard(${onDetail},'inicio',this)"></div><div><label>Horário proposto</label><input type="time" value="" onchange="setInicioPropostoGuard(${onDetail},'horarioProposto',this)"></div></div><div class="muted" style="margin-top:2px;font-size:12px">Só aparece no comprovativo se a data estiver preenchida. Só editável por Gestão, Formador ou Gestora de Formação — e só uma vez.</div>`
+    ?`<div class="formgrid" style="margin-top:12px"><div><label>Início proposto (data)</label><input type="date" value="" onchange="setInicioPropostoGuard(${onDetail},'inicio',this)"></div><div><label>Horário proposto</label><input type="time" lang="pt-PT" value="" onchange="setInicioPropostoGuard(${onDetail},'horarioProposto',this)"></div></div><div class="muted" style="margin-top:2px;font-size:12px">Só aparece no comprovativo se a data estiver preenchida. Só editável por Gestão, Formador ou Gestora de Formação — e só uma vez.</div>`
     :`<div class="muted" style="margin-top:12px;font-size:12px">Início proposto: ainda não definido (só Gestão, Formador ou Gestora de Formação podem defini-lo).</div>`)}
   ${(o.historicoInicio&&o.historicoInicio.length)?`<h3 style="color:var(--azul2);font-size:14px;margin:16px 0 4px">Histórico de Início/Horário propostos</h3>${o.historicoInicio.slice().reverse().map(h=>`<div class="muted" style="padding:4px 0;border-bottom:1px solid var(--linha)">${fmtDataCurta((h.quando||"").slice(0,10))} — ${h.campo==='inicio'?'Data':'Horário'}: ${esc(h.de||"—")} → ${esc(h.para||"—")} <span style="opacity:.7">(por ${esc(h.quem)})</span></div>`).join("")}`:""}
   ${(o.historicoNaoRealizado&&o.historicoNaoRealizado.length)?`<h3 style="color:var(--azul2);font-size:14px;margin:16px 0 4px">Histórico de PDS não realizados</h3>${o.historicoNaoRealizado.slice().reverse().map(h=>`<div class="muted" style="padding:4px 0;border-bottom:1px solid var(--linha)">${fmtDataCurta(h.data)} — ${esc(h.motivo)}</div>`).join("")}`:""}
@@ -5550,7 +5650,7 @@ function vCalendario(){
  const grp=(st)=>we.filter(x=>x.st===st).sort((a,b)=>new Date(a.t.inicio||0)-new Date(b.t.inicio||0));
  const card=(x)=>{const t=x.t;const vlabel=vagasLivresLabel(t);return `<div class="leadcard" style="border-left:4px solid ${x.st==='Em andamento'?'#1E7B45':x.st==='Planeada'?'#BF9000':'#c7ccd6'}"><b>${esc(t.ed)}ª Edição — ${esc(t.curso)}</b><div class="muted">${esc(t.horario||"")} · ${esc(t.modalidade||"")}</div><div>Início: <b>${fmtDataCurta(t.inicio)||"—"}</b> · Fim: <b>${fmtDataCurta(t.fim)||"—"}</b></div><div class="muted">Formador: ${esc(t.resp||"—")}${t.gestora?" · Gestora: "+esc(t.gestora):""}</div>${vlabel?`<div class="muted">Vagas livres: ${vlabel}</div>`:""}${t.inicio?`<div class="mv"><a class="btn-o" style="padding:3px 9px;font-size:11px;text-decoration:none" target="_blank" href="${gcalLink(t.inicio,t.ed+"ª Edição — "+t.curso,"Horário: "+(t.horario||"")+" · Formador: "+(t.resp||"")+" · Knowledge Angola")}">📅 Google Calendar</a></div>`:""}</div>`};
  const sec=(titulo,st)=>{const items=grp(st);return `<div class="sec"><h2>${titulo} <span class="pill p-cinza">${items.length}</span></h2><div class="kanban">${items.map(card).join("")||'<div class="muted">—</div>'}</div></div>`};
- return `<details class="sec accdet"><summary>Agendar actividade no Google Calendar</summary><div class="muted">Cria um evento no Google Calendar da academia — vai automaticamente assim que o motor de automatismos estiver ligado.</div><div class="formgrid"><div><label>Título</label><input id="ag_tit" placeholder="ex.: Reunião com formadores"></div><div><label>Data</label><input id="ag_data" type="date"></div><div><label>Hora</label><input id="ag_hora" type="time"></div><div><label>Nota</label><input id="ag_nota" placeholder="detalhes (opcional)"></div></div><div class="row-actions"><button class="btn-p" onclick="agendarAtividade()">Agendar</button></div></details><div class="note">Calendário das formações dos nossos cursos — visível para a gestão e para as assistentes.</div>${sec("Em andamento","Em andamento")}${sec("Próximas","Planeada")}${sec("Concluídas","Concluída")}`;
+ return `<details class="sec accdet"><summary>Agendar actividade no Google Calendar</summary><div class="muted">Cria um evento no Google Calendar da academia — vai automaticamente assim que o motor de automatismos estiver ligado.</div><div class="formgrid"><div><label>Título</label><input id="ag_tit" placeholder="ex.: Reunião com formadores"></div><div><label>Data</label><input id="ag_data" type="date"></div><div><label>Hora</label><input id="ag_hora" type="time" lang="pt-PT"></div><div><label>Nota</label><input id="ag_nota" placeholder="detalhes (opcional)"></div></div><div class="row-actions"><button class="btn-p" onclick="agendarAtividade()">Agendar</button></div></details><div class="note">Calendário das formações dos nossos cursos — visível para a gestão e para as assistentes.</div>${sec("Em andamento","Em andamento")}${sec("Próximas","Planeada")}${sec("Concluídas","Concluída")}`;
 }
 
 /* COMUNICADOS (id = telefone) */
@@ -5606,7 +5706,7 @@ function marcarPdsF(){if(!pdsEditF)return;const f=data.formandos.find(x=>x.cod==
  pdsEditF=null;toast("PDS marcado p/ "+dd+" "+hh);render();}
 function doPdsF(cod,idx){const f=data.formandos.find(x=>x.cod===cod);if(!f)return;ensurePdsF(f);const p=f.pds[idx];if(!p)return;var comb=prompt("O que ficou combinado até ao próximo encontro? (opcional)","");if(comb===null)return;comb=(comb||"").trim();p.feito=true;p.dataFeito=new Date().toISOString().slice(0,10);p.combinado=comb;f.combinado=comb;persist();toast("PDS marcado como feito");render();}
 function cancelPdsFItem(cod,idx){const f=data.formandos.find(x=>x.cod===cod);if(!f)return;ensurePdsF(f);const p=f.pds[idx];if(!p)return;if(!confirm("Cancelar o PDS de "+p.data+"?"))return;if(p.gcalRef)filaCancelarCalendario(p.gcalRef,"PDS — "+f.nome);f.pds.splice(idx,1);persist();toast("PDS cancelado"+(p.gcalRef?" (pedido de cancelamento enviado ao Google Calendar)":""));render();}
-function pdsPickerFHTML(){if(!pdsEditF)return"";const f=data.formandos.find(x=>x.cod===pdsEditF);if(!f)return"";const editando=pdsEditFIdx!==null;const alvo=editando?(f.pds||[])[pdsEditFIdx]:null;return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:101;padding:16px" onclick="if(event.target===this)cancelPdsF()"><div class="card" style="padding:22px;width:360px;max-width:94vw"><h3 style="color:var(--azul);margin-bottom:2px">${editando?"Editar PDS":"Marcar PDS"}</h3><div class="muted" style="margin-bottom:12px">${esc(f.nome)} (presencial)</div><label>Data</label><input id="pdsf_data" type="date" value="${esc((alvo&&alvo.data)||"")}"><label style="margin-top:8px">Hora</label><input id="pdsf_hora" type="time" value="${esc((alvo&&alvo.hora)||"19:30")}"><label style="margin-top:8px">Duração (minutos)</label><input id="pdsf_dur" type="number" step="5" value="${(alvo&&alvo.duracao)||60}"><div class="row-actions" style="margin-top:14px"><button class="btn-p" onclick="marcarPdsF()">${editando?"Guardar":"Marcar"}</button><button class="btn-o" onclick="cancelPdsF()">Cancelar</button></div></div></div>`;}
+function pdsPickerFHTML(){if(!pdsEditF)return"";const f=data.formandos.find(x=>x.cod===pdsEditF);if(!f)return"";const editando=pdsEditFIdx!==null;const alvo=editando?(f.pds||[])[pdsEditFIdx]:null;return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:101;padding:16px" onclick="if(event.target===this)cancelPdsF()"><div class="card" style="padding:22px;width:360px;max-width:94vw"><h3 style="color:var(--azul);margin-bottom:2px">${editando?"Editar PDS":"Marcar PDS"}</h3><div class="muted" style="margin-bottom:12px">${esc(f.nome)} (presencial)</div><label>Data</label><input id="pdsf_data" type="date" value="${esc((alvo&&alvo.data)||"")}"><label style="margin-top:8px">Hora</label><input id="pdsf_hora" type="time" lang="pt-PT" value="${esc((alvo&&alvo.hora)||"19:30")}"><label style="margin-top:8px">Duração (minutos)</label><input id="pdsf_dur" type="number" step="5" value="${(alvo&&alvo.duracao)||60}"><div class="row-actions" style="margin-top:14px"><button class="btn-p" onclick="marcarPdsF()">${editando?"Guardar":"Marcar"}</button><button class="btn-o" onclick="cancelPdsF()">Cancelar</button></div></div></div>`;}
 /* Passar de turma presencial para Turma Online (sentido inverso da secção 1) */
 let transferParaOnlineCod=null;
 function abrirTransferParaOnline(cod){transferParaOnlineCod=cod;render();}
@@ -5614,8 +5714,8 @@ function fecharTransferParaOnline(){transferParaOnlineCod=null;render();}
 function transferParaOnlineModalHTML(){if(!transferParaOnlineCod)return"";const f=data.formandos.find(x=>x.cod===transferParaOnlineCod);if(!f)return"";
  return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:101;padding:16px" onclick="if(event.target===this)fecharTransferParaOnline()"><div class="card" style="padding:22px;width:420px;max-width:94vw"><h3 style="color:var(--azul);margin-bottom:2px">Passar para turma online</h3><div class="muted" style="margin-bottom:12px">${esc(f.nome)} passa de turma presencial para acompanhamento em Turma Online. O pagamento já registado segue com o aluno.</div>
   <label>Nível inicial</label><select id="tpo_nivel">${NIVEIS.map(n=>`<option>${esc(n)}</option>`).join("")}</select>
-  <label style="margin-top:8px">Formador responsável (online)</label>${respInputHTML("tpo_form",f.formador||"","Formador")}
-  <div class="formgrid" style="margin-top:8px"><div><label>Dia proposto p/ 1ª aula (opcional)</label><input id="tpo_inicio" type="date"></div><div><label>Horário proposto (opcional)</label><input id="tpo_horario" type="time"></div></div>
+  <label style="margin-top:8px">Formador responsável (online)</label><select id="tpo_form">${formadoresOnlineOpts(f.formador||"")}</select>
+  <div class="formgrid" style="margin-top:8px"><div><label>Dia proposto p/ 1ª aula (opcional)</label><input id="tpo_inicio" type="date"></div><div><label>Horário proposto (opcional)</label><input id="tpo_horario" type="time" lang="pt-PT"></div></div>
   <div class="row-actions" style="margin-top:14px"><button class="btn-p" onclick="confirmarTransferParaOnline()">Confirmar</button><button class="btn-o" onclick="fecharTransferParaOnline()">Cancelar</button></div></div></div>`;}
 function confirmarTransferParaOnline(){const cod=transferParaOnlineCod;const f=data.formandos.find(x=>x.cod===cod);if(!f)return;if(!pedeCodigoTransfer())return;
  const _iniCombinado=val("tpo_inicio")||"";
@@ -6033,7 +6133,7 @@ function vPaginas(){const admin=role==="admin";return `<div class="sec"><h2>Cat�
 function vDefs(){const _im=indicadoresMarketing(mesTrafego||null);const _fontes=Object.keys(data.trafego||{});
  const _metaHoje=new Date().toISOString().slice(0,10);
  const _metaTabela=role==="admin"?`<div class="sec"><h2>Metas de chamadas e conversão</h2><div class="muted">Meta diária de chamadas (feitas ou recebidas) por assistente/gestora de formação, e alerta se não cumprir até uma hora-limite (verificado pelo Apps Script, no dia seguinte).</div>
-  <div class="formgrid" style="margin-top:8px"><div><label>Chamadas-meta por dia</label><input id="mt_chamadas" type="number" value="${(data.metas&&data.metas.chamadasDia)||20}"></div><div><label>Hora-limite para o alerta (dia seguinte)</label><input id="mt_hora" type="time" value="${(data.metas&&data.metas.horaLimite)||"10:00"}"></div><div><label>Hora-limite para confirmar presença no escritório</label><input id="mt_horapresenca" type="time" value="${(data.metas&&data.metas.horaLimitePresenca)||"10:00"}"></div></div>
+  <div class="formgrid" style="margin-top:8px"><div><label>Chamadas-meta por dia</label><input id="mt_chamadas" type="number" value="${(data.metas&&data.metas.chamadasDia)||20}"></div><div><label>Hora-limite para o alerta (dia seguinte)</label><input id="mt_hora" type="time" lang="pt-PT" value="${(data.metas&&data.metas.horaLimite)||"10:00"}"></div><div><label>Hora-limite para confirmar presença no escritório</label><input id="mt_horapresenca" type="time" lang="pt-PT" value="${(data.metas&&data.metas.horaLimitePresenca)||"10:00"}"></div></div>
   <div class="row-actions"><button class="btn-p" onclick="saveMetas()">Guardar meta global</button></div>
   <div class="muted" style="margin-top:6px">A <b>meta por colaborador</b> (coluna abaixo) sobrepõe-se à meta global; quem não tiver meta própria usa a global.</div>
   <div class="flex" style="gap:10px;align-items:center;margin-top:8px"><label style="margin:0">Ver o dia:</label><input type="date" value="${metaDia||new Date().toISOString().slice(0,10)}" onchange="metaDia=this.value;render()" style="width:auto"><button class="btn-o" onclick="metaDia='';render()">Hoje</button><span class="muted">YTD = acumulado do ano</span></div>
