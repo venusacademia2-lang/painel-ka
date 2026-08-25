@@ -67,7 +67,7 @@ main{padding:24px 26px;max-width:1320px;width:100%}
 .kpi:hover{border-color:var(--azul2);transform:translateY(-1px)}
 .kpi .lab{font-size:12px;color:#7b869c;font-weight:600}
 .kpi .val{font-size:24px;font-weight:800;color:var(--azul);margin-top:6px}
-.kpi.alert .val{color:var(--verm)}.kpi.money .val{color:var(--verde)}
+.kpi.alert .val{color:var(--verm)}.kpi.money .val{color:var(--verde)}.kpi.warn .val{color:var(--dour)}
 .sec{background:#fff;border:1px solid var(--linha);border-radius:14px;padding:18px;margin-top:18px;box-shadow:var(--sombra);overflow-x:auto}
 .sec h2{font-size:17px;color:var(--azul);margin-bottom:2px;font-family:Georgia,'Times New Roman',serif;font-weight:700;display:inline-block;border-bottom:2px solid var(--dour);padding-bottom:3px}
 .sec .muted{margin-bottom:14px}
@@ -371,7 +371,7 @@ div[style*="position:fixed"][style*="place-items:center"]>.card{resize:both;over
     <div style="position:absolute;bottom:24%;left:20%;width:7px;height:7px;background:#F3C34E;border-radius:50%;opacity:.45;animation:kaPulse 3.6s ease-in-out .6s infinite"></div>
   </div>
   <div class="card loginbox">
-    <div style="text-align:center;margin-bottom:6px"><img class="wordmark-lg" src="data:image/png;base64,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" alt="Knowledge Angola"><div class="muted" style="margin-top:6px">Sistema de Gestão da Academia · <b>v36.60</b></div></div>
+    <div style="text-align:center;margin-bottom:6px"><img class="wordmark-lg" src="data:image/png;base64,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" alt="Knowledge Angola"><div class="muted" style="margin-top:6px">Sistema de Gestão da Academia · <b>v36.61</b></div></div>
     <div id="recentesWrap" style="display:none;margin-bottom:10px">
       <div class="muted" style="text-align:center;font-size:11.5px;font-weight:600;margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em">Contas recentes neste dispositivo</div>
       <div id="recentesBox" style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:10px"></div>
@@ -1258,7 +1258,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.60";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.61";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -3342,13 +3342,121 @@ function abrirNovoProjecto(){novoProjectoAberto=true;render();}
 function fecharNovoProjecto(){novoProjectoAberto=false;render();}
 function abrirProjecto(i){prjAberto=i;render();}
 function fecharProjecto(){prjAberto=null;render();}
+/* L137: a pedido do Ventura, um projecto passa a poder interligar-se com o resto do sistema —
+   "Área" (reaproveita data.areas/donosDeArea, o mesmo motor de áreas já usado em "Comunicados &
+   Tarefas") e "Ligado a" (uma turma, um formando da Turma Online, ou uma empresa B2B). Nada
+   inventado de novo: reaproveita-se o que já existe (áreas, notas, ficha do aluno). */
 function criarProjecto(){
  var titulo=val("prj_titulo");
  if(!titulo){toast("Falta o título do projecto");return;}
- var o={cod:"PRJ-"+Date.now(),titulo:titulo,dataInicio:val("prj_inicio")||_dISO(new Date()),prazo:val("prj_prazo")||"",estado:"Planeado",proximoPasso:val("prj_proximo")||"",materiais:val("prj_materiais")||"",responsavel:val("prj_resp")||((currentUser&&currentUser.nome)||""),envolvidos:[],sessoes:[],historico:[],criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||"Equipa"};
+ var area=val("prj_area")||"";
+ var o={cod:"PRJ-"+Date.now(),titulo:titulo,dataInicio:val("prj_inicio")||_dISO(new Date()),prazo:val("prj_prazo")||"",estado:"Planeado",proximoPasso:val("prj_proximo")||"",materiais:val("prj_materiais")||"",responsavel:val("prj_resp")||((currentUser&&currentUser.nome)||""),area:area,ligadoA:null,envolvidos:[],sessoes:[],tarefas:[],historico:[],criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||"Equipa"};
  data.projectos.unshift(o);
  registarHistoricoProjecto(o,"Projecto criado por "+o.criadoPor);
+ if(area){
+  var donosIni=donosDeArea(area);
+  if(donosIni.length)criarNotaAutoGrupo("Novo projecto \""+o.titulo+"\" na área "+area+".",donosIni,area);
+ }
  persist();novoProjectoAberto=false;toast("Projecto criado");render();
+}
+/* L137-2: mudar a Área de um projecto avisa quem é dono dessa área (mesmo mecanismo do "Comunicados
+   & Tarefas") — separado de actualizarCampoProjecto porque este, além do aviso genérico aos
+   envolvidos, tem de avisar especificamente os donos da NOVA área. */
+function actualizarAreaProjecto(i,area){
+ var o=data.projectos[i];if(!o)return;
+ if((o.area||"")===(area||""))return;
+ o.area=area;
+ registarHistoricoProjecto(o,"Área → "+(area||"—"));
+ if(area){
+  var donos=donosDeArea(area);
+  if(donos.length)criarNotaAutoGrupo("Projecto \""+o.titulo+"\" foi atribuído à área "+area+".",donos,area);
+ }
+ notificarEnvolvidosProjecto(o,"área actualizada para \""+(area||"—")+"\"");
+ persist();render();
+}
+/* L137-2: "Ligado a" — aponta o projecto para um registo já existente (turma, formando da Turma
+   Online, ou empresa B2B). Usa códigos estáveis já existentes no sistema (turma.cod,
+   ensureOnlineCod) em vez do índice na lista, para a ligação não se perder se a lista for
+   reordenada — só o B2B não tem código próprio, por isso aí usa-se o índice (mesmo critério já
+   usado no resto do painel para o B2B, ex. verB2BDetalhe). */
+function _labelLigacaoProjecto(tipo,id){
+ if(tipo==="turma"){var t=turmaByCod(id);return t?(t.curso+" (Ed."+t.ed+")"):"(turma removida)";}
+ if(tipo==="formando"){var o=(data.online||[]).find(function(x){return ensureOnlineCod(x)===id;});return o?o.nome:"(formando removido)";}
+ if(tipo==="b2b"){var x=b2bList()[+id];return x?x.empresa:"(empresa removida)";}
+ return "";
+}
+function definirLigacaoProjecto(i,tipo,id){
+ var o=data.projectos[i];if(!o)return;
+ if(!tipo||!id){o.ligadoA=null;registarHistoricoProjecto(o,"Ligação removida");persist();render();return;}
+ var label=_labelLigacaoProjecto(tipo,id);
+ o.ligadoA={tipo:tipo,id:id,label:label};
+ registarHistoricoProjecto(o,"Ligado a: "+label);
+ persist();render();
+}
+function removerLigacaoProjecto(i){definirLigacaoProjecto(i,"","");}
+function abrirLigacaoProjecto(lig){
+ if(!lig||!lig.tipo)return;
+ if(lig.tipo==="turma"){show("turmas");return;}
+ if(lig.tipo==="formando"){var o=(data.online||[]).find(function(x){return ensureOnlineCod(x)===lig.id;});if(o){show("online");onDetail=data.online.indexOf(o);render();}return;}
+ if(lig.tipo==="b2b"){var idx=+lig.id;if(b2bList()[idx]){show("b2b");verB2BDetalhe(idx);}return;}
+}
+/* Atalho para o botão "Ver ↗" dentro do projecto — evita ter de passar o objecto ligadoA por
+   JSON dentro do onclick (frágil com aspas/acentos); parte só do índice do projecto, que já se
+   tem sempre à mão nas views. */
+function abrirLigacaoProjectoIdx(i){var o=data.projectos[i];if(o&&o.ligadoA)abrirLigacaoProjecto(o.ligadoA);}
+/* Usada na ficha do formando (avalModalHTML) para mostrar, do outro lado, que projectos estão
+   ligados a ele — a ligação passa a ver-se dos dois lados, como pedido. */
+function projectosLigadosA(tipo,id){
+ return (data.projectos||[]).map(function(o,i){return{o:o,i:i};}).filter(function(x){return x.o.ligadoA&&x.o.ligadoA.tipo===tipo&&String(x.o.ligadoA.id)===String(id);});
+}
+var prjLigTipoTemp="";
+function setPrjLigTipo(v){prjLigTipoTemp=v;render();}
+function confirmarLigacaoProjecto(i,tipo,id){if(!id){toast("Escolhe um registo da lista");return;}definirLigacaoProjecto(i,tipo,id);prjLigTipoTemp="";}
+/* HTML da secção "Ligado a" dentro do projecto: mostra o pill já ligado, ou os 2 selects
+   (tipo → alvo) para escolher a que registo se liga. */
+function ligadoAProjectoHTML(i,o){
+ var lig=o.ligadoA;
+ if(lig){
+  return '<label style="margin-top:8px">Ligado a</label><div class="flex" style="gap:6px;align-items:center;margin-top:4px;flex-wrap:wrap"><span class="pill p-azul">'+esc(lig.label)+'</span><button class="btn-o" style="padding:3px 9px" onclick="abrirLigacaoProjectoIdx('+i+')">Ver ↗</button><button class="btn-o" style="padding:3px 9px" onclick="removerLigacaoProjecto('+i+')">Desligar</button></div>';
+ }
+ var tiposOpt=[{id:"turma",label:"Turma"},{id:"formando",label:"Formando (Turma Online)"},{id:"b2b",label:"Empresa (B2B)"}];
+ var tipoSelHtml='<select onchange="setPrjLigTipo(this.value)" style="margin-top:6px"><option value="">— ligar a —</option>'+tiposOpt.map(function(t){return '<option value="'+t.id+'" '+(prjLigTipoTemp===t.id?"selected":"")+'>'+t.label+'</option>';}).join("")+'</select>';
+ var alvoHtml="";
+ if(prjLigTipoTemp==="turma"){
+  alvoHtml='<select style="margin-top:6px" onchange="confirmarLigacaoProjecto('+i+',\'turma\',this.value)"><option value="">— escolher turma —</option>'+(data.turmas||[]).map(function(t){return '<option value="'+esc(t.cod)+'">'+esc(t.curso)+' (Ed.'+esc(t.ed)+')</option>';}).join("")+'</select>';
+ }else if(prjLigTipoTemp==="formando"){
+  alvoHtml='<select style="margin-top:6px" onchange="confirmarLigacaoProjecto('+i+',\'formando\',this.value)"><option value="">— escolher formando —</option>'+(data.online||[]).map(function(o2){return '<option value="'+esc(ensureOnlineCod(o2))+'">'+esc(o2.nome)+'</option>';}).join("")+'</select>';
+ }else if(prjLigTipoTemp==="b2b"){
+  alvoHtml='<select style="margin-top:6px" onchange="confirmarLigacaoProjecto('+i+',\'b2b\',this.value)"><option value="">— escolher empresa —</option>'+b2bList().map(function(x,idx){return '<option value="'+idx+'">'+esc(x.empresa)+'</option>';}).join("")+'</select>';
+ }
+ return '<label style="margin-top:8px">Ligado a</label>'+tipoSelHtml+alvoHtml;
+}
+/* L137-3: tarefas dentro de um projecto — texto + responsável + prazo. Em vez de inventar um
+   sistema de tarefas paralelo, cada tarefa cria uma entrada normal em data.notas (o motor já
+   existente de "Comunicados & Tarefas" — tarefasDe(), _pendenciasDaPessoa(), o alerta de "tarefas
+   em atraso"), ligada pelo id da tarefa (projTarefaId). Assim a tarefa aparece automaticamente no
+   perfil da pessoa (Tarefas/Comunicados) e só sai de lá quando for marcada como concluída — em
+   qualquer um dos dois lados (toggleNota também actualiza a tarefa do projecto, ver mais abaixo). */
+function adicionarTarefaProjecto(i){
+ var o=data.projectos[i];if(!o)return;
+ var txt=val("prj_tarefa_txt_"+i),resp=val("prj_tarefa_resp_"+i),prazo=val("prj_tarefa_prazo_"+i);
+ if(!txt||!resp){toast("Escreve a tarefa e escolhe a quem atribuir");return;}
+ var id="PT-"+Date.now()+"-"+Math.floor(Math.random()*1000);
+ o.tarefas=o.tarefas||[];
+ o.tarefas.unshift({id:id,txt:txt,resp:resp,prazoData:prazo||"",feito:false,criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role});
+ data.notas.unshift({txt:"Projecto \""+o.titulo+"\": "+txt,resp:resp,area:o.area||"",numero:"",email:"",tel:"",prazoData:prazo||"",prazoHora:"",feito:false,comentario:"",data:_dISO(new Date()),criadoEm:new Date().toISOString(),pedidoPor:(currentUser&&currentUser.nome)||role,projTarefaId:id,projectoCod:o.cod});
+ registarHistoricoProjecto(o,"Tarefa atribuída a "+resp+": "+txt);
+ persist();toast("Tarefa atribuída a "+resp);render();
+}
+/* Marcar concluída directamente na ficha do projecto (o toggle inverso, a partir de "Comunicados &
+   Tarefas", está em toggleNota — mantém as duas listas sincronizadas). */
+function toggleTarefaProjecto(i,taskId){
+ var o=data.projectos[i];if(!o)return;
+ var t=(o.tarefas||[]).find(function(x){return x.id===taskId;});if(!t)return;
+ t.feito=!t.feito;
+ var n=(data.notas||[]).find(function(x){return x.projTarefaId===taskId;});
+ if(n)n.feito=t.feito;
+ persist();render();
 }
 function eliminarProjecto(i){
  var o=data.projectos[i];if(!o)return;
@@ -3407,6 +3515,7 @@ function novoProjectoModalHTML(){
   +'<label style="margin-top:8px">Próximo passo</label><input id="prj_proximo" placeholder="O que falta fazer a seguir">'
   +'<label style="margin-top:8px">Materiais necessários</label><textarea id="prj_materiais" rows="2" placeholder="Ex.: Computador, acesso ao Canva…"></textarea>'
   +'<label style="margin-top:8px">Responsável</label>'+respInputHTML("prj_resp","","— escolher —")
+  +'<label style="margin-top:8px">Área (opcional)</label><select id="prj_area"><option value="">—</option>'+areasList().map(function(a){return '<option value="'+esc(a)+'">'+esc(a)+'</option>';}).join("")+'</select>'
   +'<div class="flex" style="margin-top:16px;gap:8px;justify-content:flex-end"><button class="btn-o" onclick="fecharNovoProjecto()">Cancelar</button><button class="btn-p" onclick="criarProjecto()">Criar projecto</button></div>'
   +'</div></div>';
 }
@@ -3418,11 +3527,19 @@ function projectoDetalheModalHTML(i){
  var pessoas=_pessoasProjecto();
  var sessoesHtml=(o.sessoes||[]).length?'<table style="margin-top:6px"><thead><tr><th>Data</th><th>Quem</th><th>Início</th><th>Fecho</th><th>Horas</th><th></th></tr></thead><tbody>'+(o.sessoes||[]).map(function(s,idx){return '<tr><td>'+fmtDataCurta(s.data)+'</td><td>'+esc(s.quem)+'</td><td>'+esc(s.inicio)+'</td><td>'+esc(s.fim)+'</td><td>'+s.horas+'h</td><td><a onclick="removerSessaoProjecto('+i+','+idx+')" style="cursor:pointer">✕</a></td></tr>';}).join("")+'</tbody></table>':'<div class="muted" style="margin-top:6px">Ainda sem sessões de trabalho registadas.</div>';
  var histHtml=(o.historico||[]).length?(o.historico||[]).slice(0,12).map(function(h){return '<div class="muted" style="font-size:11.5px;margin-top:2px">'+fmtDataCurta(h.data.slice(0,10))+' '+h.data.slice(11,16)+' — '+esc(h.quem)+': '+esc(h.txt)+'</div>';}).join(""):'';
+ /* L137-3: lista de tarefas do projecto — cada uma aparece também no perfil da pessoa (Comunicados
+    & Tarefas), até ser marcada como concluída dos dois lados (ver toggleTarefaProjecto/toggleNota). */
+ var tarefasHtml=(o.tarefas||[]).length?(o.tarefas||[]).map(function(t){
+  var atras=t.prazoData&&!t.feito&&t.prazoData<_dISO(new Date());
+  return '<label style="display:flex;align-items:flex-start;gap:8px;padding:5px 0;cursor:pointer'+(t.feito?';opacity:.55;text-decoration:line-through':'')+'"><input type="checkbox" '+(t.feito?"checked":"")+' onchange="toggleTarefaProjecto('+i+',\''+t.id+'\')" style="width:auto;margin-top:3px"><span>'+esc(t.txt)+' <span class="pill p-azul" style="padding:1px 7px">'+esc(t.resp)+'</span>'+(t.prazoData?(' <span class="pill '+(atras?"p-verm":"p-cinza")+'" style="padding:1px 7px">prazo '+fmtDataCurta(t.prazoData)+(atras?" — atrasada":"")+'</span>'):'')+'</span></label>';
+ }).join(""):'<div class="muted" style="margin-top:6px">Ainda sem tarefas atribuídas.</div>';
  return '<div style="position:fixed;inset:0;background:rgba(20,30,60,.45);display:grid;place-items:center;z-index:300;padding:16px" onclick="if(event.target===this)fecharProjecto()"><div class="card" style="padding:22px;width:560px;max-width:94vw;max-height:92vh;overflow:auto">'
   +'<div class="flex" style="justify-content:space-between;align-items:flex-start;gap:8px"><h3 style="color:var(--azul);margin:0">'+esc(o.titulo)+'</h3><button class="btn-o" style="padding:4px 10px" onclick="fecharProjecto()">Fechar</button></div>'
   +'<div class="muted" style="font-size:12.5px;margin:4px 0 12px">Criado por '+esc(o.criadoPor||"—")+' · '+(o.dataInicio?fmtDataCurta(o.dataInicio):"—")+(o.prazo?' → prazo '+fmtDataCurta(o.prazo):'')+'</div>'
   +'<label>Estado</label><select onchange="actualizarCampoProjecto('+i+',\'estado\',this.value,\'Estado\')">'+estados.map(function(e){return '<option value="'+e+'" '+(o.estado===e?"selected":"")+'>'+e+'</option>';}).join("")+'</select>'
   +'<label style="margin-top:8px">Responsável</label>'+respInputHTML("prj_resp_edit_"+i,o.responsavel,"— escolher —").replace('id="prj_resp_edit_'+i+'"','id="prj_resp_edit_'+i+'" onchange="actualizarCampoProjecto('+i+',\'responsavel\',this.value,\'Responsável\')"')
+  +'<label style="margin-top:8px">Área</label><select onchange="actualizarAreaProjecto('+i+',this.value)"><option value="">—</option>'+areasList().map(function(a){return '<option value="'+esc(a)+'" '+(o.area===a?"selected":"")+'>'+esc(a)+'</option>';}).join("")+'</select>'
+  +ligadoAProjectoHTML(i,o)
   +'<label style="margin-top:8px">Próximo passo</label><div class="flex" style="gap:6px"><input id="prj_np_'+i+'" value="'+esc(o.proximoPasso||"")+'" style="flex:1"><button class="btn-o" onclick="actualizarCampoProjecto('+i+',\'proximoPasso\',val(\'prj_np_'+i+'\'),\'Próximo passo\')">Gravar</button></div>'
   +'<label style="margin-top:8px">Prazo para conclusão</label><div class="flex" style="gap:6px"><input id="prj_pz_'+i+'" type="date" value="'+esc(o.prazo||"")+'" style="flex:1"><button class="btn-o" onclick="actualizarCampoProjecto('+i+',\'prazo\',val(\'prj_pz_'+i+'\'),\'Prazo\')">Gravar</button></div>'
   +'<label style="margin-top:8px">Materiais necessários</label><div class="flex" style="gap:6px"><textarea id="prj_mat_'+i+'" rows="2" style="flex:1">'+esc(o.materiais||"")+'</textarea><button class="btn-o" onclick="actualizarCampoProjecto('+i+',\'materiais\',val(\'prj_mat_'+i+'\'),\'Materiais necessários\')">Gravar</button></div>'
@@ -3430,6 +3547,8 @@ function projectoDetalheModalHTML(i){
   +'<div class="flex" style="gap:6px;margin-top:8px;flex-wrap:wrap"><select id="prj_env_nome_'+i+'" style="flex:1;min-width:140px"><option value="">— pessoa da equipa —</option>'+pessoas.map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+'</option>';}).join("")+'</select><span class="muted">ou</span><input id="prj_env_email_'+i+'" placeholder="e-mail de alguém de fora" style="flex:1;min-width:160px"><button class="btn-o" onclick="adicionarEnvolvidoProjecto('+i+')">+ Adicionar</button></div>'
   +'<label style="margin-top:12px">Horas dedicadas — total '+horas+'h</label>'+sessoesHtml
   +'<div class="flex" style="gap:6px;margin-top:8px;flex-wrap:wrap"><input id="prj_sess_data_'+i+'" type="date" value="'+esc(_dISO(new Date()))+'"><input id="prj_sess_ini_'+i+'" type="time"><input id="prj_sess_fim_'+i+'" type="time"><button class="btn-o" onclick="adicionarSessaoProjecto('+i+')">+ Registar sessão</button></div>'
+  +'<label style="margin-top:12px">Tarefas</label><div style="margin-top:2px">'+tarefasHtml+'</div>'
+  +'<div class="flex" style="gap:6px;margin-top:8px;flex-wrap:wrap"><input id="prj_tarefa_txt_'+i+'" placeholder="O que precisa de ser feito" style="flex:1;min-width:160px"><select id="prj_tarefa_resp_'+i+'" style="min-width:140px"><option value="">— responsável —</option>'+pessoas.map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+'</option>';}).join("")+'</select><input id="prj_tarefa_prazo_'+i+'" type="date"><button class="btn-o" onclick="adicionarTarefaProjecto('+i+')">+ Atribuir tarefa</button></div>'
   +(histHtml?'<label style="margin-top:12px">Histórico</label>'+histHtml:'')
   +(role==="admin"?'<div style="margin-top:16px;text-align:right"><button class="btn-o" style="color:var(--verm);border-color:var(--verm)" onclick="eliminarProjecto('+i+')">🗑 Eliminar projecto</button></div>':'')
   +'</div></div>';
@@ -3449,7 +3568,10 @@ function vProjectos(){
   var estCor=o.estado==="Concluído"?"p-azul":o.estado==="Em curso"?"p-verde":o.estado==="Parado"?"p-dour":"p-cinza";
   var horas=horasTotaisProjecto(o);
   var envN=(o.envolvidos||[]).length;
-  return '<div class="sec" style="padding:12px 16px;margin-bottom:10px;cursor:pointer" onclick="abrirProjecto('+i+')"><div class="flex" style="justify-content:space-between;align-items:center;gap:8px"><div style="font-weight:700">'+esc(o.titulo)+'</div><span class="pill '+estCor+'">'+esc(o.estado)+'</span></div><div class="muted" style="font-size:12.5px;margin-top:4px">Responsável: '+esc(o.responsavel||"—")+' · '+envN+' envolvido'+(envN===1?"":"s")+' · '+horas+'h dedicadas'+(o.prazo?' · Prazo: '+fmtDataCurta(o.prazo):'')+'</div>'+(o.proximoPasso?'<div style="font-size:12.5px;margin-top:4px">➜ '+esc(o.proximoPasso)+'</div>':'')+'</div>';
+  var tagsHtml='';
+ if(o.area)tagsHtml+='<span class="pill p-cinza" style="margin-right:4px">'+esc(o.area)+'</span>';
+ if(o.ligadoA&&o.ligadoA.label)tagsHtml+='<span class="pill p-azul">🔗 '+esc(o.ligadoA.label)+'</span>';
+ return '<div class="sec" style="padding:12px 16px;margin-bottom:10px;cursor:pointer" onclick="abrirProjecto('+i+')"><div class="flex" style="justify-content:space-between;align-items:center;gap:8px"><div style="font-weight:700">'+esc(o.titulo)+'</div><span class="pill '+estCor+'">'+esc(o.estado)+'</span></div>'+(tagsHtml?'<div style="margin-top:4px">'+tagsHtml+'</div>':'')+'<div class="muted" style="font-size:12.5px;margin-top:4px">Responsável: '+esc(o.responsavel||"—")+' · '+envN+' envolvido'+(envN===1?"":"s")+' · '+horas+'h dedicadas'+(o.prazo?' · Prazo: '+fmtDataCurta(o.prazo):'')+'</div>'+(o.proximoPasso?'<div style="font-size:12.5px;margin-top:4px">➜ '+esc(o.proximoPasso)+'</div>':'')+'</div>';
  }).join(""):'<div class="muted">Sem projectos '+(prjFiltro?'com este estado':'ainda — cria o primeiro acima')+'.</div>';
  return '<div class="sec">'+headerHtml
   +'<input class="search" style="margin-top:10px" placeholder="Pesquisar por título…" value="'+esc(prjBusca)+'" oninput="prjBusca=this.value;renderDebounced()">'
@@ -4650,7 +4772,17 @@ function vNotas(){const abertas=data.notas.filter(n=>!n.feito),feitas=data.notas
   ${feitas.length?`<div style="margin-top:18px"><div class="muted" style="font-weight:700;margin-bottom:4px">Resolvidas (${feitas.length})</div>${feitas.map(item).join("")}</div>`:""}
  </div>`+vComunicados();}
 function addNota(){const t=val("nota_txt");if(!t){toast("Escreve algo primeiro");return}let resp=val("nota_resp");const area=val("nota_area");if(!resp&&area){const donos=donosDeArea(area);if(donos.length===1)resp=donos[0];}data.notas.unshift({txt:t,resp:resp,area:area,numero:val("nota_num"),email:val("nota_email"),tel:val("nota_tel"),prazoData:val("nota_prazo"),prazoHora:val("nota_prazoh"),feito:false,comentario:"",data:_dISO(new Date()),criadoEm:new Date().toISOString(),pedidoPor:(currentUser&&currentUser.nome)||role});const _em=val("nota_email");if(_em)filaEmail(_em,"Tarefa atribuída — Knowledge Angola","Olá,<br><br>Foi-te pedido para resolver: <b>"+esc(t)+"</b>"+(val("nota_prazo")?"<br>Prazo: "+esc(val("nota_prazo")):"")+".<br><br>Knowledge Angola");persist();render();const e=document.getElementById("nota_txt");if(e)e.focus();}
-function toggleNota(i){if(data.notas[i]){data.notas[i].feito=!data.notas[i].feito;persist();render()}}
+/* L137-3: quando a tarefa vem de um projecto (n.projTarefaId), marcar/desmarcar aqui também
+   actualiza a tarefa dentro do projecto — mantém as duas vistas sempre coerentes. Notas comuns
+   (sem projTarefaId, a esmagadora maioria) continuam exactamente como antes. */
+function toggleNota(i){
+ var n=data.notas[i];if(!n)return;
+ n.feito=!n.feito;
+ if(n.projTarefaId){
+  (data.projectos||[]).forEach(function(p){(p.tarefas||[]).forEach(function(t){if(t.id===n.projTarefaId)t.feito=n.feito;});});
+ }
+ persist();render();
+}
 function delNota(i){data.notas.splice(i,1);persist();render()}
 function editNota(i){const n=data.notas[i];if(!n)return;const t=prompt("Editar tarefa:",n.txt);if(t===null)return;n.txt=t;persist();render();}
 
@@ -6187,6 +6319,23 @@ function concluirAluno(i){const o=data.online[i];if(!o)return;if(!confirm("Marca
  if(o.email)filaEmail(o.email,"Parabéns pela conclusão — Knowledge Angola",parabensTxt(o).replace(/\n/g,"<br>"));
  persist();toast("Aluno concluído"+(o.email?" — e-mail de parabéns enviado":""));render();}
 function parabensTxt(o){const t=(data.comp&&data.comp.parabens)||"Parabéns {nome}! Concluíste a tua formação na Knowledge Angola.";return t.replace(/\{nome\}/g,o.nome||"");}
+/* L136-1: a pedido do Ventura, a ficha individual do aluno passa a mostrar quantos dias úteis
+   lhe restam no nível actual — reaproveita tal e qual diasParaConcluirNum() (já usado na barra da
+   tabela e no filtro "A terminar em breve"), sem inventar nenhum cálculo novo. Cores: >3 dias
+   normal, 0-3 dourado ("a esgotar-se"), negativo vermelho (atrasado). Concluído/Parado não contam
+   dias (não faz sentido), mostram só o estado. */
+function diasRestantesKpiHTML(o){
+ var lab="Prazo do nível";
+ if(o.status==='Concluído')return '<div class="kpi" style="cursor:default"><div class="lab">'+lab+'</div><div class="val" style="font-size:17px">Concluído</div></div>';
+ if(o.status==='Parado')return '<div class="kpi" style="cursor:default"><div class="lab">'+lab+'</div><div class="val" style="font-size:17px">Em pausa</div></div>';
+ var d=diasParaConcluirNum(o);
+ if(d===null)return '<div class="kpi" style="cursor:default"><div class="lab">'+lab+'</div><div class="val" style="font-size:17px">—</div></div>';
+ var cls=d<0?"alert":(d<=3?"warn":"");
+ var txt=d<0
+  ?("Atrasado "+Math.abs(d)+" dia"+(Math.abs(d)===1?"":"s")+" útil"+(Math.abs(d)===1?"":"eis"))
+  :(d+" dia"+(d===1?"":"s")+" útil"+(d===1?"":"eis")+" restante"+(d===1?"":"s"));
+ return '<div class="kpi '+cls+'" style="cursor:default"><div class="lab">'+lab+(d>=0&&d<=3?' <span style="color:var(--dour)">⚠️ a esgotar-se</span>':'')+'</div><div class="val" style="font-size:20px">'+txt+'</div></div>';
+}
 function avalModalHTML(){if(onDetail===null)return"";const o=data.online[onDetail];if(!o)return"";const nivel=o.nivel||"";const cor=TURMA_COR[nivel]||"—";const lista=AVALIACOES[nivel]||[];const avals=o.avals||{};const edit=canEditAval();const isGold=nivel==="Expert";
  const passados=o.niveisPassados||[];
  const percurso=NIVEIS.map(n=>{const done=passados.find(x=>x.nivel===n);const isCur=n===nivel;const entregues=(AVALIACOES[n]||[]).filter(a=>avals[n+"::"+a]);return `<div style="padding:6px 0;border-bottom:1px solid var(--linha)"><b>${esc(n)}</b> ${done?'<span class="pill p-verde">passou · '+fmtDataCurta(done.data)+'</span>':(isCur?'<span class="pill p-dour">nível actual</span>':'<span class="pill p-cinza">—</span>')}${entregues.length?'<div class="muted" style="margin-top:2px">Entregues: '+entregues.map(esc).join(", ")+'</div>':''}</div>`;}).join("");
@@ -6195,10 +6344,11 @@ function avalModalHTML(){if(onDetail===null)return"";const o=data.online[onDetai
   <div class="muted" style="margin:2px 0 12px">Turma ${esc(cor)} · Nível ${esc(nivel||"—")}${o.email?' · '+esc(o.email):''}</div>
   <details style="margin:0 0 12px"><summary class="muted" style="cursor:pointer">Ver mais informações</summary><div style="margin-top:6px;font-size:13px">Responsável (venda): ${o.vendedor?esc(o.vendedor):'<span class="pill p-verm" title="Sem responsável — a comissão desta venda não é atribuída a ninguém">— por definir</span>'}</div></details>
   ${o.status==="Concluído"?`<div class="flex" style="align-items:center;gap:8px;margin:0 0 12px;flex-wrap:wrap"><b style="color:var(--azul)">🎓 Certificado</b>${certPillOnlineHTML(o,true)}</div>`:""}
-  <div class="kpigrid" style="grid-template-columns:1fr 1fr 1fr">
+  <div class="kpigrid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">
    <div class="kpi" style="cursor:default"><div class="lab">Aulas / PDS já dados</div><div class="val">${+o.pdsFeitos||0}</div></div>
    <div class="kpi ${(+o.pdsNaoRealizados||0)?'alert':''}" style="cursor:default"><div class="lab">PDS não realizados</div><div class="val">${+o.pdsNaoRealizados||0}</div></div>
    <div class="kpi" style="cursor:default"><div class="lab">Estado</div><div class="val" style="font-size:18px">${esc(o.status||"—")}</div></div>
+   ${diasRestantesKpiHTML(o)}
   </div>
   ${o.status==="Parado"?`<div class="sec" style="border-left:4px solid var(--dour);margin-top:10px;padding:10px 14px">
     <div><b style="color:var(--azul)">Motivo da pausa:</b> ${o.pausaRazao?esc(o.pausaRazao):'<span class="muted">Não foi indicado motivo.</span>'}</div>
@@ -6221,7 +6371,13 @@ function avalModalHTML(){if(onDetail===null)return"";const o=data.online[onDetai
   ${linhas}
   ${isGold?`<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--linha)"><div class="muted" style="margin-bottom:8px">Turma Gold — conclusão do curso.</div><div class="row-actions">${o.status==="Concluído"?`<span class="pill p-azul">Concluído em ${esc(o.concluidoData||"")}</span>`:`<div class="muted" style="margin-bottom:6px;font-size:12.5px">Marca o botão abaixo se o aluno concluiu o curso.</div><button class="btn-p" onclick="concluirAluno(${onDetail})">Concluiu</button>`}</div>${o.status==="Concluído"?`<div class="note">O e-mail de parabéns foi enviado automaticamente ao aluno.</div>`:""}</div>`:""}
   ${transferHistBlockOnline(o,onDetail)}
+  ${projectosLigadosFormandoHTML(o)}
  </div></div>`;}
+function projectosLigadosFormandoHTML(o){
+ var ligs=projectosLigadosA("formando",ensureOnlineCod(o));
+ if(!ligs.length)return"";
+ return `<h3 style="color:var(--azul2);font-size:14px;margin:16px 0 4px">Projectos ligados a este aluno</h3>${ligs.map(function(x){var p=x.o;var estCor=p.estado==="Concluído"?"p-azul":p.estado==="Em curso"?"p-verde":p.estado==="Parado"?"p-dour":"p-cinza";return `<div class="flex" style="justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--linha);cursor:pointer" onclick="show('projectos');abrirProjecto(${x.i})"><div>${esc(p.titulo)}</div><span class="pill ${estCor}">${esc(p.estado)}</span></div>`;}).join("")}`;
+}
 function codTransferValor(){return (data.comp&&data.comp.codTransfer)||"";}
 function pedeCodigoTransfer(){var c=codTransferValor();if(!c)return true;var e=prompt("Código de transferência (definido pela Gestão):");if(e===null)return false;if((e||"").trim()!==String(c)){toast("Código de transferência errado — transferência cancelada");return false;}return true;}
 let transferOnlineIdx=null;
