@@ -449,14 +449,26 @@ function resumoWA(falhou){
  if(rec.fonte)l.push("Fonte: "+rec.fonte);
  return l.join("\n");
 }
-function doneOk(){document.getElementById("formfields").style.display="none";const ok=document.getElementById("okbox");ok.style.display="block";
+/* L128: rede fraca ou perdida a meio do envio. O Firebase, quando fica sem ligação, não devolve
+   nem sucesso nem erro — guarda a gravação em espera indefinidamente. Resultado: o botão ficava
+   em "A enviar…" para sempre e a pessoa não sabia se tinha ficado inscrita ou não (e nós também
+   não). Passados 15 segundos sem resposta, damos a mesma saída que damos numa falha assumida:
+   aviso claro + WhatsApp já preenchido com todos os dados, para a equipa registar à mão.
+   _jaRespondeu garante que só uma das três saídas (ok / erro / tempo esgotado) actua. */
+let _jaRespondeu=false;
+const _tempoLimite=setTimeout(function(){if(_jaRespondeu)return;_jaRespondeu=true;doneErro(true);},15000);
+function doneOk(){if(_jaRespondeu)return;_jaRespondeu=true;clearTimeout(_tempoLimite);
+document.getElementById("formfields").style.display="none";const ok=document.getElementById("okbox");ok.style.display="block";
 var linkVentura=waLink(resumoWA(false));
 try{window.open(linkVentura,"_blank");}catch(e){}
 ok.innerHTML='<div class="ok"><div style="font-size:34px">🎉</div><h3 style="color:#176b39;margin:6px 0">Inscrição concluída!</h3><p>Obrigado, '+esc(nome)+'. A nossa equipa entra em contacto contigo pelo WhatsApp para confirmar tudo.</p><a class="wa-btn" target="_blank" href="'+esc(linkVentura)+'">Notificar a nossa equipa pelo WhatsApp</a></div>';}
-function doneErro(){btn.textContent="Tentar novamente";btn.disabled=false;
+function doneErro(porTempo){if(!porTempo){if(_jaRespondeu)return;_jaRespondeu=true;}clearTimeout(_tempoLimite);
+btn.textContent="Tentar novamente";btn.disabled=false;
 var linkVentura=waLink(resumoWA(true));
 try{window.open(linkVentura,"_blank");}catch(e){}
-alert("Não conseguimos guardar a tua inscrição agora (falha de ligação). Já abrimos o WhatsApp com os teus dados para a nossa equipa registar à mão — ou tenta enviar de novo daqui a pouco.");
+alert(porTempo
+ ? "A tua ligação à internet está muito lenta e não conseguimos confirmar a inscrição. Já abrimos o WhatsApp com os teus dados para a nossa equipa te inscrever à mão — envia essa mensagem, por favor. Assim não perdes a vaga."
+ : "Não conseguimos guardar a tua inscrição agora (falha de ligação). Já abrimos o WhatsApp com os teus dados para a nossa equipa registar à mão — ou tenta enviar de novo daqui a pouco.");
 }
 if(_db){_db.ref("inscricoes").push(rec).then(doneOk).catch(doneErro);}else{doneErro();}
 }

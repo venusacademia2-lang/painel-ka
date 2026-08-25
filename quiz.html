@@ -191,8 +191,13 @@ function submeter(){
  /* L60-2: o resultado é calculado no browser, por isso continua a aparecer mesmo se a gravação falhar —
     mas já não fingimos que o lead ficou guardado. Se falhar, avisamos e abrimos logo o WhatsApp com os
     dados (nome/contacto), para a equipa não perder a pessoa mesmo que o Firebase tenha falhado. */
- function doneOk(){mostrarResultado(nome,tel,email,p,niv,false);}
- function doneErro(){mostrarResultado(nome,tel,email,p,niv,true);}
+ /* L128: mesma protecção da landing — sem rede, o Firebase não devolve sucesso nem erro e o botão
+    ficava preso em "A calcular…". Passados 15 segundos damos o resultado na mesma (é calculado
+    aqui no telemóvel), mas a assinalar que a gravação falhou, para o contacto não se perder. */
+ var _jaRespondeu=false;
+ var _tempoLimite=setTimeout(function(){if(_jaRespondeu)return;_jaRespondeu=true;mostrarResultado(nome,tel,email,p,niv,true);},15000);
+ function doneOk(){if(_jaRespondeu)return;_jaRespondeu=true;clearTimeout(_tempoLimite);mostrarResultado(nome,tel,email,p,niv,false);}
+ function doneErro(){if(_jaRespondeu)return;_jaRespondeu=true;clearTimeout(_tempoLimite);mostrarResultado(nome,tel,email,p,niv,true);}
  if(_db){_db.ref("inscricoes").push(rec).then(doneOk).catch(doneErro);}else{doneErro();}
 }
 function mostrarResultado(nome,tel,email,p,niv,falhouGravar){
