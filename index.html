@@ -1014,7 +1014,7 @@ function syncPagOnline(o){const cod=ensureOnlineCod(o);const val=+o.valorPago||0
  if(cupomCod){p.total=total;p.cupom=cupomCod;}
  _ajustarPago(p,val,val);}
 let _rowEdit=null;
-const EDIT_LABELS={nome:"Nome",tel:"Telefone",contacto:"Contacto",email:"E-mail",curso:"Curso",area:"Área de formação/trabalho",canal:"Canal",estado:"Estado",resp:"Responsável",notas:"Notas",nivel:"Nível",fase:"Fase",formador:"Formador",inicio:"Data de início",valorPago:"Valor pago (Kz)",vendedor:"Responsável",turma:"Turma",data:"Data",tipo:"Tipo",resultado:"Resultado",seguimento:"Seguimento",horaPedida:"Hora pedida para contacto",msg:"Mensagem",usaPC:"Usa PC",cupom:"Código promocional"};
+const EDIT_LABELS={nome:"Nome",tel:"Telefone",contacto:"Contacto",email:"E-mail",curso:"Curso",area:"Área de formação/trabalho",canal:"Canal",estado:"Estado",resp:"Responsável",notas:"Notas",nivel:"Nível",fase:"Fase",formador:"Formador",inicio:"Data de início",valorPago:"Valor pago (Kz)",vendedor:"Responsável",turma:"Turma",data:"Data",tipo:"Tipo",resultado:"Resultado",seguimento:"Seguimento",horaPedida:"Hora pedida para contacto",msg:"Mensagem",usaPC:"Usa PC",cupom:"Código promocional",morada:"Morada"};
 const EDIT_SKIP=["cod","prazo","pdsFeitos","ultimoPDS","proximoPDS","proximoHora","recorrente","tarefa","avaliacao","status","avals","prestacoes","ultimoMov","comprovativo","total","pago","dataPrometida","plano"];
 function editRow(arr,i){_rowEdit={arr:arr,i:i};render();}
 function fecharRowEdit(){_rowEdit=null;render();}
@@ -1040,6 +1040,12 @@ function rowEditModalHTML(){if(!_rowEdit)return"";const o=(data[_rowEdit.arr]||[
     nunca a listava e o dropdown de "Responsável" desaparecia por completo, em vez de aparecer vazio
     a pedir para escolher — como aconteceu com a Neide Vieira. Força sempre a chave a entrar na lista. */
  if((isForm||_rowEdit.arr==="online")&&keys.indexOf("vendedor")<0)keys.push("vendedor");
+ /* L139-5: "morada" é um campo novo — formandos já registados antes desta versão não têm esta
+    chave no objecto, e como a lista de campos editáveis vem de Object.keys(o), simplesmente não
+    aparecia para eles. Mesmo truque já usado acima para "vendedor": força a chave a entrar na
+    lista mesmo quando ainda não existe, para poder ser preenchida a qualquer momento — inclusive
+    depois de a formação já ter começado, como pedido pelo Ventura. */
+ if((isForm||_rowEdit.arr==="online")&&keys.indexOf("morada")<0)keys.push("morada");
  const campos=keys.map(function(k){
   if(isForm&&k==="turma")return '<div style="margin-bottom:8px"><label>'+esc(EDIT_LABELS[k]||k)+'</label><select class="re_f" data-k="turma" id="re_turma" onchange="reOnTurmaChange()"><option value="">— sem turma —</option>'+data.turmas.map(function(t){return '<option value="'+esc(t.cod)+'" '+(t.cod===o.turma?"selected":"")+'>'+esc(t.ed)+'ª Ed. — '+esc(t.curso||"")+'</option>';}).join("")+'</select></div>';
   if(isForm&&k==="horario")return '<div style="margin-bottom:8px"><label>'+esc(EDIT_LABELS[k]||k)+' (turno)</label><select class="re_f" data-k="horario" id="re_horario" onchange="reOnHorarioChange()">'+turnosDropdownOptions(o.turma,o.horario)+'</select></div>';
@@ -1189,6 +1195,16 @@ function confirmarEliminarPessoa(){
  }
  if(tipo==="online"){
   ensurePds(o);(o.pds||[]).forEach(function(p){if(p.gcalRef)filaCancelarCalendario(p.gcalRef,"PDS — "+nome);});
+  /* L139-2/9: o "parceiro" de um PDS em conjunto é gravado como texto simples (o nome) dentro de
+     pds[]/recs[] do OUTRO aluno — nunca uma referência viva. Ao eliminar aqui só se limpava o
+     próprio registo; o nome do eliminado continuava preso para sempre na agenda do colega, como
+     "🤝 [nome]" — exactamente o sintoma reportado ("já eliminei, mas continua a aparecer").
+     Varre-se agora todos os OUTROS alunos e limpa qualquer pds/recs cujo parceiro seja este nome. */
+  data.online.forEach(function(other){
+   if(other===o)return;
+   (other.pds||[]).forEach(function(p){if(p.parceiro===nome){p.parceiro="";p.groupId=null;}});
+   (other.recs||[]).forEach(function(r){if(r.parceiro===nome){r.parceiro="";}});
+  });
   if(typeof onDetail!=="undefined"&&onDetail===idx)onDetail=null;
   data.online.splice(idx,1);
  }else{
@@ -1258,7 +1274,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.63";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.64";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -3031,14 +3047,15 @@ function vRegistoForm(){const pre=regAlvo||{};regAlvo=null;return `<details clas
    <div><label>Como chegou</label><select id="f_canal" autocomplete="off">${canaisDisponiveis().map(c=>`<option${pre.fonte===c?" selected":""}>${c}</option>`).join("")}</select></div>
    <div><label>Nota</label><input id="f_nota" placeholder="observação" autocomplete="off"></div>
    <div><label>Responsável pela venda <span style="color:#C0392B">*</span></label>${respInputHTML("f_vend",pre.resp||"","Quem acompanhou/vendeu — obrigatório")}</div>
+   <div><label>Nº do BI <span style="color:#C0392B">*</span> <span class="muted" style="font-weight:400">(obrigatório para Presencial)</span></label><input id="f_bi" placeholder="ex.: 00XXXXXXLAXXX" autocomplete="off"><div class="muted" style="margin-top:3px">Precisa de vir sempre no comprovativo de inscrição.</div></div>
   </div>
   <details class="subdet"><summary>Mais detalhes (opcional — pode preencher depois)</summary>
    <div class="formgrid" style="margin-top:10px">
     <div><label>E-mail</label><input id="f_email" autocomplete="off"></div>
     <div><label>Área de formação/trabalho</label><input id="f_area" placeholder="ex.: Contabilidade" autocomplete="off"></div>
-    <div><label>Nº do BI (opcional)</label><input id="f_bi" placeholder="ex.: 00XXXXXXLAXXX" autocomplete="off"></div>
     <div><label>Data de nascimento</label><input id="f_nasc" type="date"></div>
     <div><label>Nº secundário (opcional)</label><input id="f_tel2" placeholder="9XX XXX XXX" autocomplete="off"></div>
+    <div><label>Morada</label><input id="f_morada" placeholder="ex.: Bairro, Rua, Município, Luanda" autocomplete="off"><div class="muted" style="margin-top:3px">Não é preciso agora — pode ser preenchida a qualquer momento, mesmo já durante a formação (Editar registo).</div></div>
     <div><label>Próximo curso que pretende fazer</label><select id="f_prox"><option value="">—</option>${cursosLista().map(c=>`<option>${c}</option>`).join("")}</select></div>
     <div><label>Usa computador da academia?</label><select id="f_pc"><option>Não</option><option>Sim</option></select></div>
    </div>
@@ -3083,20 +3100,25 @@ function addVenda(){const nome=val("f_nome");if(!nome){toast("Falta o nome");ret
  if(val("f_mod")==="Online"){
   if(!val("f_oform")){toast("Escolhe o formador antes de inscrever — obrigatório em Turma Online");document.getElementById("f_oform").focus();return;}
   if(!val("f_email")){toast("O e-mail do aluno é obrigatório em Turma Online");document.getElementById("f_email").focus();return;}
-  const _o={nome:nome,email:val("f_email"),contacto:val("f_tel"),area:val("f_area"),nivel:val("f_onivel"),fase:val("f_omodo")||FASES[0],formador:val("f_oform"),inicio:val("f_oinicio"),horarioProposto:val("f_ohorario"),prazo:prazoPorNivel(val("f_onivel")),status:"Em andamento",valorPago:numVal("f_pago"),tarefa:"Não",avaliacao:"Não",proximoPDS:"",ultimoPDS:"",pdsFeitos:0,recorrente:false,bi:val("f_bi"),nasc:val("f_nasc"),tel2:val("f_tel2"),nota:val("f_nota"),canal:val("f_canal"),fonte:fonteDeTel(val("f_tel")),criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role,vendedor:val("f_vend"),cupom:cupomAplicado?cupomAplicado.codigo:""};ensureOnlineCod(_o);data.online.push(_o);syncPagOnline(_o);enviarEmailsRegistoOnline(_o);persist();toast("Aluno online registado");limparCampos(["f_tel","f_nome","f_email","f_area","f_bi","f_nasc","f_tel2","f_nota","f_oinicio","f_pago","f_cupom"]);render();return;}
+  const _o={nome:nome,email:val("f_email"),contacto:val("f_tel"),area:val("f_area"),nivel:val("f_onivel"),fase:val("f_omodo")||FASES[0],formador:val("f_oform"),inicio:val("f_oinicio"),horarioProposto:val("f_ohorario"),prazo:prazoPorNivel(val("f_onivel")),status:"Em andamento",valorPago:numVal("f_pago"),tarefa:"Não",avaliacao:"Não",proximoPDS:"",ultimoPDS:"",pdsFeitos:0,recorrente:false,bi:val("f_bi"),morada:val("f_morada"),nasc:val("f_nasc"),tel2:val("f_tel2"),nota:val("f_nota"),canal:val("f_canal"),fonte:fonteDeTel(val("f_tel")),criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role,vendedor:val("f_vend"),cupom:cupomAplicado?cupomAplicado.codigo:""};ensureOnlineCod(_o);data.online.push(_o);syncPagOnline(_o);enviarEmailsRegistoOnline(_o);persist();toast("Aluno online registado");limparCampos(["f_tel","f_nome","f_email","f_area","f_bi","f_morada","f_nasc","f_tel2","f_nota","f_oinicio","f_pago","f_cupom"]);render();return;}
+ /* L139-4: pedido explícito do Ventura ("É IMPORTANTE") — o comprovativo de inscrição presencial
+    tem de trazer sempre o número do BI. Antes, o campo estava marcado como "(opcional)" dentro de
+    "Mais detalhes" (secção colapsada, fácil de saltar), por isso a maioria dos comprovativos saía
+    sem BI. Passa a ser obrigatório para inscrições Presenciais antes de gravar a venda. */
+ if(!val("f_bi")){toast("O nº do BI é obrigatório — tem de vir sempre no comprovativo de inscrição.");var _fbi=document.getElementById("f_bi");if(_fbi)_fbi.focus();return;}
  const turma=val("f_turma");if(!turma){toast("Selecciona a turma/edição antes de gravar — é obrigatório para o P&L bater certo.");document.getElementById("f_turma").focus();return;}const usaPC=val("f_pc");
  if(turma){const t=turmaByCod(turma);const vl=vagasLivres(t);
   if(vl===0&&!confirm("A turma "+t.ed+"ª está CHEIA. Inscrever mesmo assim?"))return;
   if(usaPC==="Sim"&&pcOcupados(t.cod)>=computadoresDe(t)&&!confirm("Já não há computadores livres nesta turma (limite "+computadoresDe(t)+"). Inscrever mesmo assim?"))return;}
  const n=data.formandos.reduce((m,f)=>{const x=parseInt((f.cod||"").replace(/\D/g,""))||0;return x>m?x:m},0)+1;const cod="KA-"+String(n).padStart(3,"0");
- data.formandos.push({cod,nome,tel:val("f_tel"),tel2:val("f_tel2"),bi:val("f_bi"),nasc:val("f_nasc"),email:val("f_email"),area:val("f_area"),curso:val("f_curso"),proximoCurso:val("f_prox"),nota:val("f_nota"),turma,turno:turnoSelInfo().turno,periodo:turnoSelInfo().periodo,horario:turnoSelInfo().horario,gestora:turnoSelInfo().gestora,formador:turnoSelInfo().formador,canal:val("f_canal"),fonte:fonteDeTel(val("f_tel")),data:_dISO(new Date()),criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role,estado:"Activo",vendedor:val("f_vend")||"Gestão",usaPC,gratifVolume10:gratifVolumeElegivel(turma,val("f_vend")||"Gestão")});
+ data.formandos.push({cod,nome,tel:val("f_tel"),tel2:val("f_tel2"),bi:val("f_bi"),morada:val("f_morada"),nasc:val("f_nasc"),email:val("f_email"),area:val("f_area"),curso:val("f_curso"),proximoCurso:val("f_prox"),nota:val("f_nota"),turma,turno:turnoSelInfo().turno,periodo:turnoSelInfo().periodo,horario:turnoSelInfo().horario,gestora:turnoSelInfo().gestora,formador:turnoSelInfo().formador,canal:val("f_canal"),fonte:fonteDeTel(val("f_tel")),data:_dISO(new Date()),criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role,estado:"Activo",vendedor:val("f_vend")||"Gestão",usaPC,gratifVolume10:gratifVolumeElegivel(turma,val("f_vend")||"Gestão")});
  const bonus=(val("f_bonus")==="Sim");const total=bonus?0:numVal("f_total");const pagoAgora=bonus?0:numVal("f_pago");const comp=val("f_comp");
  const plano=bonus?"Bónus":((pagoAgora>=total&&total>0)?"A pronto":"Prestações");
  const pag={cod,plano,total,pago:pagoAgora,bonus:bonus,bonusPor:bonus?((currentUser&&currentUser.nome)||role):"",comprovativo:comp,dataPrometida:val("f_prom"),criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role,prestacoes:[],cupom:(cupomAplicado&&!bonus)?cupomAplicado.codigo:""};
  if(pagoAgora>0)pag.prestacoes.push({valor:pagoAgora,data:_dISO(new Date()),comprovativo:comp});
  data.pagamentos.push(pag);
  if(cupomAplicado&&!bonus)cupomRegistarUso(cupomAplicado.codigo);
- persist();toast("Venda registada — "+cod);limparCampos(["f_tel","f_nome","f_total","f_pago","f_prom","f_nota","f_email","f_area","f_bi","f_nasc","f_tel2","f_cupom"]);render();}
+ persist();toast("Venda registada — "+cod);limparCampos(["f_tel","f_nome","f_total","f_pago","f_prom","f_nota","f_email","f_area","f_bi","f_morada","f_nasc","f_tel2","f_cupom"]);render();}
 /* L126: função antiga sem chamadas activas — apagava o formando e o pagamento à bruta, sem
    arquivo nem motivo. Fica a apontar para o fluxo único, para nunca voltar a haver dois caminhos
    diferentes de eliminar a mesma coisa. */
@@ -3356,17 +3378,40 @@ function notificarEnvolvidosProjecto(o,msg){
 var novoProjectoAberto=false,prjAberto=null,prjFiltro="",prjBusca="";
 function abrirNovoProjecto(){novoProjectoAberto=true;render();}
 function fecharNovoProjecto(){novoProjectoAberto=false;render();}
-function abrirProjecto(i){prjAberto=i;render();}
+/* L139-7: só quem "faz parte do projecto" o vê — pedido do Ventura ("Ponto 7, decidas tu" sobre
+   o mecanismo). Reaproveita-se o que já existe em vez de inventar um sistema de membros novo:
+   é responsável, está em "envolvidos", ou pertence à Área do projecto (donosDeArea, o mesmo motor
+   já usado em Comunicados). Gestão continua a ver tudo (precisa de visão de topo). */
+function _podeVerProjecto(o){
+ if(!o)return false;
+ if(role==="admin")return true;
+ var eu=(currentUser&&currentUser.nome)||"";
+ if(!eu)return false;
+ if(o.responsavel===eu)return true;
+ if((o.envolvidos||[]).some(function(e){return e.quem===eu;}))return true;
+ if(o.area&&donosDeArea(o.area).indexOf(eu)>=0)return true;
+ return false;
+}
+function abrirProjecto(i){if(!_podeVerProjecto((data.projectos||[])[i])){toast("Não tens acesso a este projecto");return;}prjAberto=i;render();}
 function fecharProjecto(){prjAberto=null;render();}
 /* L137: a pedido do Ventura, um projecto passa a poder interligar-se com o resto do sistema —
    "Área" (reaproveita data.areas/donosDeArea, o mesmo motor de áreas já usado em "Comunicados &
    Tarefas") e "Ligado a" (uma turma, um formando da Turma Online, ou uma empresa B2B). Nada
    inventado de novo: reaproveita-se o que já existe (áreas, notas, ficha do aluno). */
+/* L139-7: código próprio do projecto — só para referência interna da equipa (Ventura: "é um
+   interno"), não é mostrado a ninguém fora do sistema. Antes já existia um "cod" (PRJ-Date.now()),
+   mas nunca aparecia em lado nenhum da interface — passa a mostrar-se no cartão e na ficha, e o
+   formato passa a ser sequencial (PRJ-001, PRJ-002…) para ser fácil de dizer/escrever à mão,
+   como já acontece com os códigos de formando (KA-001). */
+function _proximoCodProjecto(){
+ var n=(data.projectos||[]).reduce(function(m,p){var x=parseInt(String(p.cod||"").replace(/\D/g,""))||0;return x>m?x:m;},0)+1;
+ return "PRJ-"+String(n).padStart(3,"0");
+}
 function criarProjecto(){
  var titulo=val("prj_titulo");
  if(!titulo){toast("Falta o título do projecto");return;}
  var area=val("prj_area")||"";
- var o={cod:"PRJ-"+Date.now(),titulo:titulo,dataInicio:val("prj_inicio")||_dISO(new Date()),prazo:val("prj_prazo")||"",estado:"Planeado",proximoPasso:val("prj_proximo")||"",materiais:val("prj_materiais")||"",responsavel:val("prj_resp")||((currentUser&&currentUser.nome)||""),area:area,ligadoA:null,envolvidos:[],sessoes:[],tarefas:[],historico:[],criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||"Equipa"};
+ var o={cod:_proximoCodProjecto(),titulo:titulo,dataInicio:val("prj_inicio")||_dISO(new Date()),prazo:val("prj_prazo")||"",estado:"Planeado",proximoPasso:val("prj_proximo")||"",materiais:val("prj_materiais")||"",responsavel:val("prj_resp")||((currentUser&&currentUser.nome)||""),area:area,ligadoA:null,envolvidos:[],sessoes:[],tarefas:[],historico:[],criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||"Equipa"};
  data.projectos.unshift(o);
  registarHistoricoProjecto(o,"Projecto criado por "+o.criadoPor);
  if(area){
@@ -3433,7 +3478,13 @@ function confirmarLigacaoProjecto(i,tipo,id){if(!id){toast("Escolhe um registo d
 function ligadoAProjectoHTML(i,o){
  var lig=o.ligadoA;
  if(lig){
-  return '<label style="margin-top:8px">Ligado a</label><div class="flex" style="gap:6px;align-items:center;margin-top:4px;flex-wrap:wrap"><span class="pill p-azul">'+esc(lig.label)+'</span><button class="btn-o" style="padding:3px 9px" onclick="abrirLigacaoProjectoIdx('+i+')">Ver ↗</button><button class="btn-o" style="padding:3px 9px" onclick="removerLigacaoProjecto('+i+')">Desligar</button></div>';
+  /* L139-2/9: lig.label ficava gravado ao criar a ligação e nunca mais era actualizado — se o
+     formando/turma/empresa fosse depois renomeado, ou eliminado, o Projecto continuava a mostrar
+     o nome antigo para sempre. _labelLigacaoProjecto() já existe e faz a mesma consulta em tempo
+     real (com "(...removido)" quando já não existe) — passa a usar-se aqui em vez do label
+     congelado. */
+  var labelViva=_labelLigacaoProjecto(lig.tipo,lig.id);
+  return '<label style="margin-top:8px">Ligado a</label><div class="flex" style="gap:6px;align-items:center;margin-top:4px;flex-wrap:wrap"><span class="pill p-azul">'+esc(labelViva)+'</span><button class="btn-o" style="padding:3px 9px" onclick="abrirLigacaoProjectoIdx('+i+')">Ver ↗</button><button class="btn-o" style="padding:3px 9px" onclick="removerLigacaoProjecto('+i+')">Desligar</button></div>';
  }
  var tiposOpt=[{id:"turma",label:"Turma"},{id:"formando",label:"Formando (Turma Online)"},{id:"b2b",label:"Empresa (B2B)"}];
  var tipoSelHtml='<select onchange="setPrjLigTipo(this.value)" style="margin-top:6px"><option value="">— ligar a —</option>'+tiposOpt.map(function(t){return '<option value="'+t.id+'" '+(prjLigTipoTemp===t.id?"selected":"")+'>'+t.label+'</option>';}).join("")+'</select>';
@@ -3551,7 +3602,7 @@ function projectoDetalheModalHTML(i){
  }).join(""):'<div class="muted" style="margin-top:6px">Ainda sem tarefas atribuídas.</div>';
  return '<div style="position:fixed;inset:0;background:rgba(20,30,60,.45);display:grid;place-items:center;z-index:300;padding:16px" onclick="if(event.target===this)fecharProjecto()"><div class="card" style="padding:22px;width:560px;max-width:94vw;max-height:92vh;overflow:auto">'
   +'<div class="flex" style="justify-content:space-between;align-items:flex-start;gap:8px"><h3 style="color:var(--azul);margin:0">'+esc(o.titulo)+'</h3><button class="btn-o" style="padding:4px 10px" onclick="fecharProjecto()">Fechar</button></div>'
-  +'<div class="muted" style="font-size:12.5px;margin:4px 0 12px">Criado por '+esc(o.criadoPor||"—")+' · '+(o.dataInicio?fmtDataCurta(o.dataInicio):"—")+(o.prazo?' → prazo '+fmtDataCurta(o.prazo):'')+'</div>'
+  +'<div class="muted" style="font-size:12.5px;margin:4px 0 12px">'+(o.cod?esc(o.cod)+' · ':'')+'Criado por '+esc(o.criadoPor||"—")+' · '+(o.dataInicio?fmtDataCurta(o.dataInicio):"—")+(o.prazo?' → prazo '+fmtDataCurta(o.prazo):'')+'</div>'
   +'<label>Estado</label><select onchange="actualizarCampoProjecto('+i+',\'estado\',this.value,\'Estado\')">'+estados.map(function(e){return '<option value="'+e+'" '+(o.estado===e?"selected":"")+'>'+e+'</option>';}).join("")+'</select>'
   +'<label style="margin-top:8px">Responsável</label>'+respInputHTML("prj_resp_edit_"+i,o.responsavel,"— escolher —").replace('id="prj_resp_edit_'+i+'"','id="prj_resp_edit_'+i+'" onchange="actualizarCampoProjecto('+i+',\'responsavel\',this.value,\'Responsável\')"')
   +'<label style="margin-top:8px">Área</label><select onchange="actualizarAreaProjecto('+i+',this.value)"><option value="">—</option>'+areasList().map(function(a){return '<option value="'+esc(a)+'" '+(o.area===a?"selected":"")+'>'+esc(a)+'</option>';}).join("")+'</select>'
@@ -3566,18 +3617,39 @@ function projectoDetalheModalHTML(i){
   +'<label style="margin-top:12px">Tarefas</label><div style="margin-top:2px">'+tarefasHtml+'</div>'
   +'<div class="flex" style="gap:6px;margin-top:8px;flex-wrap:wrap"><input id="prj_tarefa_txt_'+i+'" placeholder="O que precisa de ser feito" style="flex:1;min-width:160px"><select id="prj_tarefa_resp_'+i+'" style="min-width:140px"><option value="">— responsável —</option>'+pessoas.map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+'</option>';}).join("")+'</select><input id="prj_tarefa_prazo_'+i+'" type="date"><button class="btn-o" onclick="adicionarTarefaProjecto('+i+')">+ Atribuir tarefa</button></div>'
   +(histHtml?'<label style="margin-top:12px">Histórico</label>'+histHtml:'')
-  +(role==="admin"?'<div style="margin-top:16px;text-align:right"><button class="btn-o" style="color:var(--verm);border-color:var(--verm)" onclick="eliminarProjecto('+i+')">🗑 Eliminar projecto</button></div>':'')
+  /* L139-8: "Fechar projecto" arquiva mas mantém tudo visível — nunca esconde nem apaga
+     (pedido do Ventura: "Fica visível com histório"). Diferente de Eliminar (admin-only,
+     remove mesmo); Fechar/Reabrir fica ao alcance de quem já vê o projecto. */
+  +(o.arquivado?'<div style="margin-top:14px;padding:8px 10px;background:#eef1f5;border-radius:8px;font-size:12.5px" class="muted">🗄 Projecto arquivado em '+fmtDataCurta((o.arquivadoEm||"").slice(0,10))+' por '+esc(o.arquivadoPor||"—")+'. <a onclick="reabrirProjectoArquivado('+i+')" style="cursor:pointer;font-weight:600">Reabrir</a></div>':'<div style="margin-top:14px;text-align:right"><button class="btn-o" onclick="fecharProjectoArquivar('+i+')">🗄 Fechar projecto</button></div>')
+  +(role==="admin"?'<div style="margin-top:10px;text-align:right"><button class="btn-o" style="color:var(--verm);border-color:var(--verm)" onclick="eliminarProjecto('+i+')">🗑 Eliminar projecto</button></div>':'')
   +'</div></div>';
+}
+function fecharProjectoArquivar(i){
+ var o=data.projectos[i];if(!o)return;
+ kaConfirm('Fechar/arquivar o projecto "'+o.titulo+'"? Continua visível com todo o histórico — só deixa de aparecer na lista activa.',function(){
+  o.arquivado=true;o.arquivadoEm=new Date().toISOString();o.arquivadoPor=(currentUser&&currentUser.nome)||"Equipa";
+  registarHistoricoProjecto(o,"Projecto fechado/arquivado");persist();toast("Projecto arquivado");render();
+ },"Fechar projecto");
+}
+function reabrirProjectoArquivado(i){
+ var o=data.projectos[i];if(!o)return;
+ o.arquivado=false;o.arquivadoEm="";o.arquivadoPor="";
+ registarHistoricoProjecto(o,"Projecto reaberto");persist();toast("Projecto reaberto");render();
 }
 function vProjectos(){
  var q=(prjBusca||"").toLowerCase();
- var todos=(data.projectos||[]).filter(function(o){return !q||(o.titulo||"").toLowerCase().includes(q);});
+ /* L139-7: só entram na lista os projectos em que a pessoa está envolvida (ou Gestão, que vê tudo). */
+ var todos=(data.projectos||[]).filter(_podeVerProjecto).filter(function(o){return !q||(o.titulo||"").toLowerCase().includes(q);});
+ /* L139-8: arquivados saem da lista activa por defeito (não empatam o dia a dia), mas nunca
+    desaparecem — há um chip próprio "Arquivados" para os encontrar, e o histórico fica sempre
+    dentro do próprio projecto (ver projectoDetalheModalHTML). */
+ var arquivadosN=todos.filter(function(o){return o.arquivado;}).length;
  var estados=[{id:"",label:"Todos"},{id:"Planeado",label:"Planeado"},{id:"Em curso",label:"Em curso"},{id:"Parado",label:"Parado"},{id:"Concluído",label:"Concluído"}];
  var chips=estados.map(function(f){
-  var n=todos.filter(function(o){return !f.id||o.estado===f.id;}).length;
+  var n=todos.filter(function(o){return !o.arquivado&&(!f.id||o.estado===f.id);}).length;
   return '<button class="btn-'+(prjFiltro===f.id?"p":"o")+'" style="padding:6px 12px;flex:0 0 auto" onclick="prjFiltro=\''+f.id+'\';render()">'+esc(f.label)+' <span class="pill p-cinza" style="padding:1px 7px">'+n+'</span></button>';
- }).join("");
- var lista=todos.filter(function(o){return !prjFiltro||o.estado===prjFiltro;});
+ }).join("")+(arquivadosN?'<button class="btn-'+(prjFiltro==="__arq"?"p":"o")+'" style="padding:6px 12px;flex:0 0 auto" onclick="prjFiltro=\'__arq\';render()">🗄 Arquivados <span class="pill p-cinza" style="padding:1px 7px">'+arquivadosN+'</span></button>':'');
+ var lista=prjFiltro==="__arq"?todos.filter(function(o){return o.arquivado;}):todos.filter(function(o){return !o.arquivado&&(!prjFiltro||o.estado===prjFiltro);});
  var headerHtml='<div class="flex" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><h2 style="margin:0">Projectos</h2><button class="btn" onclick="abrirNovoProjecto()">+ Novo projecto</button></div>';
  var cardsHtml=lista.length?lista.map(function(o){
   var i=data.projectos.indexOf(o);
@@ -3586,8 +3658,8 @@ function vProjectos(){
   var envN=(o.envolvidos||[]).length;
   var tagsHtml='';
  if(o.area)tagsHtml+='<span class="pill p-cinza" style="margin-right:4px">'+esc(o.area)+'</span>';
- if(o.ligadoA&&o.ligadoA.label)tagsHtml+='<span class="pill p-azul">🔗 '+esc(o.ligadoA.label)+'</span>';
- return '<div class="sec" style="padding:12px 16px;margin-bottom:10px;cursor:pointer" onclick="abrirProjecto('+i+')"><div class="flex" style="justify-content:space-between;align-items:center;gap:8px"><div style="font-weight:700">'+esc(o.titulo)+'</div><span class="pill '+estCor+'">'+esc(o.estado)+'</span></div>'+(tagsHtml?'<div style="margin-top:4px">'+tagsHtml+'</div>':'')+'<div class="muted" style="font-size:12.5px;margin-top:4px">Responsável: '+esc(o.responsavel||"—")+' · '+envN+' envolvido'+(envN===1?"":"s")+' · '+horas+'h dedicadas'+(o.prazo?' · Prazo: '+fmtDataCurta(o.prazo):'')+'</div>'+(o.proximoPasso?'<div style="font-size:12.5px;margin-top:4px">➜ '+esc(o.proximoPasso)+'</div>':'')+'</div>';
+ if(o.ligadoA)tagsHtml+='<span class="pill p-azul">🔗 '+esc(_labelLigacaoProjecto(o.ligadoA.tipo,o.ligadoA.id))+'</span>';
+ return '<div class="sec" style="padding:12px 16px;margin-bottom:10px;cursor:pointer'+(o.arquivado?';opacity:.7':'')+'" onclick="abrirProjecto('+i+')"><div class="flex" style="justify-content:space-between;align-items:center;gap:8px"><div style="font-weight:700">'+esc(o.titulo)+(o.cod?' <span class="muted" style="font-weight:400;font-size:12px">'+esc(o.cod)+'</span>':'')+'</div><span class="flex" style="gap:4px">'+(o.arquivado?'<span class="pill p-cinza">🗄 Arquivado</span>':'')+'<span class="pill '+estCor+'">'+esc(o.estado)+'</span></span></div>'+(tagsHtml?'<div style="margin-top:4px">'+tagsHtml+'</div>':'')+'<div class="muted" style="font-size:12.5px;margin-top:4px">Responsável: '+esc(o.responsavel||"—")+' · '+envN+' envolvido'+(envN===1?"":"s")+' · '+horas+'h dedicadas'+(o.prazo?' · Prazo: '+fmtDataCurta(o.prazo):'')+'</div>'+(o.proximoPasso?'<div style="font-size:12.5px;margin-top:4px">➜ '+esc(o.proximoPasso)+'</div>':'')+'</div>';
  }).join(""):'<div class="muted">Sem projectos '+(prjFiltro?'com este estado':'ainda — cria o primeiro acima')+'.</div>';
  return '<div class="sec">'+headerHtml
   +'<input class="search" style="margin-top:10px" placeholder="Pesquisar por título…" value="'+esc(prjBusca)+'" oninput="prjBusca=this.value;renderDebounced()">'
@@ -3968,6 +4040,23 @@ function inscContactado(i){
  }
  abrirContactarLead(data.leads.indexOf(existente));
 }
+/* L139-6: alguns cliques de "Fale connosco" no catálogo (e, raramente, submissões incompletas)
+   chegam sem nenhum dado que identifique a pessoa — nome em branco (ou literalmente "(sem nome)")
+   e sem telefone. Não há nada a fazer com estes registos (não há como contactar ninguém), por isso
+   o Ventura pediu um botão para os limpar em massa desta lista. Critério deliberadamente estrito —
+   só apaga quem não tem NEM nome NEM telefone — para nunca apagar por engano um lead real que só
+   tenha ficado com o nome em branco mas com um contacto válido. */
+function _leadsSemNadaCount(){
+ return (data.leads||[]).filter(function(l){return ["Quiz","Landing","Catálogo"].indexOf(l.canal)>=0&&(!l.nome||l.nome==="(sem nome)")&&!(l.tel||"").trim();}).length;
+}
+function apagarLeadsSemNome(){
+ var n=_leadsSemNadaCount();
+ if(!n){toast("Não há registos sem nome nem contacto para apagar");return;}
+ kaConfirm("Apagar "+n+" registo(s) de \"Leads do Quiz\" sem nome nem telefone (não dá para contactar ninguém)? Esta acção não pode ser desfeita.",function(){
+  data.leads=(data.leads||[]).filter(function(l){return !(["Quiz","Landing","Catálogo"].indexOf(l.canal)>=0&&(!l.nome||l.nome==="(sem nome)")&&!(l.tel||"").trim());});
+  persist();toast(n+" registo(s) sem nome apagado(s)");render();
+ },"Apagar");
+}
 function vQuizLeads(){
  const hoje=new Date(new Date().toDateString());
  const q=qlSearch.toLowerCase(),qd=qlSearch.replace(/\D/g,"");
@@ -4018,7 +4107,9 @@ function vQuizLeads(){
  if(qlView==="leads"){
   corpo='<div class="muted" style="margin-bottom:8px">Quem respondeu ao teste de Excel, se inscreveu pela página pública ou mostrou interesse no catálogo — nota (/20), contacto e estado, para ligar rápido sem procurar no quadro geral de leads.</div>'
    +'<div class="flex" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><input id="q_ql" class="search" placeholder="🔍 Pesquisar por nome ou telefone…" value="'+esc(qlSearch)+'" oninput="qlSearch=this.value;refocusSearch(\'q_ql\');renderDebounced()">'
-   +'<button class="btn-'+(qlSoNaoContactados?"p":"o")+'" style="padding:6px 10px" onclick="qlSoNaoContactados=!qlSoNaoContactados;render()">'+(qlSoNaoContactados?"A mostrar só por contactar ✓":"Só quem ainda não foi contactado")+'</button></div>'
+   +'<button class="btn-'+(qlSoNaoContactados?"p":"o")+'" style="padding:6px 10px" onclick="qlSoNaoContactados=!qlSoNaoContactados;render()">'+(qlSoNaoContactados?"A mostrar só por contactar ✓":"Só quem ainda não foi contactado")+'</button>'
+   +(_leadsSemNadaCount()>0?'<button class="btn-o" style="padding:6px 10px;color:var(--verm)" onclick="apagarLeadsSemNome()" title="Apaga quem não tem nome nem telefone — não há como contactar">🗑 Apagar sem nome ('+_leadsSemNadaCount()+')</button>':'')
+   +'</div>'
    +'<table><thead><tr><th class="stickyhead">Nome</th><th class="stickyhead">Telefone</th><th class="stickyhead">Nota</th><th class="stickyhead">Curso</th><th class="stickyhead">Estado</th><th class="stickyhead">Data/Hora</th><th class="stickyhead"></th></tr></thead><tbody>'+rowsLeads+'</tbody></table>';
  }else if(qlView==="pend"){
   corpo=carregando?'<div class="muted">A carregar quiz/catálogo…</div>':(inscModalHTML()+'<div class="muted" style="margin-bottom:8px">Quem respondeu ao teste de Excel ou mostrou interesse pelo catálogo e ainda não é lead nem formando. Usa "Ver ficha" para detalhes ou "→ Lead" para dar seguimento comercial (raramente precisas — o sistema já cria o lead sozinho assim que a submissão chega).</div>'
@@ -5041,7 +5132,7 @@ function vOnlineAcompanhamentoHTML(hoje,wk,theadTop){
     calculado para a tabela grande ficava errado aqui, fazendo o cabeçalho aparecer preso a meio
     da lista em vez de no topo. Como esta lista é normalmente curta, tira-se o "sticky" — o
     cabeçalho passa a ficar sempre e só no topo da própria tabela, sem ambiguidade possível. */
- const agendaHtml=`<details class="sec accdet"><summary>Agenda de PDS <span class="pill p-cinza">${_ag.length}</span></summary>${(role==="admin"||podeEditarPrazo())?'<div class="flex" style="gap:8px;margin:2px 0 8px;align-items:center;flex-wrap:wrap"><button class="btn-o" style="padding:4px 10px" onclick="limparPdsIndevidos()">🧹 Limpar PDS repetidos/indevidos</button><span class="muted" style="font-size:11.5px">Apaga marcações repetidas e as que caem em dias fora da recorrência do aluno. Não mexe nas marcações feitas à mão.</span></div>':''}<table><thead><tr>${['Data','Hora','Aluno','Formador',''].map(function(h){return '<th>'+h+'</th>';}).join('')}</tr></thead><tbody>${_ag.map(function(x){var atras=x.data<_hs,hj=x.data===_hs;var oi=data.online.indexOf(x.o);return '<tr><td style="white-space:nowrap"><div class="flex" style="gap:4px;align-items:center;flex-wrap:wrap">'+fmtDataCurta(x.data)+(atras?'<span class="pill p-verm">atraso</span>':(hj?'<span class="pill p-dour">hoje</span>':''))+'</div></td><td>'+esc(x.hora||"—")+'</td><td>'+esc(x.o.nome)+(x.parceiro?' 🤝 '+esc(x.parceiro):'')+(x.rec?' ♻':'')+(x.o.combinado?'<br><span class="muted" style="font-size:11px">📝 Combinado: '+esc(x.o.combinado)+'</span>':'')+'</td><td>'+esc(x.o.formador||"—")+'</td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:4px 8px" onclick="verDetalhe('+oi+')">Ver perfil</button><button class="btn-g" style="padding:4px 8px" onclick="doPDS('+oi+')">PDS feito</button><button class="btn-o" style="padding:4px 8px" onclick="naoRealizadoPDS('+oi+')">PDS não realizado</button><button class="btn-o" style="padding:4px 8px" onclick="editarPdsItem('+oi+','+x.idx+')">Editar</button><button class="btn-o" style="padding:4px 8px" onclick="cancelPdsItem('+oi+','+x.idx+')">Cancelar</button></td></tr>';}).join("")||'<tr><td colspan="5" class="muted">Sem PDS agendados.</td></tr>'}</tbody></table></details>`;
+ const agendaHtml=`<details class="sec accdet"><summary>Agenda de PDS <span class="pill p-cinza">${_ag.length}</span></summary>${(role==="admin"||podeEditarPrazo())?'<div class="flex" style="gap:8px;margin:2px 0 8px;align-items:center;flex-wrap:wrap"><button class="btn-o" style="padding:4px 10px" onclick="limparPdsIndevidos()">🧹 Limpar PDS repetidos/indevidos</button><span class="muted" style="font-size:11.5px">Apaga marcações repetidas e as que caem em dias fora da recorrência do aluno. Não mexe nas marcações feitas à mão.</span></div>':''}<table><thead><tr>${['Data','Hora','Aluno','Formador',''].map(function(h){return '<th>'+h+'</th>';}).join('')}</tr></thead><tbody>${_ag.map(function(x){var atras=x.data<_hs,hj=x.data===_hs;var oi=data.online.indexOf(x.o);return '<tr><td style="white-space:nowrap"><div class="flex" style="gap:4px;align-items:center;flex-wrap:wrap">'+fmtDataCurta(x.data)+(atras?'<span class="pill p-verm">atraso</span>':(hj?'<span class="pill p-dour">hoje</span>':''))+'</div></td><td>'+esc(x.hora||"—")+'</td><td>'+esc(x.o.nome)+(x.parceiro?' 🤝 '+esc(x.parceiro):'')+(x.rec?' ♻':'')+(x.o.combinado?'<br><span class="muted" style="font-size:11px">📝 Combinado: '+esc(x.o.combinado)+'</span>':'')+'</td><td>'+esc(x.o.formador||"—")+'</td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:4px 8px" onclick="verDetalhe('+oi+')">Ver perfil</button><button class="btn-g" style="padding:4px 8px" onclick="doPDS('+oi+','+x.idx+')">PDS feito</button><button class="btn-o" style="padding:4px 8px" onclick="naoRealizadoPDS('+oi+','+x.idx+')">PDS não realizado</button><button class="btn-o" style="padding:4px 8px" onclick="editarPdsItem('+oi+','+x.idx+')">Editar</button><button class="btn-o" style="padding:4px 8px" onclick="cancelPdsItem('+oi+','+x.idx+')">Cancelar</button></td></tr>';}).join("")||'<tr><td colspan="5" class="muted">Sem PDS agendados.</td></tr>'}</tbody></table></details>`;
  const _real=data.online.filter(function(o){return o.ultimoPDS===_hs;});
  const realizadosHtml=_real.length?`<details class="sec accdet"><summary>PDS realizados hoje <span class="pill p-cinza">${_real.length}</span></summary><table><thead><tr><th>Aluno</th><th>Formador</th><th>Combinado</th></tr></thead><tbody>${_real.map(function(o){return '<tr><td>'+esc(o.nome)+'</td><td>'+esc(o.formador||"—")+'</td><td>'+(o.combinado?esc(o.combinado):'<span class="muted">—</span>')+'</td></tr>';}).join("")}</tbody></table></details>`:'';
 
@@ -5620,20 +5711,33 @@ function marcarUmPDS(o,idx){idx=idx||0;ensurePds(o);var pds=o.pds[idx];
    de que os dados se estavam a perder. Mesma causa-raiz que já se tinha corrigido noutro sítio do
    painel (L27-3: "Transferir" trocou prompt() por um dropdown). Aqui troca-se o prompt() por um
    modal próprio (pdsFeitoModalHTML), que funciona em qualquer navegador/telemóvel. */
-let pdsFeitoEdit=null;
-function doPDS(i){const o=data.online[i];if(!o)return;if(o.status==="Parado"){toast("Aluno em pausa — não dá para marcar PDS");return;}pdsFeitoEdit=i;render();}
-function fecharPdsFeito(){pdsFeitoEdit=null;render();}
-function confirmarPdsFeito(){if(pdsFeitoEdit===null)return;const oi=pdsFeitoEdit;const o=data.online[oi];if(!o){pdsFeitoEdit=null;render();return;}
- var comb=(val("pdsf_comb")||"").trim();ensurePds(o);syncProx(o);const alvo=o.pds[0];const gid=alvo?alvo.groupId:null;const ddAlvo=alvo?alvo.data:null;
- marcarUmPDS(o,0);o.combinado=comb;if(comb){if(!Array.isArray(o.combinadoHist))o.combinadoHist=[];o.combinadoHist.unshift({data:_dISO(new Date()),texto:comb});}
+let pdsFeitoEdit=null;let pdsFeitoEditIdx=0;
+/* L139-1: doPDS() só recebia o índice do ALUNO (i), nunca o índice do PDS concreto dentro de
+   o.pds[] — e confirmarPdsFeito() assumia sempre o.pds[0]. Isto funcionava enquanto cada aluno só
+   tinha um PDS agendado, mas a Agenda de PDS lista TODAS as ocorrências (recorrências futuras,
+   PDS extra marcados à mão) — cada linha com o seu x.idx próprio. Ao clicar "PDS feito" numa linha
+   que não era a primeira do aluno, o sistema completava sempre pds[0] (uma ocorrência diferente
+   da clicada), e a linha realmente clicada continuava a aparecer na Agenda como se nada tivesse
+   acontecido — exactamente o sintoma reportado ("o nome não sai do agendamento"). Agora doPDS
+   recebe também o idx da linha clicada (por omissão 0, para os sítios que só têm um PDS por
+   aluno, como o menu "Mais"). */
+function doPDS(i,idx){const o=data.online[i];if(!o)return;if(o.status==="Parado"){toast("Aluno em pausa — não dá para marcar PDS");return;}pdsFeitoEdit=i;pdsFeitoEditIdx=idx||0;render();}
+function fecharPdsFeito(){pdsFeitoEdit=null;pdsFeitoEditIdx=0;render();}
+function confirmarPdsFeito(){if(pdsFeitoEdit===null)return;const oi=pdsFeitoEdit;const o=data.online[oi];if(!o){pdsFeitoEdit=null;pdsFeitoEditIdx=0;render();return;}
+ var comb=(val("pdsf_comb")||"").trim();ensurePds(o);syncProx(o);const alvoIdx=Math.min(pdsFeitoEditIdx||0,Math.max(o.pds.length-1,0));const alvo=o.pds[alvoIdx];const gid=alvo?alvo.groupId:null;const ddAlvo=alvo?alvo.data:null;
+ marcarUmPDS(o,alvoIdx);o.combinado=comb;if(comb){if(!Array.isArray(o.combinadoHist))o.combinadoHist=[];o.combinadoHist.unshift({data:_dISO(new Date()),texto:comb});}
  if(gid){data.online.forEach(function(other){if(other===o)return;ensurePds(other);var idx=other.pds.findIndex(function(p){return p.groupId===gid&&p.data===ddAlvo;});if(idx>=0)marcarUmPDS(other,idx);});}
- persist();pdsFeitoEdit=null;toast("PDS feito"+(alvo&&alvo.parceiro?" (em conjunto com "+alvo.parceiro+")":"")+(o.pds.length?" — próximo: "+o.proximoPDS:""));render();}
+ persist();pdsFeitoEdit=null;pdsFeitoEditIdx=0;toast("PDS feito"+(alvo&&alvo.parceiro?" (em conjunto com "+alvo.parceiro+")":"")+(o.pds.length?" — próximo: "+o.proximoPDS:""));render();}
 function pdsFeitoModalHTML(){if(pdsFeitoEdit===null)return"";const o=data.online[pdsFeitoEdit];if(!o)return"";return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharPdsFeito()"><div class="card" style="padding:22px;width:360px;max-width:94vw"><h3 style="color:var(--azul);margin-bottom:2px">PDS feito</h3><div class="muted" style="margin-bottom:12px">${esc(o.nome)}${o.formador?' · '+esc(o.formador):''}</div><label>O que ficou combinado até ao próximo encontro? (opcional)</label><textarea id="pdsf_comb" rows="3" placeholder="Ex.: praticar Procv até quinta"></textarea><div class="flex" style="margin-top:14px;gap:6px"><button class="btn-o" onclick="fecharPdsFeito()">Cancelar</button><button class="btn-g" onclick="confirmarPdsFeito()">Marcar PDS feito</button></div></div></div>`;}
 function cancelPdsItem(i,idx){var o=data.online[i];if(!o)return;ensurePds(o);syncProx(o);if(!o.pds[idx])return;if(!confirm("Cancelar o PDS de "+o.pds[idx].data+"?"))return;var _ref=o.pds[idx].gcalRef;if(_ref)filaCancelarCalendario(_ref,"PDS — "+o.nome);o.pds.splice(idx,1);syncProx(o);persist();toast("PDS cancelado"+(_ref?" (pedido de cancelamento enviado ao Google Calendar)":""));render();}
 const MOTIVOS_NAO_REALIZADO=["Aluno não compareceu","Formador indisponível","Reagendado a pedido do aluno","Falha técnica / internet","Outro"];
-let naoRealEdit=null;
-function naoRealizadoPDS(i){naoRealEdit=i;render();}
-function fecharNaoReal(){naoRealEdit=null;render();}
+let naoRealEdit=null;let naoRealEditIdx=0;
+/* L139-1: mesma correcção que em doPDS/confirmarPdsFeito — naoRealizadoPDS() só recebia o
+   índice do aluno, e as funções de confirmação assumiam sempre o.pds[0]. Agora recebe também
+   o idx da linha da Agenda clicada, para nunca tocar num PDS diferente do que foi assinalado
+   como "não realizado". */
+function naoRealizadoPDS(i,idx){naoRealEdit=i;naoRealEditIdx=idx||0;render();}
+function fecharNaoReal(){naoRealEdit=null;naoRealEditIdx=0;render();}
 /* L84-2/L87-4: 3 acções distintas neste modal (antes só havia "Remarcar"):
    - Confirmar: regista o motivo (fica no histórico e conta para "PDS não realizados"), sem
      forçar logo a escolha de nova data — para quando ainda não se sabe quando será o próximo.
@@ -5641,10 +5745,10 @@ function fecharNaoReal(){naoRealEdit=null;render();}
      clique — comportamento que já existia.
    - Cancelar: cancela mesmo o PDS agendado (reaproveita cancelPdsItem, com o aviso de Google
      Calendar), sem registar motivo nenhum — para quando o PDS nunca devia ter ficado marcado. */
-function _registarPdsNaoRealizado(oi){const o=data.online[oi];if(!o)return false;ensurePds(o);syncProx(o);const motivo=val("nr_motivo")==="Outro"?(val("nr_outro")||"Outro"):val("nr_motivo");if(!motivo){toast("Escolhe o motivo");return false;}if(!Array.isArray(o.historicoNaoRealizado))o.historicoNaoRealizado=[];o.historicoNaoRealizado.push({data:_dISO(new Date()),motivo:motivo,pdsData:o.pds[0]?o.pds[0].data:""});o.pdsNaoRealizados=(+o.pdsNaoRealizados||0)+1;if(o.pds.length)o.pds.shift();syncProx(o);persist();return true;}
-function confirmarNaoRealizado(){if(naoRealEdit===null)return;const oi=naoRealEdit;if(!_registarPdsNaoRealizado(oi))return;naoRealEdit=null;toast("Motivo registado — escolhe agora a nova data");agendarPDS(oi);}
-function confirmarSemRemarcar(){if(naoRealEdit===null)return;const oi=naoRealEdit;if(!_registarPdsNaoRealizado(oi))return;naoRealEdit=null;toast("Motivo registado.");render();}
-function cancelarPdsNaoRealizado(){if(naoRealEdit===null)return;const oi=naoRealEdit;ensurePds(data.online[oi]||{});cancelPdsItem(oi,0);naoRealEdit=null;render();}
+function _registarPdsNaoRealizado(oi,idx){const o=data.online[oi];if(!o)return false;ensurePds(o);syncProx(o);const alvoIdx=Math.min(idx||0,Math.max(o.pds.length-1,0));const motivo=val("nr_motivo")==="Outro"?(val("nr_outro")||"Outro"):val("nr_motivo");if(!motivo){toast("Escolhe o motivo");return false;}if(!Array.isArray(o.historicoNaoRealizado))o.historicoNaoRealizado=[];o.historicoNaoRealizado.push({data:_dISO(new Date()),motivo:motivo,pdsData:o.pds[alvoIdx]?o.pds[alvoIdx].data:""});o.pdsNaoRealizados=(+o.pdsNaoRealizados||0)+1;if(o.pds.length)o.pds.splice(alvoIdx,1);syncProx(o);persist();return true;}
+function confirmarNaoRealizado(){if(naoRealEdit===null)return;const oi=naoRealEdit;if(!_registarPdsNaoRealizado(oi,naoRealEditIdx))return;naoRealEdit=null;naoRealEditIdx=0;toast("Motivo registado — escolhe agora a nova data");agendarPDS(oi);}
+function confirmarSemRemarcar(){if(naoRealEdit===null)return;const oi=naoRealEdit;if(!_registarPdsNaoRealizado(oi,naoRealEditIdx))return;naoRealEdit=null;naoRealEditIdx=0;toast("Motivo registado.");render();}
+function cancelarPdsNaoRealizado(){if(naoRealEdit===null)return;const oi=naoRealEdit;ensurePds(data.online[oi]||{});cancelPdsItem(oi,naoRealEditIdx||0);naoRealEdit=null;naoRealEditIdx=0;render();}
 function naoRealModalHTML(){if(naoRealEdit===null)return"";const o=data.online[naoRealEdit];if(!o)return"";return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharNaoReal()"><div class="card" style="padding:22px;width:360px;max-width:94vw"><h3 style="color:var(--azul);margin-bottom:2px">PDS não realizado</h3><div class="muted" style="margin-bottom:12px">${esc(o.nome)}${o.formador?' · '+esc(o.formador):''}</div><label>Motivo</label><select id="nr_motivo" onchange="document.getElementById('nr_outro_wrap').style.display=this.value==='Outro'?'block':'none'">${MOTIVOS_NAO_REALIZADO.map(m=>`<option>${esc(m)}</option>`).join("")}</select><div id="nr_outro_wrap" style="display:none;margin-top:8px"><label>Especifica</label><input id="nr_outro" placeholder="Descreve o motivo"></div><div class="muted" style="margin-top:8px;font-size:12px">Confirmar regista o motivo sem remarcar já. Remarcar regista o motivo e abre logo a nova data. Cancelar cancela mesmo o PDS agendado (sem registar motivo).</div><div class="flex" style="margin-top:14px;flex-wrap:wrap;gap:6px"><button class="btn-o" onclick="confirmarSemRemarcar()">Confirmar</button><button class="btn-p" onclick="confirmarNaoRealizado()">Remarcar</button><button class="btn-o" style="color:var(--verm)" onclick="cancelarPdsNaoRealizado()">Cancelar PDS</button></div></div></div>`;}
 /* L90-7: antes só apagava o padrão de recorrência (recs[]), mas deixava ficar quaisquer PDS já
    marcados para esse dia da semana (em pds[]) — o aluno continuava a ver/receber esses encontros
@@ -6781,7 +6885,7 @@ function compDoc(cod){const c=compEfetivo();const logo=c.logo||((document.queryS
      <div>Início: <b>${esc(_dt.inicio?formatarDataExtensa(_dt.inicio):"—")}</b></div>
      <div>Fim: <b>${esc(_dt.fim?formatarDataExtensa(_dt.fim):"—")}</b></div>
      <div>Horário: <b>${esc(horarioDoFormando(f,t)||"—")}</b></div>
-     ${f.bi?`<div>Nº do BI: <b>${esc(f.bi)}</b></div>`:''}
+     ${f.bi?`<div>Nº do BI: <b>${esc(f.bi)}</b></div>`:'<div style="color:#a3311f">⚠ Nº do BI em falta — actualiza na ficha do formando antes de emitir/enviar este comprovativo.</div>'}
      <div>Local: <b>${esc(c.local)}</b></div>
    </div>
    <div class="det" style="border-top:1px solid var(--linha);padding-top:14px;margin-top:18px"><div style="font-weight:700;color:var(--azul);margin-bottom:6px">📍 LOCALIZAÇÃO E ACESSO</div>
@@ -7000,12 +7104,17 @@ function confirmarInscricaoModalHTML(){if(inscConfirmModal===null||!Array.isArra
  <div style="margin-top:10px"><label style="display:block;font-weight:700;font-size:12px;color:var(--azul);text-transform:uppercase;margin-bottom:5px">Formação</label>
  <select id="conf_curso" onchange="setConfCurso(this)">${cursosLista().map(function(c){return '<option value="'+esc(c)+'" '+(c===cursoAtual?"selected":"")+'>'+esc(c)+'</option>';}).join("")}</select>
  ${cursoAtual!==(r.curso||"")?`<div class="muted" style="margin-top:4px">Veio da landing como "${esc(r.curso||"—")}" — a corrigir para "${esc(cursoAtual)}".</div>`:""}</div>
- <div style="margin-top:10px"><label style="display:block;font-weight:700;font-size:12px;color:var(--azul);text-transform:uppercase;margin-bottom:5px">Edição/turma</label>
+ ${modalidadeAtual==="Online"?`<div style="margin-top:10px"><label style="display:block;font-weight:700;font-size:12px;color:var(--azul);text-transform:uppercase;margin-bottom:5px">Nível</label>
+ <select id="conf_nivel">${NIVEIS.map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+'</option>';}).join("")}</select>
+ <div class="muted" style="margin-top:4px">A Turma Online não tem edições — o aluno entra directamente no acompanhamento individual, a partir deste nível.</div></div>
+ <div style="margin-top:10px"><label style="display:block;font-weight:700;font-size:12px;color:var(--azul);text-transform:uppercase;margin-bottom:5px">Formador <span style="color:#C0392B">*</span></label>
+ <select id="conf_formador"><option value="">— escolher (obrigatório) —</option>${todosNomesFormadoresOnline().filter(function(n){return n!=="—";}).map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+'</option>';}).join("")}</select></div>`:
+ `<div style="margin-top:10px"><label style="display:block;font-weight:700;font-size:12px;color:var(--azul);text-transform:uppercase;margin-bottom:5px">Edição/turma</label>
  <select id="conf_turma" onchange="setConfTurma(this)">${ativas.length?ativas.map(function(t){return '<option value="'+esc(t.cod)+'" '+(t.cod===autoCod?"selected":"")+'>'+esc(t.ed)+'ª — '+esc(t.curso||"")+'</option>';}).join(""):'<option value="">Sem edição activa para este curso</option>'}</select>
  <div class="muted" style="margin-top:4px">Só aparecem edições ainda a decorrer ou por começar — edições já concluídas não são opção.</div></div>
  ${turnosSel?`<div style="margin-top:10px"><label style="display:block;font-weight:700;font-size:12px;color:var(--azul);text-transform:uppercase;margin-bottom:5px">Turno</label>
  <select id="conf_turno" onchange="setConfTurno(this)">${!turnoGuess?'<option value="">— escolhe o turno —</option>':""}${turnosSel.map(function(tn){return '<option value="'+esc(tn.horario)+'" '+(tn.horario===turnoGuess?"selected":"")+'>'+esc(tn.horario)+'</option>';}).join("")}</select>
- <div class="muted" style="margin-top:4px">${turnoGuess?'Palpite automático a partir do que veio da landing — confirma ou corrige antes de gravar, para os números por turno baterem certo.':'<b style="color:#a3311f">O texto da landing não deu para adivinhar o turno — escolhe manualmente antes de confirmar.</b>'}</div></div>`:""}
+ <div class="muted" style="margin-top:4px">${turnoGuess?'Palpite automático a partir do que veio da landing — confirma ou corrige antes de gravar, para os números por turno baterem certo.':'<b style="color:#a3311f">O texto da landing não deu para adivinhar o turno — escolhe manualmente antes de confirmar.</b>'}</div></div>`:""}`}
  <div style="margin-top:10px"><label style="display:block;font-weight:700;font-size:12px;color:var(--azul);text-transform:uppercase;margin-bottom:5px">Código promocional (opcional)</label>
  <input id="conf_cupom" placeholder="Ex.: PROMO10" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
  <div class="muted" style="margin-top:4px">Se o formando tiver um cupão de desconto, escreve o código aqui — a percentagem é aplicada ao valor total ao confirmar.</div></div>
@@ -7028,19 +7137,37 @@ function confirmarInscricaoModalHTML(){if(inscConfirmModal===null||!Array.isArra
    (confirmarInscricaoModalHTML), nunca por coincidência de telefone com outro formando já existente
    por outra via — isso causava inscrições a desaparecer sem terem sido tocadas (ex.: Henrique). */
 function _marcarInscConfirmada(r){if(!r)return;r.confirmada=true;var ref=_fbInscRef();if(ref&&r._key){ref.child(r._key).update({confirmada:true});}}
+/* L139-3: até aqui, finalizarInscricao() ignorava a modalidade e criava SEMPRE um data.formandos
+   ligado a uma turma/edição presencial — mesmo quando a inscrição vinha marcada como "Online".
+   Como Turma Online não tem edições, o resultado era o aluno online ficar agarrado a uma edição
+   presencial qualquer (ex.: "15ª Edição"), que é exactamente o sintoma reportado. Agora, quando a
+   modalidade escolhida é Online, o caminho é totalmente diferente: cria-se um registo em
+   data.online (o mesmo usado pela aba Turma Online), com nível e formador — nunca uma turma. */
 function finalizarInscricao(i){const r=Array.isArray(INSCR)&&INSCR[i];if(!r)return;
  if(formandoDuplicado(r.tel,r.nome)){toast("Duplicado — este contacto já está registado.");return;}
  if(!val("conf_resp")){toast("Escolhe o responsável pela venda antes de confirmar — é obrigatório.");var _cr=document.getElementById("conf_resp");if(_cr)_cr.focus();return;}
  const cursoFinal=confCursoSel||r.curso||"";
+ const modalidadeChk=confModalidadeSel||r.modalidade||"Presencial";
+ if(modalidadeChk==="Online"){
+  const formadorSel=val("conf_formador")||"";
+  if(!formadorSel){toast("Escolhe o formador antes de confirmar — é obrigatório na Turma Online.");var _cf=document.getElementById("conf_formador");if(_cf)_cf.focus();return;}
+  const nivelSel=val("conf_nivel")||NIVEIS[0];
+  const cupomCod0=(val("conf_cupom")||"").trim().toUpperCase();let cupomAplicado0=null;
+  if(cupomCod0){const cv=cupomValidar(cupomCod0,cursoFinal);if(!cv.ok){toast(cv.msg);var _cc0=document.getElementById("conf_cupom");if(_cc0)_cc0.focus();return;}cupomAplicado0=cv.cupom;}
+  const _o={nome:r.nome||"",email:r.email||"",contacto:r.tel||"",area:cursoFinal,nivel:nivelSel,fase:"",formador:formadorSel,inicio:_dISO(new Date()),prazo:prazoPorNivel(nivelSel),status:"Em andamento",valorPago:+r.valorPago||0,tarefa:"Não",avaliacao:"Não",proximoPDS:"",ultimoPDS:"",pdsFeitos:0,recorrente:false,canal:"Landing",fonte:r.fonte||"",vendedor:val("conf_resp")||"Gestão",criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role,cupom:cupomAplicado0?cupomAplicado0.codigo:""};
+  ensureOnlineCod(_o);data.online.push(_o);syncPagOnline(_o);
+  if(cupomAplicado0)cupomRegistarUso(cupomAplicado0.codigo);
+  if(_o.email){var _L=classroomOnlineLinks();var _link=_L[NIVEIS[0]]||"";var _corpo=msgBoasVindasOnline().replace(/\{nome\}/g,_o.nome||"").replace(/\{link\}/g,_link||"(link a definir pela Gestão)").replace(/\n/g,"<br>");filaEmail(_o.email,"Bem-vindo à Turma Online — Knowledge Angola",_corpo);}
+  _marcarInscConfirmada(r);persist();inscConfirmModal=null;confCursoSel=null;toast("Inscrito na Turma Online");show("online");return;
+ }
  const turma=val("conf_turma")||"";
  const turmaObj=turmaByCod(turma);
- const modalidadeChk=confModalidadeSel||r.modalidade||"Presencial";
- const temTurno=modalidadeChk!=="Online"&&turmaObj&&Array.isArray(turmaObj.turnos)&&turmaObj.turnos.length>1;
+ const temTurno=turmaObj&&Array.isArray(turmaObj.turnos)&&turmaObj.turnos.length>1;
  if(temTurno&&!val("conf_turno")){toast("Escolhe o turno antes de confirmar — não havia palpite fiável a partir do que veio da landing.");return;}
  const cupomCod=(val("conf_cupom")||"").trim().toUpperCase();let cupomAplicado=null;
  if(cupomCod){const cv=cupomValidar(cupomCod,cursoFinal);if(!cv.ok){toast(cv.msg);var _cc=document.getElementById("conf_cupom");if(_cc)_cc.focus();return;}cupomAplicado=cv.cupom;}
  const n=data.formandos.reduce((m,f)=>{const x=parseInt((f.cod||"").replace(/\D/g,""))||0;return x>m?x:m},0)+1;const cod="KA-"+String(n).padStart(3,"0");
- const horarioFinal=temTurno?val("conf_turno"):(modalidadeChk==="Online"?"":(r.horario||""));
+ const horarioFinal=temTurno?val("conf_turno"):(r.horario||"");
  data.formandos.push({cod,nome:r.nome||"",tel:r.tel||"",email:r.email||"",curso:cursoFinal,turma,periodo:r.periodo||"",horario:horarioFinal,modalidade:modalidadeChk,canal:"Landing",fonte:r.fonte||"",data:_dISO(new Date()),criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role,estado:"Activo",vendedor:val("conf_resp")||"Gestão",gratifVolume10:gratifVolumeElegivel(turma,val("conf_resp")||"Gestão")});
  const totalBase=precoDe(cursoFinal)||0;const total=cupomAplicado?Math.round(totalBase*(1-cupomAplicado.percentagem/100)):totalBase;const pago=+r.valorPago||0;
  data.pagamentos.push({cod,plano:(pago>=total&&total>0)?"A pronto":"Prestações",total:total,pago:pago,comprovativo:r.comprovativo?"Sim":"Não",dataPrometida:"",prestacoes:pago>0?[{valor:pago,data:_dISO(new Date()),comprovativo:r.comprovativo?"Sim":"Não",comprovativoImg:r.comprovativo||""}]:[],criadoEm:new Date().toISOString(),cupom:cupomAplicado?cupomAplicado.codigo:""});
@@ -7063,7 +7190,7 @@ function finalizarFusaoInscricao(i){const r=Array.isArray(INSCR)&&INSCR[i];if(!r
     ter um horário Presencial válido; a fusão só preenche o que vier de novo, nunca apaga o que já lá estava. */
  const horarioFinal=temTurno?val("conf_turno"):(r.horario||dup.horario||"");
  const alteracoes=[];
- ["email","bi","nascimento","tel2","area"].forEach(function(k){if(!dup[k]&&r[k]){dup[k]=r[k];alteracoes.push(k);}});
+ ["email","bi","morada","nascimento","tel2","area"].forEach(function(k){if(!dup[k]&&r[k]){dup[k]=r[k];alteracoes.push(k);}});
  const nomeR=(r.nome||"").trim(),nomeDup=(dup.nome||"").trim();
  if(nomeR&&nomeR.length>nomeDup.length){dup.nome=nomeR;alteracoes.push("nome");}
  if(cursoFinal&&dup.curso!==cursoFinal){dup.curso=cursoFinal;alteracoes.push("curso");}
@@ -7524,6 +7651,7 @@ function fichaCard(cod){const f=data.formandos.find(x=>x.cod===cod);if(!f)return
    <div><label>Turma / Formador</label><div>${t?esc(t.ed)+'ª — '+esc(f.horario||f.turno||t.horario||''):esc(f.turma||'—')}${t&&t.resp?' · '+esc(t.resp):''}${t&&t.gestora?' · Gestora: '+esc(t.gestora):''}</div></div>
    <div><label>Período / Horário</label><div>${f.periodo?esc(f.periodo):'—'}${f.horario?' · '+esc(f.horario):''}</div></div>
    <div><label>Nº do BI</label><div>${esc(f.bi||'—')}</div></div>
+   <div><label>Morada</label><div>${esc(f.morada||'—')}</div></div>
    <div><label>Data de nascimento</label><div>${esc(f.nasc||'—')}</div></div>
    <div><label>Telefone</label><div>${esc(f.tel||"—")}</div></div>
    <div><label>E-mail</label><div>${esc(f.email||'—')}${on&&on.email&&on.email!==f.email?` <button class="btn-o" style="padding:2px 8px;font-size:12px" onclick="carregarEmailOnline('${esc(f.cod)}')">Carregar e-mail da turma online</button>`:''}</div></div>
