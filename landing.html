@@ -284,6 +284,17 @@ return Object.keys(set);
 }
 
 const PERIODO_UNICO={"Excel do Zero ao Fundamental":"Dias de semana"};
+/* L140-7: lista de cursos disponíveis em modalidade Online — vem do painel (Definições → Catálogo →
+   coluna "Tem Online?"), por defeito só "Excel do Básico ao Avançado". Evita a combinação inválida
+   que existia antes (dava para escolher "Excel do Zero ao Fundamental" + "Online", curso que não
+   tem turma online nenhuma). */
+function _cursosOnlineList(){return (CFG.cursosOnline&&CFG.cursosOnline.length)?CFG.cursosOnline:["Excel do Básico ao Avançado"];}
+function cursosParaModalidade(online){
+ const _base=(CFG.cursos&&CFG.cursos.length?CFG.cursos:DEF.cursos);
+ var cs=_base.filter(function(c){return !CFG.cursosAtivos||CFG.cursosAtivos[c]!==false;}).filter(function(c){return !/power\s*bi/i.test(c);});
+ if(online){var onl=_cursosOnlineList();cs=cs.filter(function(c){return onl.some(function(n){return _matchCurso(n,c)||_matchCurso(c,n)||n===c;});});}
+ return cs;
+}
 function cursoChg(){
 var curso=val("i_curso")||CURSO_SEL;
 CURSO_SEL=curso;
@@ -359,8 +370,8 @@ if(tg&&ts.length)tg.innerHTML=ts.map(function(t){return '<div class="tcard"><div
 var fb=document.getElementById("faqbox");if(fb)fb.innerHTML=(CFG.faq||[]).map(function(f){return '<details><summary>'+esc(f.q)+'</summary><p>'+esc(f.a)+'</p></details>';}).join("");
 var f2=document.getElementById("f_local2");if(f2)f2.textContent=CFG.local||DEF.local;
 var gt=document.getElementById("guar_txt");if(gt){var og=(CFG.oferta&&CFG.oferta.garantia)||DEF.oferta.garantia;if(og)gt.textContent=og;}
-const _base=(CFG.cursos&&CFG.cursos.length?CFG.cursos:DEF.cursos);
-const cs=_base.filter(function(c){return !CFG.cursosAtivos||CFG.cursosAtivos[c]!==false;}).filter(function(c){return !/power\s*bi/i.test(c);});
+var online0=(document.getElementById("i_mod")?val("i_mod"):"").toLowerCase().indexOf("online")>=0;
+const cs=cursosParaModalidade(online0);
 document.getElementById("i_curso").innerHTML='<option value=""'+(CURSO_SEL?"":" selected")+'>Selecciona a formação…</option>'+cs.map(function(c){return "<option"+(CURSO_SEL&&_matchCurso(c,CURSO_SEL)?" selected":"")+">"+esc(c)+"</option>";}).join("");
 cursoChg();
 modChg();
@@ -395,6 +406,7 @@ if(dc){
 if(dc.precos){var _extra=Object.keys(dc.precos).filter(function(k){return DEF.cursos.indexOf(k)<0;});CFG.cursos=DEF.cursos.concat(_extra);CFG.precos=Object.assign({},CFG.precos||{},dc.precos);}
 if(dc.cursosAtivos)CFG.cursosAtivos=dc.cursosAtivos;
 if(dc.vagasCurso)CFG.vagasCurso=dc.vagasCurso;
+if(dc.cursosOnline)CFG.cursosOnline=dc.cursosOnline;
 render();
 }
 }).catch(function(){});
@@ -415,6 +427,15 @@ var pw=document.getElementById("periodowrap"),nota=document.getElementById("onli
 if(pw)pw.style.display=online?"none":"block";
 if(nota)nota.style.display=online?"block":"none";
 if(online){var sel=document.getElementById("i_periodo");if(sel)sel.value="";}
+/* L140-7: ao mudar a modalidade, refaz a lista de cursos disponível — online só mostra
+   os cursos marcados "Tem Online?" no painel (por defeito, só Básico ao Avançado). */
+var curSel=document.getElementById("i_curso");
+if(curSel){
+ var cs=cursosParaModalidade(online);
+ var manter=curSel.value&&cs.indexOf(curSel.value)>=0;
+ curSel.innerHTML='<option value=""'+(manter?"":" selected")+'>Selecciona a formação…</option>'+cs.map(function(c){return "<option"+(manter&&c===curSel.value?" selected":"")+">"+esc(c)+"</option>";}).join("");
+ if(!manter){CURSO_SEL="";cursoChg();}
+}
 }
 
 let COMP_B64="";

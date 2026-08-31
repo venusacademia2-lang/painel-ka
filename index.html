@@ -846,9 +846,37 @@ function fezPagamento(f){const p=payOf(f.cod);return !!(p&&(+p.pago||0)>0);}
 function inscritosPagosDe(cod,turno){return data.formandos.filter(f=>f.turma===cod&&f.estado!=="Transferido p/ Online"&&(!turno||(f.horario||f.turno||"")===turno)&&fezPagamento(f)).length}
 function computadoresDe(t){const n=+t.computadores;return n>0?n:COMPUTADORES;}
 function pcOcupados(cod){return data.formandos.filter(f=>f.turma===cod&&f.estado!=="Transferido p/ Online"&&f.usaPC==="Sim"&&fezPagamento(f)).length}
-/* "Vagas" é definido por turno (ex.: 20 por turno de manhã e 20 à tarde), não partilhado entre turnos da mesma edição. */
-function vagasLivres(t,turno){if(!t.vagas)return null;return Math.max(0,(+t.vagas||0)-inscritosPagosDe(t.cod,turno));}
-function vagasLivresPorTurno(t){if(!t||!t.vagas||!Array.isArray(t.turnos)||t.turnos.length<2)return null;return t.turnos.map(function(tn){return{horario:tn.horario,vl:vagasLivres(t,tn.horario)};});}
+/* L140-1: "Vagas" passa a ter DUAS capacidades por turno, em vez de um único número partilhado
+   pela edição inteira (causa da "0 vagas" a aparecer no catálogo mesmo havendo lugar num turno
+   específico — publicarCatalogo() somava pagos dos DOIS turnos contra o mesmo total).
+   - vagasReal: o tecto verdadeiro (ex.: 25) — nunca se admite mais do que isto.
+   - vagasMostradas: o número que aparece no sistema e no catálogo (ex.: 20), a decrescer com
+     cada pagamento — pedido do Ventura: "conte como 25 mas mostre 20 no sistema, e vá reduzindo
+     as vagas à medida que as pessoas forem pagando". Só a Real trava inscrições; a Mostrada é
+     só o que se vê (efeito de urgência controlado pelo próprio Ventura).
+   Migração: turno sem vagasReal/vagasMostradas próprias usa o t.vagas antigo da edição (sem
+   quebrar turmas já criadas); turma sem turnos múltiplos continua a usar t.vagas directamente. */
+function _turnoPorHorario(t,horario){if(!t||!Array.isArray(t.turnos)||!horario)return null;return t.turnos.find(function(tn){return tn.horario===horario;})||null;}
+/* Um turno "tem capacidade própria" quando alguém já preencheu vagasReal/vagasMostradas nele.
+   Enquanto isso não acontece (todas as turmas já existentes antes de L140), cada turno cai de volta
+   para o t.vagas antigo e partilhado — mantém o comportamento de sempre em vez de ficar sem número
+   nenhum (bug corrigido: antes disto, um turno sem configuração própria devolvia null e o catálogo
+   mostrava 0/vazio em turmas que já existiam). */
+function _turnosConfigurados(t){return !!(t&&Array.isArray(t.turnos)&&t.turnos.some(function(tn){return (tn.vagasReal!=null&&tn.vagasReal!=="")||(tn.vagasMostradas!=null&&tn.vagasMostradas!=="");}));}
+function _capReal(t,horario){var tn=_turnoPorHorario(t,horario);if(tn&&tn.vagasReal!=null&&tn.vagasReal!=="")return +tn.vagasReal||0;return t?(+t.vagas||null):null;}
+function _capMostrada(t,horario){var tn=_turnoPorHorario(t,horario);if(tn&&tn.vagasMostradas!=null&&tn.vagasMostradas!=="")return +tn.vagasMostradas||0;var cr=_capReal(t,horario);return cr;}
+function vagasLivres(t,turno){if(!t)return null;
+ if(turno){var cap=_capMostrada(t,turno);if(cap==null)return null;return Math.max(0,cap-inscritosPagosDe(t.cod,turno));}
+ if(Array.isArray(t.turnos)&&t.turnos.length&&_turnosConfigurados(t)){var soma=0,temCap=false;t.turnos.forEach(function(tn){var c=_capMostrada(t,tn.horario);if(c!=null){soma+=c;temCap=true;}});if(temCap)return Math.max(0,soma-inscritosPagosDe(t.cod));}
+ if(!t.vagas)return null;return Math.max(0,(+t.vagas||0)-inscritosPagosDe(t.cod,turno));}
+/* Capacidade REAL restante (não a mostrada) — usada só para decidir se ainda se pode mesmo admitir
+   mais alguém, mesmo quando a Mostrada já diz "CHEIA". Conta todos os inscritos (pagos + por pagar),
+   porque é uma questão de lugar físico/vaga real, não de urgência de marketing. */
+function vagasRealLivres(t,turno){if(!t)return null;
+ if(turno){var cap=_capReal(t,turno);if(cap==null)return null;return Math.max(0,cap-inscritosDe(t.cod,turno));}
+ if(Array.isArray(t.turnos)&&t.turnos.length&&_turnosConfigurados(t)){var soma=0,temCap=false;t.turnos.forEach(function(tn){var c=_capReal(t,tn.horario);if(c!=null){soma+=c;temCap=true;}});if(temCap)return Math.max(0,soma-inscritosDe(t.cod));}
+ if(!t.vagas)return null;return Math.max(0,(+t.vagas||0)-inscritosDe(t.cod,turno));}
+function vagasLivresPorTurno(t){if(!t||!Array.isArray(t.turnos)||t.turnos.length<2)return null;return t.turnos.map(function(tn){return{horario:tn.horario,vl:vagasLivres(t,tn.horario)};});}
 function inscritosPorTurno(t){if(!t||!Array.isArray(t.turnos)||t.turnos.length<2)return null;
  var totalIns=inscritosDe(t.cod),totalPg=inscritosPagosDe(t.cod),somaIns=0,somaPg=0;
  var linhas=t.turnos.map(function(tn){var pg=inscritosPagosDe(t.cod,tn.horario);var ins=inscritosDe(t.cod,tn.horario);somaIns+=ins;somaPg+=pg;return{horario:tn.horario,pg:pg,dv:ins-pg};});
@@ -877,20 +905,26 @@ function migrarHorariosFormandos(){(data.formandos||[]).forEach(function(f){
 function vagasLivresLabel(t){var pt=vagasLivresPorTurno(t);if(pt)return pt.map(function(x){return esc(x.horario)+': '+(x.vl===0?'CHEIA':x.vl);}).join(' · ');var vl=vagasLivres(t);return vl==null?"":String(vl);}
 /* L21: vagas livres contando TODOS os inscritos (pagos + por pagar) — reflecte o lugar físico ocupado na sala,
    ao contrário de vagasLivres()/vagasLivresPorTurno() que só descontam quem já pagou (uso financeiro). */
-function vagasLivresTotal(t,turno){if(!t||!t.vagas)return null;return Math.max(0,(+t.vagas||0)-inscritosDe(t.cod,turno));}
-function vagasLivresTotalPorTurno(t){if(!t||!t.vagas||!Array.isArray(t.turnos)||t.turnos.length<2)return null;return t.turnos.map(function(tn){return{horario:tn.horario,vl:vagasLivresTotal(t,tn.horario)};});}
+function vagasLivresTotal(t,turno){if(!t)return null;
+ if(turno){var cap=_capMostrada(t,turno);if(cap==null)return null;return Math.max(0,cap-inscritosDe(t.cod,turno));}
+ if(Array.isArray(t.turnos)&&t.turnos.length&&_turnosConfigurados(t)){var soma=0,temCap=false;t.turnos.forEach(function(tn){var c=_capMostrada(t,tn.horario);if(c!=null){soma+=c;temCap=true;}});if(temCap)return Math.max(0,soma-inscritosDe(t.cod));}
+ if(!t.vagas)return null;return Math.max(0,(+t.vagas||0)-inscritosDe(t.cod,turno));}
+function vagasLivresTotalPorTurno(t){if(!t||!Array.isArray(t.turnos)||t.turnos.length<2)return null;return t.turnos.map(function(tn){return{horario:tn.horario,vl:vagasLivresTotal(t,tn.horario)};});}
 /* Resumo por turno para a página "Turmas presenciais" — mostra, por turno: inscritos (pagos+por pagar),
    vagas totais e vagas livres nas duas óticas (física = todos; financeira = só pagos). */
 function turnoOcupacaoResumo(t){
  if(!t)return[];
+ /* "vagas" aqui reflecte a mesma capacidade (Mostrada) usada para calcular vlT/vlP — antes usava
+    sempre t.vagas em bruto, o que fazia a coluna dizer "sem limite" mesmo quando o turno já tinha
+    a sua própria capacidade configurada (e t.vagas, agora só obrigatório sem turnos, ficava vazio). */
  if(!Array.isArray(t.turnos)||t.turnos.length<2){
-  return[{horario:t.horario||"",ins:inscritosDe(t.cod),pg:inscritosPagosDe(t.cod),vagas:+t.vagas||0,vlT:vagasLivresTotal(t),vlP:vagasLivres(t)}];
+  return[{horario:t.horario||"",ins:inscritosDe(t.cod),pg:inscritosPagosDe(t.cod),vagas:_capMostrada(t)||0,vlT:vagasLivresTotal(t),vlP:vagasLivres(t)}];
  }
- return t.turnos.map(function(tn){return{horario:tn.horario,ins:inscritosDe(t.cod,tn.horario),pg:inscritosPagosDe(t.cod,tn.horario),vagas:+t.vagas||0,vlT:vagasLivresTotal(t,tn.horario),vlP:vagasLivres(t,tn.horario)};});
+ return t.turnos.map(function(tn){return{horario:tn.horario,ins:inscritosDe(t.cod,tn.horario),pg:inscritosPagosDe(t.cod,tn.horario),vagas:_capMostrada(t,tn.horario)||0,vlT:vagasLivresTotal(t,tn.horario),vlP:vagasLivres(t,tn.horario)};});
 }
 function turnoOcupacaoHTML(t){var r=turnoOcupacaoResumo(t);if(!r.length)return"";
  return '<table style="margin:6px 0 10px;font-size:12.5px"><thead><tr><th class="stickyhead">Turno</th><th class="stickyhead">Inscritos</th><th class="stickyhead">Vagas livres (sala — todos)</th><th class="stickyhead">Vagas livres (só pagos)</th></tr></thead><tbody>'+
-  r.map(function(x){var dv=x.ins-x.pg;var vlTcell=x.vagas?(x.vlT===0?'<span class="pill p-verm">CHEIA</span>':'<span class="pill p-verde">'+x.vlT+'</span>'):'<span class="muted">sem limite</span>';var vlPcell=x.vagas?(x.vlP==null?'—':x.vlP):'—';
+  r.map(function(x){var dv=x.ins-x.pg;var vlTcell=(x.vagas&&x.vlT!=null)?(x.vlT===0?'<span class="pill p-verm">CHEIA</span>':'<span class="pill p-verde">'+x.vlT+'</span>'):'<span class="muted">sem limite</span>';var vlPcell=(x.vagas&&x.vlP!=null)?x.vlP:'—';
    return '<tr><td>'+esc(x.horario||'—')+'</td><td>'+x.ins+' <span class="muted">('+x.pg+' pago(s)'+(dv?' + '+dv+' por pagar':'')+')</span></td><td>'+vlTcell+'</td><td class="muted">'+vlPcell+'</td></tr>';
   }).join("")+'</tbody></table>';
 }
@@ -1274,7 +1308,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.64";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.66";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -2601,6 +2635,12 @@ function setCatBool(k,el){var c=catCfg();c[k]=el.checked;persist();}
 function setCatProx(curso,el){var c=catCfg();if(!c.proximaTurmaCurso)c.proximaTurmaCurso={};c.proximaTurmaCurso[curso]=el.value;persist();}
 function setCatPreco(nome,el){var c=catCfg();if(!c.precos)c.precos={};c.precos[nome]=+String(el.value).replace(/\D/g,"")||0;persist();}
 function setCatAtivo(nome,el){var c=catCfg();if(!c.cursosAtivos)c.cursosAtivos={};c.cursosAtivos[nome]=el.checked;persist();}
+/* L140-6/7: lista configurável dos cursos que existem mesmo em modalidade Online — pedido do
+   Ventura ("a única modalidade que aparece é a do básico ao avançado"), mas em vez de fixar isso
+   no código, fica um interruptor por curso aqui, para o dia em que outro curso passar a ter turma
+   online não seja preciso mexer em código nenhum. Por defeito só "Excel do Básico ao Avançado". */
+function cursosOnlineCfg(){var c=catCfg();if(!Array.isArray(c.cursosOnline))c.cursosOnline=["Excel do Básico ao Avançado"];return c.cursosOnline;}
+function setCatOnline(nome,el){var c=catCfg();var arr=cursosOnlineCfg();var i=arr.indexOf(nome);if(el.checked){if(i<0)arr.push(nome);}else{if(i>=0)arr.splice(i,1);}persist();}
 function setCatTest(i,campo,el){var c=catCfg();if(!Array.isArray(c.testemunhos))c.testemunhos=[];while(c.testemunhos.length<=i)c.testemunhos.push({});c.testemunhos[i][campo]=el.value;persist();}
 function setCatFaq(el){var c=catCfg();c.faq=el.value.split("\n").map(function(s){return s.trim();}).filter(Boolean).map(function(ln){var p=ln.split("|");return {q:(p[0]||"").trim(),a:(p[1]||"").trim()};});persist();}
 function catModImgs(){var c=catCfg();if(!c.modImgs)c.modImgs={presencial:"https://images.pexels.com/photos/5940845/pexels-photo-5940845.jpeg?auto=compress&cs=tinysrgb&w=800",online:"https://images.pexels.com/photos/7191927/pexels-photo-7191927.jpeg?auto=compress&cs=tinysrgb&w=800"};return c.modImgs;}
@@ -2626,8 +2666,17 @@ function addCursoCatalogo(){if(!podeCursos()){toast("Só a gestão ou quem ela a
 function delCursoCatalogo(n){if(!podeCursos()){toast("Só a gestão ou quem ela autorizar");return;}var m=prompt("Motivo para remover \""+n+"\" do catálogo (fica registado):");if(m===null)return;if(!(m||"").trim()){toast("O motivo é obrigatório");return;}var c=catCfg();if(c.precos)delete c.precos[n];if(c.cursosAtivos)delete c.cursosAtivos[n];if(c.proximaTurmaCurso)delete c.proximaTurmaCurso[n];cursosLog("Removido do catálogo",n,m.trim());persist();toast("Removido — clica Publicar catálogo");render();}
 function _normCurso(s){return String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]/g,"");}
 function onCatPdf(inp){var f=inp.files&&inp.files[0];if(!f)return;var r=new FileReader();r.onload=function(e){catCfg().pdf=e.target.result;persist();toast("PDF carregado — clica Publicar catálogo");render();};r.readAsDataURL(f);}
-function publicarCatalogo(){if(role!=="admin"){toast("Só a gestão");return;}try{if(!(window.firebase&&firebase.apps&&firebase.apps.length)){toast("Sem ligação ao Firebase");return;}var c=catCfg();var vagasCurso={};try{Object.keys(c.precos||{}).forEach(function(cn){var n1=_normCurso(cn);var ts=(data.turmas||[]).filter(function(t){var n2=_normCurso(t.curso);return (t.modalidade||"Presencial")!=="Online"&&estadoTurma(t)!=="Concluída"&&(n1===n2||n1.indexOf(n2)>=0||n2.indexOf(n1)>=0);});if(ts.length){var t=ts.sort(function(a,b){return new Date(a.inicio||"2100")-new Date(b.inicio||"2100");})[0];var vl=vagasLivres(t);if(vl!=null)vagasCurso[cn]=vl;}});}catch(e){}
-firebase.database().ref("publico/catalogo").set({vagasCurso:vagasCurso,whatsapp:(c.whatsapp||"").replace(/\D/g,""),landing:c.landing||"",proximaTurma:c.proximaTurma||"",local:c.local||((data.comp&&data.comp.morada)||""),precos:c.precos||{},cursosAtivos:c.cursosAtivos||{},imagem:c.imagem||"",logo:c.logo||"",testemunhos:(c.testemunhos||[]).filter(function(t){return t&&t.link;}),formados:c.formados||"",ressalva:c.ressalva||"",garantia:c.garantia||"",prestacoes:c.prestacoes||"",prestOn:(c.prestOn!==false),detalhes:c.detalhes||"",ga:c.ga||"",gancho:c.gancho||"",ganchoCor:c.ganchoCor||"",faq:c.faq||[],vagas:c.vagas||"",proximaTurmaCurso:c.proximaTurmaCurso||{},ancoragem:c.ancoragem||"",titulo:c.titulo||"",subtitulo:c.subtitulo||"",finalTitulo:c.finalTitulo||"",finalSub:c.finalSub||"",pdf:c.pdf||"",pdfOn:(c.pdfOn!==false),pdfLabel:c.pdfLabel||"",cursoImgs:c.cursoImgs||{},curriculo:c.curriculo||{},modImgs:c.modImgs||{},cursoThumbs:c.cursoThumbs||{},heroFoto:c.heroFoto||"",formadores:catFormadorLista().map(function(f){return {foto:f.foto||"",nome:f.nome||"",cargo:f.cargo||"",bio:f.bio||"",instituicoes:(f.instituicoesTxt||"").split("\n").map(function(s){return s.trim();}).filter(Boolean)};}).filter(function(f){return f.nome;}),atualizado:new Date().toISOString()});toast("Catálogo publicado — o link já mostra estes valores");}catch(e){toast("Erro ao publicar");}}
+/* L140-4/6: duas correcções à publicação de vagas para o catálogo.
+   1) A correspondência de nome de curso passou de "aproximada" (substring — "Excel" batia com
+      qualquer curso que começasse por "Excel", podendo apanhar a turma errada) para EXACTA
+      (nome normalizado igual, nada mais). Se não houver turma com o nome exacto, não publica
+      nada para esse curso em vez de arriscar mostrar o número de outro curso.
+   2) vagasCurso deixa de ser um número só (partilhado por todos os turnos da edição) e passa a
+      ser um objecto com o detalhe por turno — para o catálogo poder mostrar "Dias de semana: X
+      vagas · Sábado manhã: Y vagas · Sábado tarde: Z vagas" em vez de um total confuso. Também
+      publica o nº da edição usada, para aparecer no catálogo. */
+function publicarCatalogo(){if(role!=="admin"){toast("Só a gestão");return;}try{if(!(window.firebase&&firebase.apps&&firebase.apps.length)){toast("Sem ligação ao Firebase");return;}var c=catCfg();var vagasCurso={};var edicaoCurso={};try{Object.keys(c.precos||{}).forEach(function(cn){var n1=_normCurso(cn);var ts=(data.turmas||[]).filter(function(t){var n2=_normCurso(t.curso);return (t.modalidade||"Presencial")!=="Online"&&estadoTurma(t)!=="Concluída"&&n1===n2;});if(!ts.length)return;var t=ts.sort(function(a,b){return new Date(a.inicio||"2100")-new Date(b.inicio||"2100");})[0];var porTurno=vagasLivresPorTurno(t);if(porTurno){vagasCurso[cn]={turnos:porTurno.map(function(x){return{horario:x.horario,vagas:x.vl};}),total:porTurno.reduce(function(s,x){return s+(+x.vl||0);},0)};}else{var vl=vagasLivres(t);if(vl!=null)vagasCurso[cn]={total:vl};}edicaoCurso[cn]=t.ed||"";});}catch(e){}
+firebase.database().ref("publico/catalogo").set({vagasCurso:vagasCurso,edicaoCurso:edicaoCurso,whatsapp:(c.whatsapp||"").replace(/\D/g,""),landing:c.landing||"",proximaTurma:c.proximaTurma||"",local:c.local||((data.comp&&data.comp.morada)||""),precos:c.precos||{},cursosAtivos:c.cursosAtivos||{},imagem:c.imagem||"",logo:c.logo||"",testemunhos:(c.testemunhos||[]).filter(function(t){return t&&t.link;}),formados:c.formados||"",ressalva:c.ressalva||"",garantia:c.garantia||"",prestacoes:c.prestacoes||"",prestOn:(c.prestOn!==false),detalhes:c.detalhes||"",ga:c.ga||"",gancho:c.gancho||"",ganchoCor:c.ganchoCor||"",faq:c.faq||[],vagas:c.vagas||"",proximaTurmaCurso:c.proximaTurmaCurso||{},ancoragem:c.ancoragem||"",titulo:c.titulo||"",subtitulo:c.subtitulo||"",finalTitulo:c.finalTitulo||"",finalSub:c.finalSub||"",pdf:c.pdf||"",pdfOn:(c.pdfOn!==false),pdfLabel:c.pdfLabel||"",cursoImgs:c.cursoImgs||{},curriculo:c.curriculo||{},modImgs:c.modImgs||{},cursoThumbs:c.cursoThumbs||{},heroFoto:c.heroFoto||"",cursosOnline:cursosOnlineCfg(),formadores:catFormadorLista().map(function(f){return {foto:f.foto||"",nome:f.nome||"",cargo:f.cargo||"",bio:f.bio||"",instituicoes:(f.instituicoesTxt||"").split("\n").map(function(s){return s.trim();}).filter(Boolean)};}).filter(function(f){return f.nome;}),atualizado:new Date().toISOString()});toast("Catálogo publicado — o link já mostra estes valores");}catch(e){toast("Erro ao publicar");}}
 function lnd(){if(!data.landing)data.landing={};return data.landing;}
 function setLnd(k,el){lnd()[k]=el.value;persist();}
 function setLndOf(k,el){var L=lnd();if(!L.oferta)L.oferta={};L.oferta[k]=el.value;persist();}
@@ -3107,8 +3156,11 @@ function addVenda(){const nome=val("f_nome");if(!nome){toast("Falta o nome");ret
     sem BI. Passa a ser obrigatório para inscrições Presenciais antes de gravar a venda. */
  if(!val("f_bi")){toast("O nº do BI é obrigatório — tem de vir sempre no comprovativo de inscrição.");var _fbi=document.getElementById("f_bi");if(_fbi)_fbi.focus();return;}
  const turma=val("f_turma");if(!turma){toast("Selecciona a turma/edição antes de gravar — é obrigatório para o P&L bater certo.");document.getElementById("f_turma").focus();return;}const usaPC=val("f_pc");
- if(turma){const t=turmaByCod(turma);const vl=vagasLivres(t);
-  if(vl===0&&!confirm("A turma "+t.ed+"ª está CHEIA. Inscrever mesmo assim?"))return;
+ if(turma){const t=turmaByCod(turma);const vlReal=vagasRealLivres(t,turnoSelInfo().turno);
+  /* L140-1: o aviso de "CHEIA" só bloqueia quando a capacidade REAL (não a mostrada, que é
+     propositadamente mais baixa) se esgota — senão o sistema travava inscrições que o Ventura
+     sabia que ainda cabiam. */
+  if(vlReal===0&&!confirm("A turma "+t.ed+"ª está CHEIA (capacidade real). Inscrever mesmo assim?"))return;
   if(usaPC==="Sim"&&pcOcupados(t.cod)>=computadoresDe(t)&&!confirm("Já não há computadores livres nesta turma (limite "+computadoresDe(t)+"). Inscrever mesmo assim?"))return;}
  const n=data.formandos.reduce((m,f)=>{const x=parseInt((f.cod||"").replace(/\D/g,""))||0;return x>m?x:m},0)+1;const cod="KA-"+String(n).padStart(3,"0");
  data.formandos.push({cod,nome,tel:val("f_tel"),tel2:val("f_tel2"),bi:val("f_bi"),morada:val("f_morada"),nasc:val("f_nasc"),email:val("f_email"),area:val("f_area"),curso:val("f_curso"),proximoCurso:val("f_prox"),nota:val("f_nota"),turma,turno:turnoSelInfo().turno,periodo:turnoSelInfo().periodo,horario:turnoSelInfo().horario,gestora:turnoSelInfo().gestora,formador:turnoSelInfo().formador,canal:val("f_canal"),fonte:fonteDeTel(val("f_tel")),data:_dISO(new Date()),criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role,estado:"Activo",vendedor:val("f_vend")||"Gestão",usaPC,gratifVolume10:gratifVolumeElegivel(turma,val("f_vend")||"Gestão")});
@@ -3184,14 +3236,15 @@ function vTurmas(){
    <div><label>Curso</label><select id="t_curso">${cursosLista().map(c=>`<option>${c}</option>`).join("")}</select></div>
    <div><label>Início</label><input id="t_ini" type="date"></div>
    <div><label>Fim</label><input id="t_fim" type="date"></div>
-   <div><label>Vagas</label><input id="t_vagas" type="number" placeholder="20"></div>
+   <div><label>Vagas (só se não activares turnos abaixo)</label><input id="t_vagas" type="number" placeholder="20"></div>
    <div><label>Computadores disponíveis nesta edição</label><input id="t_comp" type="number" placeholder="${COMPUTADORES}"></div>
   </div>
   <div class="sec" style="margin-top:10px;padding:14px;background:#f7f9fc"><label>Turnos da edição — activa os que existem e indica a gestora, o formador e (opcional) as datas de cada um. Se as datas ficarem vazias, usa as datas gerais em cima.</label>
-   <table><thead><tr><th class="stickyhead"></th><th class="stickyhead">Turno</th><th class="stickyhead">Gestora de formação</th><th class="stickyhead">Formador</th><th class="stickyhead">Início</th><th class="stickyhead">Fim</th></tr></thead><tbody>
-    <tr><td><input type="checkbox" id="tn_sabM"></td><td>Sábado manhã (8:30–13:00)</td><td><select id="tn_sabM_g">${gestorasOpts("")}</select></td><td><select id="tn_sabM_f">${formadoresOpts("")}</select></td><td><input id="tn_sabM_i" type="date"></td><td><input id="tn_sabM_fim" type="date"></td></tr>
-    <tr><td><input type="checkbox" id="tn_sabT"></td><td>Sábado tarde (14:00–18:00)</td><td><select id="tn_sabT_g">${gestorasOpts("")}</select></td><td><select id="tn_sabT_f">${formadoresOpts("")}</select></td><td><input id="tn_sabT_i" type="date"></td><td><input id="tn_sabT_fim" type="date"></td></tr>
-    <tr><td><input type="checkbox" id="tn_sem"></td><td>Dias de semana (9h–11h)</td><td><select id="tn_sem_g">${gestorasOpts("")}</select></td><td><select id="tn_sem_f">${formadoresOpts("")}</select></td><td><input id="tn_sem_i" type="date"></td><td><input id="tn_sem_fim" type="date"></td></tr>
+   <div class="muted" style="margin:4px 0 8px">Vagas (real) é o tecto verdadeiro de lugares — nunca se ultrapassa. Vagas (mostradas) é o que aparece no sistema e no catálogo, e vai descendo à medida que os alunos pagam (podes pôr um número mais baixo do que o real, para dar sensação de procura).</div>
+   <table><thead><tr><th class="stickyhead"></th><th class="stickyhead">Turno</th><th class="stickyhead">Gestora de formação</th><th class="stickyhead">Formador</th><th class="stickyhead">Início</th><th class="stickyhead">Fim</th><th class="stickyhead">Vagas (real)</th><th class="stickyhead">Vagas (mostradas)</th></tr></thead><tbody>
+    <tr><td><input type="checkbox" id="tn_sabM"></td><td>Sábado manhã (8:30–13:00)</td><td><select id="tn_sabM_g">${gestorasOpts("")}</select></td><td><select id="tn_sabM_f">${formadoresOpts("")}</select></td><td><input id="tn_sabM_i" type="date"></td><td><input id="tn_sabM_fim" type="date"></td><td><input id="tn_sabM_vr" type="number" placeholder="25" style="width:70px"></td><td><input id="tn_sabM_vm" type="number" placeholder="20" style="width:70px"></td></tr>
+    <tr><td><input type="checkbox" id="tn_sabT"></td><td>Sábado tarde (14:00–18:00)</td><td><select id="tn_sabT_g">${gestorasOpts("")}</select></td><td><select id="tn_sabT_f">${formadoresOpts("")}</select></td><td><input id="tn_sabT_i" type="date"></td><td><input id="tn_sabT_fim" type="date"></td><td><input id="tn_sabT_vr" type="number" placeholder="25" style="width:70px"></td><td><input id="tn_sabT_vm" type="number" placeholder="20" style="width:70px"></td></tr>
+    <tr><td><input type="checkbox" id="tn_sem"></td><td>Dias de semana (9h–11h)</td><td><select id="tn_sem_g">${gestorasOpts("")}</select></td><td><select id="tn_sem_f">${formadoresOpts("")}</select></td><td><input id="tn_sem_i" type="date"></td><td><input id="tn_sem_fim" type="date"></td><td><input id="tn_sem_vr" type="number" placeholder="25" style="width:70px"></td><td><input id="tn_sem_vm" type="number" placeholder="20" style="width:70px"></td></tr>
    </tbody></table></div>
   <div class="muted" style="margin-top:6px">Os dias de presença são automáticos: turnos de sábado → os 5 sábados; turno de semana → Segunda e Quinta.</div>
   <div class="row-actions"><button class="btn-p" onclick="addTurma()">Gravar edição</button></div></details>
@@ -3208,7 +3261,7 @@ function addTurma(){const ed=val("t_ed");if(!ed){toast("Falta o nº da edição"
  const curso0=val("t_curso");
  const jaExiste=(data.turmas||[]).find(function(t){return String(t.ed)===String(ed)&&(t.curso||"")===curso0;});
  if(jaExiste){toast("Já existe a "+ed+"ª edição de "+curso0+" (código "+jaExiste.cod+"). Usa \"Editar tudo\" nessa linha da tabela Edições para mudar turnos, datas ou equipa — não criar outra.");return;}
- const turnos=[];function addT(id,tipo,horario){const c=document.getElementById(id);if(c&&c.checked)turnos.push({tipo,horario,gestora:val(id+"_g"),formador:val(id+"_f"),inicio:val(id+"_i"),fim:val(id+"_fim")});}
+ const turnos=[];function addT(id,tipo,horario){const c=document.getElementById(id);if(c&&c.checked)turnos.push({tipo,horario,gestora:val(id+"_g"),formador:val(id+"_f"),inicio:val(id+"_i"),fim:val(id+"_fim"),vagasReal:val(id+"_vr")?+val(id+"_vr"):"",vagasMostradas:val(id+"_vm")?+val(id+"_vm"):""});}
  addT("tn_sabM","sabManha","Sábado manhã (8:30–13:00)");addT("tn_sabT","sabTarde","Sábado tarde (14:00–18:00)");addT("tn_sem","semana","Dias de semana (9h–11h)");
  if(!turnos.length){toast("Activa pelo menos um turno");return}
  if(turnos.some(t=>!t.gestora)){toast("Cada turno precisa de gestora de formação");return}
@@ -3762,13 +3815,14 @@ function editTurmaModalHTML(){if(turmaEditIdx==null)return"";const t=data.turmas
    <div><label>Curso</label><select onchange="setTurmaEditCampo('curso',this)">${cursosLista().map(c=>`<option ${t.curso===c?"selected":""}>${esc(c)}</option>`).join("")}</select></div>
    <div><label>Início</label><input type="date" value="${esc(t.inicio||"")}" onchange="setTurmaEditCampo('inicio',this)"></div>
    <div><label>Fim</label><input type="date" value="${esc(t.fim||"")}" onchange="setTurmaEditCampo('fim',this)"></div>
-   <div><label>Vagas por turno</label><input type="number" value="${esc(t.vagas||"")}" onchange="setTurmaEditCampo('vagas',this)"></div>
+   <div><label>Vagas (só se não houver turnos)</label><input type="number" value="${esc(t.vagas||"")}" onchange="setTurmaEditCampo('vagas',this)"></div>
    <div><label>Computadores disponíveis</label><input type="number" value="${esc(t.computadores||"")}" onchange="setTurmaEditCampo('computadores',this)"></div>
    <div><label>Orçamento atribuído (Kz)</label><input type="number" value="${esc(t.orcamento||"")}" onchange="setTurmaEditCampo('orcamento',this)"></div>
   </div>
-  ${temTurnos?`<div class="sec" style="margin-top:12px;padding:14px;background:#f7f9fc"><label>Equipa por turno</label>
-   <table><thead><tr><th>Turno</th><th>Gestora de formação</th><th>Formador</th><th>Início</th><th>Fim</th></tr></thead><tbody>
-   ${t.turnos.map(function(tn,ti){return `<tr><td>${esc(tn.horario||"")}</td><td><select onchange="setTurnoEditCampo(${ti},'gestora',this)">${gestorasOpts(tn.gestora||"")}</select></td><td><select onchange="setTurnoEditCampo(${ti},'formador',this)">${formadoresOpts(tn.formador||"")}</select></td><td><input type="date" value="${esc(tn.inicio||"")}" onchange="setTurnoEditCampo(${ti},'inicio',this)"></td><td><input type="date" value="${esc(tn.fim||"")}" onchange="setTurnoEditCampo(${ti},'fim',this)"></td></tr>`;}).join("")}
+  ${temTurnos?`<div class="sec" style="margin-top:12px;padding:14px;background:#f7f9fc"><label>Equipa e vagas por turno</label>
+   <div class="muted" style="margin:4px 0 8px">Vagas (real) — tecto verdadeiro, nunca ultrapassado. Vagas (mostradas) — o que aparece no sistema e no catálogo, a descer com cada pagamento.</div>
+   <table><thead><tr><th>Turno</th><th>Gestora de formação</th><th>Formador</th><th>Início</th><th>Fim</th><th>Vagas (real)</th><th>Vagas (mostradas)</th></tr></thead><tbody>
+   ${t.turnos.map(function(tn,ti){return `<tr><td>${esc(tn.horario||"")}</td><td><select onchange="setTurnoEditCampo(${ti},'gestora',this)">${gestorasOpts(tn.gestora||"")}</select></td><td><select onchange="setTurnoEditCampo(${ti},'formador',this)">${formadoresOpts(tn.formador||"")}</select></td><td><input type="date" value="${esc(tn.inicio||"")}" onchange="setTurnoEditCampo(${ti},'inicio',this)"></td><td><input type="date" value="${esc(tn.fim||"")}" onchange="setTurnoEditCampo(${ti},'fim',this)"></td><td><input type="number" style="width:70px" value="${esc(tn.vagasReal||"")}" onchange="setTurnoEditCampo(${ti},'vagasReal',this)"></td><td><input type="number" style="width:70px" value="${esc(tn.vagasMostradas||"")}" onchange="setTurnoEditCampo(${ti},'vagasMostradas',this)"></td></tr>`;}).join("")}
    </tbody></table></div>`:`<div class="formgrid" style="margin-top:6px">
    <div><label>Gestora de formação</label><select onchange="setTurmaEditCampo('gestora',this)">${gestorasOpts(t.gestora||"")}</select></div>
    <div><label>Formador responsável</label><select onchange="setTurmaEditCampo('resp',this)">${formadoresOpts(t.resp||"")}</select></div>
@@ -3781,7 +3835,9 @@ function setTurmaEditCampo(key,el){const t=data.turmas[turmaEditIdx];if(!t)retur
  if(key==="gestora"&&Array.isArray(t.turnos)&&t.turnos.length===1)t.turnos[0].gestora=v;
  if(key==="resp"&&Array.isArray(t.turnos)&&t.turnos.length===1)t.turnos[0].formador=v;
  persist();toast("Edição actualizada");render();}
-function setTurnoEditCampo(ti,key,el){const t=data.turmas[turmaEditIdx];if(!t||!Array.isArray(t.turnos)||!t.turnos[ti])return;t.turnos[ti][key]=el.value;
+function setTurnoEditCampo(ti,key,el){const t=data.turmas[turmaEditIdx];if(!t||!Array.isArray(t.turnos)||!t.turnos[ti])return;
+ var v=el.value;if(key==="vagasReal"||key==="vagasMostradas")v=(String(v).trim()===""?"":(+v||0));
+ t.turnos[ti][key]=v;
  if(ti===0){if(key==="gestora")t.gestora=el.value;if(key==="formador")t.resp=el.value;}
  persist();toast("Equipa actualizada");render();}
 function procPadrao(){if(!Array.isArray(data.procTurma)||!data.procTurma.length)data.procTurma=["Criar grupo de WhatsApp da turma","Enviar mensagem de boas-vindas","Confirmar pagamentos e comprovativos","Adicionar alunos ao Google Classroom","Confirmar sala, computadores e material","Agendar e confirmar a 1ª aula","Enviar lembrete 24h antes do início"];return data.procTurma;}
@@ -6618,7 +6674,7 @@ function transferOnlineModalHTML(){if(transferOnlineIdx===null)return"";const o=
   <div class="row-actions" style="margin-top:14px"><button class="btn-p" onclick="confirmarTransferOnline()">Confirmar transferência</button><button class="btn-o" onclick="fecharTransferOnline()">Cancelar</button></div></div></div>`;}
 function confirmarTransferOnline(){const i=transferOnlineIdx;const o=data.online[i];if(!o)return;if(!pedeCodigoTransfer())return;const turma=val("tr_turma");if(!turma){toast("Escolhe a edição presencial");return}
  const t=turmaByCod(turma);const usaPC=val("tr_pc");
- if(t){const vl=vagasLivres(t);if(vl===0&&!confirm("A turma "+t.ed+"ª está CHEIA (vagas já pagas). Transferir mesmo assim?"))return;
+ if(t){const vlReal=vagasRealLivres(t,turnoSelInfoDe(t).turno);if(vlReal===0&&!confirm("A turma "+t.ed+"ª está CHEIA (capacidade real). Transferir mesmo assim?"))return;
   if(usaPC==="Sim"&&pcOcupados(t.cod)>=computadoresDe(t)&&!confirm("Já não há computadores livres nesta turma. Transferir mesmo assim?"))return;}
  const n=data.formandos.reduce((m,f)=>{const x=parseInt((f.cod||"").replace(/\D/g,""))||0;return x>m?x:m},0)+1;const cod="KA-"+String(n).padStart(3,"0");
  const codOnlineAntigo=ensureOnlineCod(o);const info=turnoSelInfoDe(t);
@@ -7963,8 +8019,8 @@ function vPaginas(){const admin=role==="admin";return `<div class="sec"><h2>Cat�
    <div><label>Logótipo do catálogo</label><input type="file" accept="image/*" onchange="onCatLogo(this)">${catCfg().logo?'<div class="muted" style="margin-top:3px">✅ logótipo carregado</div>':'<div class="muted" style="margin-top:3px">Sem logótipo — usa o "K" por defeito.</div>'}</div>
    <div><label>Imagem do catálogo (banner)</label><input type="file" accept="image/*" onchange="onCatImg(this)">${catCfg().imagem?'<div class="muted" style="margin-top:3px">✅ imagem carregada</div>':'<div class="muted" style="margin-top:3px">Sem imagem — mostra um banner por defeito.</div>'}</div>
   </div>
-  <table style="margin-top:8px"><thead><tr><th class="stickyhead">Curso</th><th class="stickyhead">Preço (Kz)</th><th class="stickyhead">Próxima turma</th><th class="stickyhead" style="text-align:center">Mostrar</th></tr></thead><tbody>
-  ${Object.keys(catCfg().precos||{}).map(function(cn){return '<tr><td>'+esc(cn)+' <a href="#" onclick="delCursoCatalogo(\''+esc(cn)+'\');return false" style="color:#C0392B;font-size:11px;text-decoration:underline">remover</a></td><td><input type="number" value="'+((catCfg().precos&&catCfg().precos[cn])||0)+'" onchange="setCatPreco(\''+esc(cn)+'\',this)"></td><td><input value="'+esc((catCfg().proximaTurmaCurso&&catCfg().proximaTurmaCurso[cn])||"")+'" placeholder="ex.: 5 Ago" onchange="setCatProx(\''+esc(cn)+'\',this)"></td><td style="text-align:center"><input type="checkbox" '+((catCfg().cursosAtivos&&catCfg().cursosAtivos[cn]!==false)?"checked":"")+' onchange="setCatAtivo(\''+esc(cn)+'\',this)"></td></tr>';}).join("")}
+  <table style="margin-top:8px"><thead><tr><th class="stickyhead">Curso</th><th class="stickyhead">Preço (Kz)</th><th class="stickyhead">Próxima turma</th><th class="stickyhead" style="text-align:center">Mostrar</th><th class="stickyhead" style="text-align:center" title="Se a formação também é dada em modalidade Online — controla o que aparece na ficha de inscrição quando se escolhe Online">Tem Online?</th></tr></thead><tbody>
+  ${Object.keys(catCfg().precos||{}).map(function(cn){return '<tr><td>'+esc(cn)+' <a href="#" onclick="delCursoCatalogo(\''+esc(cn)+'\');return false" style="color:#C0392B;font-size:11px;text-decoration:underline">remover</a></td><td><input type="number" value="'+((catCfg().precos&&catCfg().precos[cn])||0)+'" onchange="setCatPreco(\''+esc(cn)+'\',this)"></td><td><input value="'+esc((catCfg().proximaTurmaCurso&&catCfg().proximaTurmaCurso[cn])||"")+'" placeholder="ex.: 5 Ago" onchange="setCatProx(\''+esc(cn)+'\',this)"></td><td style="text-align:center"><input type="checkbox" '+((catCfg().cursosAtivos&&catCfg().cursosAtivos[cn]!==false)?"checked":"")+' onchange="setCatAtivo(\''+esc(cn)+'\',this)"></td><td style="text-align:center"><input type="checkbox" '+(cursosOnlineCfg().indexOf(cn)>=0?"checked":"")+' onchange="setCatOnline(\''+esc(cn)+'\',this)"></td></tr>';}).join("")}
   </tbody></table>
   <div class="formgrid" style="margin-top:8px"><div><label>➕ Novo curso no catálogo</label><input id="cat_nc_nome" placeholder="Nome do curso"></div><div><label>Preço (Kz)</label><input id="cat_nc_preco" type="number" placeholder="0"></div><div style="align-self:end"><button class="btn-o" onclick="addCursoCatalogo()">Adicionar</button></div></div>
   <details class="accdet" style="margin-top:14px"><summary>Checklist de formação por curso (antes do início)</summary>
@@ -8002,8 +8058,9 @@ function vPaginas(){const admin=role==="admin";return `<div class="sec"><h2>Cat�
   <div class="muted" style="margin-top:12px;font-weight:600;color:var(--azul)">Testemunhos em vídeo (aparecem no catálogo)</div>
   <div class="muted" style="font-size:12px">Cola o link do vídeo (YouTube, Google Drive ou Vimeo) e o nome. Deixa vazio para não mostrar.</div>
   <table style="margin-top:6px"><thead><tr><th class="stickyhead">Link do vídeo</th><th class="stickyhead">Nome / área</th></tr></thead><tbody>
-  ${[0,1,2].map(function(i){var t=(catCfg().testemunhos&&catCfg().testemunhos[i])||{};return '<tr><td><input value="'+esc(t.link||"")+'" placeholder="https://..." onchange="setCatTest('+i+',\'link\',this)" style="width:100%"></td><td><input value="'+esc(t.nome||"")+'" placeholder="ex.: Ana, Contabilidade" onchange="setCatTest('+i+',\'nome\',this)"></td></tr>';}).join("")}
+  ${[0,1,2].map(function(i){var t=(catCfg().testemunhos&&catCfg().testemunhos[i])||{};var driveMsg=/drive\.google\.com/.test(t.link||"")?'<div class="muted" style="font-size:11px;color:#a3311f;margin-top:2px">⚠ Link do Google Drive — no Drive, clica em Partilhar → "Qualquer pessoa com o link" (senão o vídeo aparece com erro no catálogo).</div>':"";return '<tr><td><input value="'+esc(t.link||"")+'" placeholder="https://..." onchange="setCatTest('+i+',\'link\',this)" style="width:100%">'+driveMsg+'</td><td><input value="'+esc(t.nome||"")+'" placeholder="ex.: Ana, Contabilidade" onchange="setCatTest('+i+',\'nome\',this)"></td></tr>';}).join("")}
   </tbody></table>
+  <div class="muted" style="font-size:12px;margin-top:4px">Dica: o YouTube normal (não precisa de ser "não listado") costuma dar menos problemas do que o Google Drive — se puderes, sobe o vídeo ao YouTube e cola o link daqui.</div>
   <div class="row-actions"><button class="btn-p" onclick="publicarCatalogo()">Publicar catálogo</button> <a class="btn-o" style="padding:8px 12px;text-decoration:none" href="catalogo.html" target="_blank">Ver catálogo ↗</a></div>
   <div class="note" style="margin-top:8px">Para o link público mostrar isto, é preciso (uma única vez) acrescentar a excepção do nó "publico" nas regras do Firebase — pede-me o texto.</div></div>
  <div class="sec"><h2>Gerir a Página de Inscrição</h2><div class="muted">Configura o texto da página de vendas (landing). Deixa um campo vazio para usar o texto por defeito. As alterações aparecem assim que gravas; "Publicar landing" garante que continua a funcionar mesmo depois de fecharmos a segurança.</div>

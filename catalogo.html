@@ -415,7 +415,14 @@ var cont=document.getElementById("grid"); cont.innerHTML="";
 var LISTA=CURSOS.slice();
 LISTA.filter(function(c){return !CFG.cursosAtivos || CFG.cursosAtivos[c.nome]!==false;}).forEach(function(c){
 var preco=(CFG.precos&&CFG.precos[c.nome])||DEFAULT.precos[c.nome]||0;
-var vagas=(CFG.vagasCurso&&CFG.vagasCurso[c.nome]!=null)?CFG.vagasCurso[c.nome]:null;
+/* L140-5: vagasCurso passou de um número só (partilhado por todos os turnos) para um objecto com
+   detalhe por turno — {turnos:[{horario,vagas}],total}. Mantém-se compatível com o formato antigo
+   (um número), caso ainda não se tenha republicado o catálogo depois desta actualização. */
+var vagasInfo=(CFG.vagasCurso&&CFG.vagasCurso[c.nome])!=null?CFG.vagasCurso[c.nome]:null;
+var vagas=null,vagasPorTurno=null;
+if(typeof vagasInfo==="number"){vagas=vagasInfo;}
+else if(vagasInfo&&typeof vagasInfo==="object"){vagas=vagasInfo.total!=null?vagasInfo.total:null;if(Array.isArray(vagasInfo.turnos)&&vagasInfo.turnos.length>1)vagasPorTurno=vagasInfo.turnos;}
+var edicao=(CFG.edicaoCurso&&CFG.edicaoCurso[c.nome])||"";
 var im=(CFG.cursoImgs&&CFG.cursoImgs[c.nome])||{};
 var thumbFoto=(CFG.cursoThumbs&&CFG.cursoThumbs[c.nome])||DEFAULT.cursoThumbs[c.nome];
 var mods=curriculoDe(c.nome);
@@ -426,8 +433,8 @@ a.innerHTML =
 '<div class="body">'+
 '<div class="inst">Knowledge Angola · Academia de Formação</div>'+
 '<h3>'+c.nome+'</h3>'+
-'<div class="badges"><span class="badge b-nivel">'+c.nivel+'</span><span class="badge b-cert">Certificado</span></div>'+
-(vagas!=null?'<div class="vagasmsg">🔥 Restam '+vagas+' vagas na próxima turma</div>':'')+
+'<div class="badges"><span class="badge b-nivel">'+c.nivel+'</span><span class="badge b-cert">Certificado</span>'+(edicao?'<span class="badge" style="background:#eef1f5;color:#555">'+edicao+'ª Edição</span>':'')+'</div>'+
+(vagasPorTurno?'<div class="vagasmsg" style="display:flex;flex-direction:column;gap:2px">'+vagasPorTurno.map(function(x){return x.vagas==null?'':'<div>🔥 '+x.horario+': '+(x.vagas===0?'<b>esgotado</b>':'Restam <b>'+x.vagas+'</b> vagas')+'</div>';}).join("")+'</div>':(vagas!=null?'<div class="vagasmsg">🔥 Restam '+vagas+' vagas na próxima turma</div>':''))+
 '<div class="horario">🕐 <span>'+(HORARIOS[c.nome]||"Horário a confirmar na inscrição")+'</span></div>'+
 (CFG.formados?'<div class="rating"><b>🎓</b> Já formámos '+CFG.formados+'</div>':'')+
 '<div class="price"><span class="v">'+kz(preco)+'</span><span class="lnk" style="cursor:pointer" onclick="toggleDetalhe(this)">Quero começar →</span></div>'+
