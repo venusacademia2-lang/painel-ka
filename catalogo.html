@@ -76,6 +76,16 @@ header{border-bottom:1px solid var(--linha);position:sticky;top:0;background:#ff
 .price .v{font-size:19px;font-weight:800;color:var(--txt)}
 .price .lnk{font-size:13.5px;font-weight:700;color:var(--azul);text-decoration:underline}
 .vagasmsg{font-size:12px;color:#a3311f;font-weight:700;margin-bottom:8px}
+.turnos{display:flex;flex-direction:column;gap:5px;margin-bottom:10px;background:var(--cinza);border:1px solid var(--linha);border-radius:8px;padding:9px 11px}
+.turnorow{display:flex;align-items:center;gap:8px}
+.turnorow .ticone{font-size:14px;width:16px;text-align:center;flex-shrink:0}
+.turnorow .tlabel{flex:1;display:flex;flex-direction:column;line-height:1.3}
+.turnorow .tlabel .tnome{font-size:12px;font-weight:700;color:#33415a}
+.turnorow .tlabel .thoras{font-size:11px;font-weight:500;color:#8792a6}
+.turnorow .tvagas{font-size:11.5px;font-weight:800;white-space:nowrap;color:#1a7a3c}
+.turnorow .tvagas b{font-size:13px}
+.turnorow .tvagas.esgotado{color:#a3311f}
+.turnorow .tvagas.consultar{color:#8792a6;font-weight:600;font-style:italic}
 .horario{font-size:12.5px;color:#535353;margin-bottom:8px;display:flex;gap:6px;align-items:flex-start}
 .semresultados{grid-column:1/-1;text-align:center;color:#8792a6;padding:30px;font-size:14.5px}
 /* modalidade */
@@ -323,6 +333,32 @@ var HORARIOS = {
 "Excel do Zero ao Fundamental":"Apenas dias de semana (9h às 11h)",
 "Power BI":"Horário a confirmar na inscrição"
 };
+/* Turnos fixos por curso, para mostrar vagas discriminadas por turno no cartão do catálogo
+   (em vez de um único número partilhado que pode dar a falsa ideia de que o curso está esgotado
+   quando só um turno específico está cheio). "chave" é usada para casar com o texto de horário
+   que vem do painel (data.vagasCurso[curso].turnos[].horario). */
+var TURNOS_PADRAO = {
+"Excel do Básico ao Avançado":[
+ {chave:"semana", icone:"📅", label:"Dias de semana", horas:"9h00 às 11h00"},
+ {chave:"sabmanha", icone:"🌅", label:"Sábado de manhã", horas:"8h30 às 13h00"},
+ {chave:"sabtarde", icone:"🌇", label:"Sábado à tarde", horas:"14h00 às 18h00"}
+],
+"Excel do Zero ao Fundamental":[
+ {chave:"semana", icone:"📅", label:"Dias de semana", horas:"9h00 às 11h00"}
+]
+};
+function normTxt(s){return String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");}
+function vagasDoTurno(vagasPorTurno,chave){
+if(!vagasPorTurno)return null;
+var alvo=vagasPorTurno.find(function(x){
+ var h=normTxt(x.horario);
+ if(chave==="semana")return h.indexOf("sabado")<0;
+ if(chave==="sabmanha")return h.indexOf("sabado")>=0&&h.indexOf("manh")>=0;
+ if(chave==="sabtarde")return h.indexOf("sabado")>=0&&h.indexOf("tard")>=0;
+ return false;
+});
+return alvo&&alvo.vagas!=null?alvo.vagas:null;
+}
 var CURRICULO = {
 "Excel do Básico ao Avançado":[
 {t:"Módulo I — Funcionalidades Básicas",top:["O ambiente do Excel: friso, guias e menu Ficheiro","Barra de Acesso Rápido e operações com livros e folhas","Edição, selecção e formatação de células"]},
@@ -422,6 +458,25 @@ var vagasInfo=(CFG.vagasCurso&&CFG.vagasCurso[c.nome])!=null?CFG.vagasCurso[c.no
 var vagas=null,vagasPorTurno=null;
 if(typeof vagasInfo==="number"){vagas=vagasInfo;}
 else if(vagasInfo&&typeof vagasInfo==="object"){vagas=vagasInfo.total!=null?vagasInfo.total:null;if(Array.isArray(vagasInfo.turnos)&&vagasInfo.turnos.length>1)vagasPorTurno=vagasInfo.turnos;}
+/* Bloco de vagas: para cursos com mais de um turno fixo (ex.: Excel do Básico ao Avançado),
+   mostra sempre as 3 linhas por turno (dias de semana / sábado manhã / sábado tarde) em vez de
+   um único número partilhado — isso evita a falsa impressão de "curso esgotado" quando só um
+   turno específico está cheio e os outros ainda têm vagas. As vagas reais de cada linha só
+   aparecem depois de o painel publicar o catálogo já com o detalhe por turno; até lá mostra-se
+   "consultar" em vez de um número inventado. */
+var turnosDef=TURNOS_PADRAO[c.nome];
+var vagasBlockHtml, horarioHtml;
+if(turnosDef&&turnosDef.length>1){
+ vagasBlockHtml='<div class="turnos">'+turnosDef.map(function(td){
+  var v=vagasDoTurno(vagasPorTurno,td.chave);
+  var direita=v==null?'<span class="tvagas consultar">consultar</span>':(v===0?'<span class="tvagas esgotado">esgotado</span>':'<span class="tvagas">Restam <b>'+v+'</b></span>');
+  return '<div class="turnorow"><span class="ticone">'+td.icone+'</span><span class="tlabel"><span class="tnome">'+td.label+'</span><span class="thoras">'+td.horas+'</span></span>'+direita+'</div>';
+ }).join("")+'</div>';
+ horarioHtml="";
+}else{
+ vagasBlockHtml=(vagas!=null?'<div class="vagasmsg">🔥 Restam '+vagas+' vagas na próxima turma</div>':'');
+ horarioHtml='<div class="horario">🕐 <span>'+(HORARIOS[c.nome]||"Horário a confirmar na inscrição")+'</span></div>';
+}
 var edicao=(CFG.edicaoCurso&&CFG.edicaoCurso[c.nome])||"";
 var im=(CFG.cursoImgs&&CFG.cursoImgs[c.nome])||{};
 var thumbFoto=(CFG.cursoThumbs&&CFG.cursoThumbs[c.nome])||DEFAULT.cursoThumbs[c.nome];
@@ -434,8 +489,8 @@ a.innerHTML =
 '<div class="inst">Knowledge Angola · Academia de Formação</div>'+
 '<h3>'+c.nome+'</h3>'+
 '<div class="badges"><span class="badge b-nivel">'+c.nivel+'</span><span class="badge b-cert">Certificado</span>'+(edicao?'<span class="badge" style="background:#eef1f5;color:#555">'+edicao+'ª Edição</span>':'')+'</div>'+
-(vagasPorTurno?'<div class="vagasmsg" style="display:flex;flex-direction:column;gap:2px">'+vagasPorTurno.map(function(x){return x.vagas==null?'':'<div>🔥 '+x.horario+': '+(x.vagas===0?'<b>esgotado</b>':'Restam <b>'+x.vagas+'</b> vagas')+'</div>';}).join("")+'</div>':(vagas!=null?'<div class="vagasmsg">🔥 Restam '+vagas+' vagas na próxima turma</div>':''))+
-'<div class="horario">🕐 <span>'+(HORARIOS[c.nome]||"Horário a confirmar na inscrição")+'</span></div>'+
+vagasBlockHtml+
+horarioHtml+
 (CFG.formados?'<div class="rating"><b>🎓</b> Já formámos '+CFG.formados+'</div>':'')+
 '<div class="price"><span class="v">'+kz(preco)+'</span><span class="lnk" style="cursor:pointer" onclick="toggleDetalhe(this)">Quero começar →</span></div>'+
 '<div class="carddetalhe" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--linha)">'+
