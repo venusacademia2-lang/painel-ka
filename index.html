@@ -1308,7 +1308,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.66";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.67";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -2666,6 +2666,20 @@ function addCursoCatalogo(){if(!podeCursos()){toast("Só a gestão ou quem ela a
 function delCursoCatalogo(n){if(!podeCursos()){toast("Só a gestão ou quem ela autorizar");return;}var m=prompt("Motivo para remover \""+n+"\" do catálogo (fica registado):");if(m===null)return;if(!(m||"").trim()){toast("O motivo é obrigatório");return;}var c=catCfg();if(c.precos)delete c.precos[n];if(c.cursosAtivos)delete c.cursosAtivos[n];if(c.proximaTurmaCurso)delete c.proximaTurmaCurso[n];cursosLog("Removido do catálogo",n,m.trim());persist();toast("Removido — clica Publicar catálogo");render();}
 function _normCurso(s){return String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]/g,"");}
 function onCatPdf(inp){var f=inp.files&&inp.files[0];if(!f)return;var r=new FileReader();r.onload=function(e){catCfg().pdf=e.target.result;persist();toast("PDF carregado — clica Publicar catálogo");render();};r.readAsDataURL(f);}
+/* L141-2: a escolha de qual edição publicar, entre as activas do mesmo curso, escolhia sempre a de
+   início MAIS ANTIGO. Se o Ventura já tiver aberto a edição seguinte (porque a anterior encheu) mas
+   a anterior ainda não estiver marcada como Concluída, o catálogo continuava a publicar a edição
+   velha e quase cheia em vez da nova com vagas — dava exactamente "já não tem vagas" a um curso que,
+   na prática, ainda tinha. Agora escolhe primeiro entre as que têm vagas livres (a mais recente
+   dessas); só se NENHUMA tiver vaga é que mostra a mais recente na mesma (correctamente esgotada). */
+function _turmaParaPublicar(ts){
+ return ts.slice().sort(function(a,b){
+  var va=vagasLivres(a),vb=vagasLivres(b);
+  var aTem=(va==null||va>0)?1:0,bTem=(vb==null||vb>0)?1:0;
+  if(aTem!==bTem)return bTem-aTem;
+  return (+b.ed||0)-(+a.ed||0);
+ })[0];
+}
 /* L140-4/6: duas correcções à publicação de vagas para o catálogo.
    1) A correspondência de nome de curso passou de "aproximada" (substring — "Excel" batia com
       qualquer curso que começasse por "Excel", podendo apanhar a turma errada) para EXACTA
@@ -2675,7 +2689,7 @@ function onCatPdf(inp){var f=inp.files&&inp.files[0];if(!f)return;var r=new File
       ser um objecto com o detalhe por turno — para o catálogo poder mostrar "Dias de semana: X
       vagas · Sábado manhã: Y vagas · Sábado tarde: Z vagas" em vez de um total confuso. Também
       publica o nº da edição usada, para aparecer no catálogo. */
-function publicarCatalogo(){if(role!=="admin"){toast("Só a gestão");return;}try{if(!(window.firebase&&firebase.apps&&firebase.apps.length)){toast("Sem ligação ao Firebase");return;}var c=catCfg();var vagasCurso={};var edicaoCurso={};try{Object.keys(c.precos||{}).forEach(function(cn){var n1=_normCurso(cn);var ts=(data.turmas||[]).filter(function(t){var n2=_normCurso(t.curso);return (t.modalidade||"Presencial")!=="Online"&&estadoTurma(t)!=="Concluída"&&n1===n2;});if(!ts.length)return;var t=ts.sort(function(a,b){return new Date(a.inicio||"2100")-new Date(b.inicio||"2100");})[0];var porTurno=vagasLivresPorTurno(t);if(porTurno){vagasCurso[cn]={turnos:porTurno.map(function(x){return{horario:x.horario,vagas:x.vl};}),total:porTurno.reduce(function(s,x){return s+(+x.vl||0);},0)};}else{var vl=vagasLivres(t);if(vl!=null)vagasCurso[cn]={total:vl};}edicaoCurso[cn]=t.ed||"";});}catch(e){}
+function publicarCatalogo(){if(role!=="admin"){toast("Só a gestão");return;}try{if(!(window.firebase&&firebase.apps&&firebase.apps.length)){toast("Sem ligação ao Firebase");return;}var c=catCfg();var vagasCurso={};var edicaoCurso={};try{Object.keys(c.precos||{}).forEach(function(cn){var n1=_normCurso(cn);var ts=(data.turmas||[]).filter(function(t){var n2=_normCurso(t.curso);return (t.modalidade||"Presencial")!=="Online"&&estadoTurma(t)!=="Concluída"&&n1===n2;});if(!ts.length)return;var t=_turmaParaPublicar(ts);var porTurno=vagasLivresPorTurno(t);if(porTurno){vagasCurso[cn]={turnos:porTurno.map(function(x){return{horario:x.horario,vagas:x.vl};}),total:porTurno.reduce(function(s,x){return s+(+x.vl||0);},0)};}else{var vl=vagasLivres(t);if(vl!=null)vagasCurso[cn]={total:vl};}edicaoCurso[cn]=t.ed||"";});}catch(e){}
 firebase.database().ref("publico/catalogo").set({vagasCurso:vagasCurso,edicaoCurso:edicaoCurso,whatsapp:(c.whatsapp||"").replace(/\D/g,""),landing:c.landing||"",proximaTurma:c.proximaTurma||"",local:c.local||((data.comp&&data.comp.morada)||""),precos:c.precos||{},cursosAtivos:c.cursosAtivos||{},imagem:c.imagem||"",logo:c.logo||"",testemunhos:(c.testemunhos||[]).filter(function(t){return t&&t.link;}),formados:c.formados||"",ressalva:c.ressalva||"",garantia:c.garantia||"",prestacoes:c.prestacoes||"",prestOn:(c.prestOn!==false),detalhes:c.detalhes||"",ga:c.ga||"",gancho:c.gancho||"",ganchoCor:c.ganchoCor||"",faq:c.faq||[],vagas:c.vagas||"",proximaTurmaCurso:c.proximaTurmaCurso||{},ancoragem:c.ancoragem||"",titulo:c.titulo||"",subtitulo:c.subtitulo||"",finalTitulo:c.finalTitulo||"",finalSub:c.finalSub||"",pdf:c.pdf||"",pdfOn:(c.pdfOn!==false),pdfLabel:c.pdfLabel||"",cursoImgs:c.cursoImgs||{},curriculo:c.curriculo||{},modImgs:c.modImgs||{},cursoThumbs:c.cursoThumbs||{},heroFoto:c.heroFoto||"",cursosOnline:cursosOnlineCfg(),formadores:catFormadorLista().map(function(f){return {foto:f.foto||"",nome:f.nome||"",cargo:f.cargo||"",bio:f.bio||"",instituicoes:(f.instituicoesTxt||"").split("\n").map(function(s){return s.trim();}).filter(Boolean)};}).filter(function(f){return f.nome;}),atualizado:new Date().toISOString()});toast("Catálogo publicado — o link já mostra estes valores");}catch(e){toast("Erro ao publicar");}}
 function lnd(){if(!data.landing)data.landing={};return data.landing;}
 function setLnd(k,el){lnd()[k]=el.value;persist();}
