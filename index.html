@@ -1308,7 +1308,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.68";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.69";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -6950,7 +6950,7 @@ function compDoc(cod){const c=compEfetivo();const logo=c.logo||((document.queryS
      <div>Início: <b>${esc(_dt.inicio?formatarDataExtensa(_dt.inicio):"—")}</b></div>
      <div>Fim: <b>${esc(_dt.fim?formatarDataExtensa(_dt.fim):"—")}</b></div>
      <div>Horário: <b>${esc(horarioDoFormando(f,t)||"—")}</b></div>
-     ${f.bi?`<div>Nº do BI: <b>${esc(f.bi)}</b></div>`:'<div style="color:#a3311f">⚠ Nº do BI em falta — actualiza na ficha do formando antes de emitir/enviar este comprovativo.</div>'}
+     ${f.bi?`<div>Nº do BI: <b>${esc(f.bi)}</b></div>`:''}
      <div>Local: <b>${esc(c.local)}</b></div>
    </div>
    <div class="det" style="border-top:1px solid var(--linha);padding-top:14px;margin-top:18px"><div style="font-weight:700;color:var(--azul);margin-bottom:6px">📍 LOCALIZAÇÃO E ACESSO</div>
