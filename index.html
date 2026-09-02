@@ -1308,7 +1308,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.67";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.68";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -3110,7 +3110,7 @@ function vRegistoForm(){const pre=regAlvo||{};regAlvo=null;return `<details clas
    <div><label>Como chegou</label><select id="f_canal" autocomplete="off">${canaisDisponiveis().map(c=>`<option${pre.fonte===c?" selected":""}>${c}</option>`).join("")}</select></div>
    <div><label>Nota</label><input id="f_nota" placeholder="observação" autocomplete="off"></div>
    <div><label>Responsável pela venda <span style="color:#C0392B">*</span></label>${respInputHTML("f_vend",pre.resp||"","Quem acompanhou/vendeu — obrigatório")}</div>
-   <div><label>Nº do BI <span style="color:#C0392B">*</span> <span class="muted" style="font-weight:400">(obrigatório para Presencial)</span></label><input id="f_bi" placeholder="ex.: 00XXXXXXLAXXX" autocomplete="off"><div class="muted" style="margin-top:3px">Precisa de vir sempre no comprovativo de inscrição.</div></div>
+   <div><label>Nº do BI <span class="muted" style="font-weight:400">(opcional)</span></label><input id="f_bi" placeholder="ex.: 00XXXXXXLAXXX" autocomplete="off"><div class="muted" style="margin-top:3px">Se preenchido, aparece no comprovativo de inscrição.</div></div>
   </div>
   <details class="subdet"><summary>Mais detalhes (opcional — pode preencher depois)</summary>
    <div class="formgrid" style="margin-top:10px">
@@ -3164,11 +3164,6 @@ function addVenda(){const nome=val("f_nome");if(!nome){toast("Falta o nome");ret
   if(!val("f_oform")){toast("Escolhe o formador antes de inscrever — obrigatório em Turma Online");document.getElementById("f_oform").focus();return;}
   if(!val("f_email")){toast("O e-mail do aluno é obrigatório em Turma Online");document.getElementById("f_email").focus();return;}
   const _o={nome:nome,email:val("f_email"),contacto:val("f_tel"),area:val("f_area"),nivel:val("f_onivel"),fase:val("f_omodo")||FASES[0],formador:val("f_oform"),inicio:val("f_oinicio"),horarioProposto:val("f_ohorario"),prazo:prazoPorNivel(val("f_onivel")),status:"Em andamento",valorPago:numVal("f_pago"),tarefa:"Não",avaliacao:"Não",proximoPDS:"",ultimoPDS:"",pdsFeitos:0,recorrente:false,bi:val("f_bi"),morada:val("f_morada"),nasc:val("f_nasc"),tel2:val("f_tel2"),nota:val("f_nota"),canal:val("f_canal"),fonte:fonteDeTel(val("f_tel")),criadoEm:new Date().toISOString(),criadoPor:(currentUser&&currentUser.nome)||role,vendedor:val("f_vend"),cupom:cupomAplicado?cupomAplicado.codigo:""};ensureOnlineCod(_o);data.online.push(_o);syncPagOnline(_o);enviarEmailsRegistoOnline(_o);persist();toast("Aluno online registado");limparCampos(["f_tel","f_nome","f_email","f_area","f_bi","f_morada","f_nasc","f_tel2","f_nota","f_oinicio","f_pago","f_cupom"]);render();return;}
- /* L139-4: pedido explícito do Ventura ("É IMPORTANTE") — o comprovativo de inscrição presencial
-    tem de trazer sempre o número do BI. Antes, o campo estava marcado como "(opcional)" dentro de
-    "Mais detalhes" (secção colapsada, fácil de saltar), por isso a maioria dos comprovativos saía
-    sem BI. Passa a ser obrigatório para inscrições Presenciais antes de gravar a venda. */
- if(!val("f_bi")){toast("O nº do BI é obrigatório — tem de vir sempre no comprovativo de inscrição.");var _fbi=document.getElementById("f_bi");if(_fbi)_fbi.focus();return;}
  const turma=val("f_turma");if(!turma){toast("Selecciona a turma/edição antes de gravar — é obrigatório para o P&L bater certo.");document.getElementById("f_turma").focus();return;}const usaPC=val("f_pc");
  if(turma){const t=turmaByCod(turma);const vlReal=vagasRealLivres(t,turnoSelInfo().turno);
   /* L140-1: o aviso de "CHEIA" só bloqueia quando a capacidade REAL (não a mostrada, que é
