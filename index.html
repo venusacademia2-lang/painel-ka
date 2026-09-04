@@ -1308,7 +1308,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.70";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.71";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -3782,7 +3782,7 @@ function processarAvisosRegressoPausa(){
     var fimISO=new Date(new Date(proxima.data+"T"+proxima.hora+":00").getTime()+durMin*60000).toISOString();
     var _emailForm=emailDoColaborador(o.formador);
     var _ref=filaCalendario("PDS — "+o.nome,proxima.data+"T"+proxima.hora+":00",fimISO,"Ponto de Situação · Formador: "+(o.formador||"")+" · Knowledge Angola",juntarConvidados(o.email,_emailForm));
-    o.pds.push({data:proxima.data,hora:proxima.hora,rec:true,groupId:proxima.groupId,parceiro:proxima.parceiro,gcalRef:_ref||null});
+    o.pds.push({id:_novoPdsId(),data:proxima.data,hora:proxima.hora,rec:true,groupId:proxima.groupId,parceiro:proxima.parceiro,gcalRef:_ref||null});
     syncProx(o);
    }
    if(o.email){
@@ -5152,7 +5152,7 @@ function vOnline(){
    ser reaproveitada tal e qual na aba Formadores (ver vOnlineFormadoresHTML), a pedido do Ventura:
    a lista de alunos dentro de um formador passa a usar a MESMA tabela/cabeçalho que já existe em
    Acompanhamento, em vez do cartão introduzido no L130 — mesma linguagem visual nas duas abas. */
-function _linhaOnlineTbl(o){const i=data.online.indexOf(o);const fl=pdsFlag(o);const done=o.status==='Concluído';const nivelCell=done?'<span class="pill p-azul">Concluído</span>':(esc(o.nivel||"")+' <button class="btn-o" style="padding:1px 7px" title="Passar ao próximo nível" onclick="proxNivel('+i+')">↑</button>'+((role==="admin"||podeEditar())?' <button class="btn-o" style="padding:1px 7px" title="Gerir/reabrir nível (só Gestão)" onclick="gerirNivel('+i+')">✎</button>':''));const cellTarefa=done?'<span class="muted">—</span>':('<button class="pill '+(o.tarefa==='Sim'?'p-verde':'p-verm')+'" style="border:none;cursor:pointer" onclick="toggleOnline('+i+',&#39;tarefa&#39;)">'+(o.tarefa==='Sim'?'Sim':'Não')+'</button>');const cellAval=done?'<span class="muted">—</span>':('<button class="pill '+(o.avaliacao==='Sim'?'p-verde':'p-verm')+'" style="border:none;cursor:pointer" onclick="toggleOnline('+i+',&#39;avaliacao&#39;)">'+(o.avaliacao==='Sim'?'Sim':'Não')+'</button>');return `<tr><td class="cel-nome">${esc(o.nome)}<br><span class="muted">${esc(o.email||"")}</span>${done?'<br>'+certPillOnlineHTML(o,true):''}</td><td data-l="Nível" class="cel-lado">${nivelCell}</td><td data-l="Fase" class="cel-lado">${esc(o.fase||"")}</td><td data-l="Estado"><button class="pill ${o.status==='Concluído'?'p-azul':o.status==='Em andamento'?'p-verde':o.status==='Parado'?'p-dour':'p-verm'}" style="border:none;cursor:pointer" title="Mudar estado" onclick="abrirStatusOnline(${i})">${esc(o.status||"")}</button>${o.status==='Parado'?'<div class="muted" style="margin-top:2px">⏸ '+(o.pausaRazao?esc(o.pausaRazao)+' — ':'')+'até '+(o.pausaAte?fmtDataCurta(o.pausaAte):'—')+'</div>':''}</td><td data-l="Tarefa" class="cel-lado">${cellTarefa}</td><td data-l="Avaliação" class="cel-lado">${cellAval}</td><td data-l="PDS feitos" class="cel-lado" style="text-align:center">${+o.pdsFeitos||0}</td><td data-l="Prazo">${prazoBarHTML(o)} ${podeEditarPrazo()?`<button class="btn-o" style="padding:1px 6px;margin-top:3px" title="Conceder mais dias (Gestão, Gestora de Formação ou Formador)" onclick="abrirEditarPrazo(${i})">✎</button>`:""}</td><td data-l="Próximo PDS">${(function(){syncProx(o);var arr=o.pds||[];var _hs=_dISO(new Date());var h=arr.map(function(p,pi){var atras=p.data<_hs,hj=p.data===_hs;return '<div style="margin:1px 0;white-space:nowrap">'+fmtDataCurta(p.data)+(p.hora?' '+esc(p.hora):'')+(p.rec?' ♻':'')+(p.parceiro?' 🤝 '+esc(p.parceiro):'')+(atras?' <span class="pill p-verm" style="padding:0 5px">atraso</span>':(hj?' <span class="pill p-dour" style="padding:0 5px">hoje</span>':''))+' <button class="btn-o" style="padding:0 5px" title="Cancelar este PDS" onclick="cancelPdsItem('+i+','+pi+')">✕</button></div>';}).join("")||'<span class="muted">—</span>';var recs=(o.recs||[]).map(function(r,ri){return '<span class="pill p-verde" style="padding:1px 6px;margin:1px 2px 0 0;display:inline-block">♻ '+DIAS_NOME[r.dia]+' '+esc(r.hora||"")+(r.parceiro?' 🤝 '+esc(r.parceiro):'')+' <a onclick="delRec('+i+','+ri+')" style="cursor:pointer">✕</a></span>';}).join("");return h+(recs?'<div style="margin-top:3px">'+recs+'</div>':'');})()}</td><td data-l="Formador" class="cel-lado">${esc(o.formador||"")}</td><td data-l="Situação" class="cel-lado"><span class="pill ${fl.c}">${fl.t}</span></td><td class="flex cel-accoes" style="gap:5px;flex-wrap:wrap">${(done||o.status==='Parado')?"":`<button class="btn-o" style="padding:4px 8px" onclick="agendarPDS(${i})">📅 Marcar PDS</button>`}<button class="btn-o" style="padding:4px 8px" onclick="verDetalhe(${i})">👤 Detalhe</button><button class="btn-o" style="padding:4px 8px" title="Eliminar, PDS feito, PDS não realizado, trocar formador, transferir, editar…" onclick="toggleOnDefMenu(${i})">⋯ Mais</button>${onDefMenuHTML(i,done)}</td></tr>`;}
+function _linhaOnlineTbl(o){const i=data.online.indexOf(o);const fl=pdsFlag(o);const done=o.status==='Concluído';const nivelCell=done?'<span class="pill p-azul">Concluído</span>':(esc(o.nivel||"")+' <button class="btn-o" style="padding:1px 7px" title="Passar ao próximo nível" onclick="proxNivel('+i+')">↑</button>'+((role==="admin"||podeEditar())?' <button class="btn-o" style="padding:1px 7px" title="Gerir/reabrir nível (só Gestão)" onclick="gerirNivel('+i+')">✎</button>':''));const cellTarefa=done?'<span class="muted">—</span>':('<button class="pill '+(o.tarefa==='Sim'?'p-verde':'p-verm')+'" style="border:none;cursor:pointer" onclick="toggleOnline('+i+',&#39;tarefa&#39;)">'+(o.tarefa==='Sim'?'Sim':'Não')+'</button>');const cellAval=done?'<span class="muted">—</span>':('<button class="pill '+(o.avaliacao==='Sim'?'p-verde':'p-verm')+'" style="border:none;cursor:pointer" onclick="toggleOnline('+i+',&#39;avaliacao&#39;)">'+(o.avaliacao==='Sim'?'Sim':'Não')+'</button>');return `<tr><td class="cel-nome">${esc(o.nome)}<br><span class="muted">${esc(o.email||"")}</span>${done?'<br>'+certPillOnlineHTML(o,true):''}</td><td data-l="Nível" class="cel-lado">${nivelCell}</td><td data-l="Fase" class="cel-lado">${esc(o.fase||"")}</td><td data-l="Estado"><button class="pill ${o.status==='Concluído'?'p-azul':o.status==='Em andamento'?'p-verde':o.status==='Parado'?'p-dour':'p-verm'}" style="border:none;cursor:pointer" title="Mudar estado" onclick="abrirStatusOnline(${i})">${esc(o.status||"")}</button>${o.status==='Parado'?'<div class="muted" style="margin-top:2px">⏸ '+(o.pausaRazao?esc(o.pausaRazao)+' — ':'')+'até '+(o.pausaAte?fmtDataCurta(o.pausaAte):'—')+'</div>':''}</td><td data-l="Tarefa" class="cel-lado">${cellTarefa}</td><td data-l="Avaliação" class="cel-lado">${cellAval}</td><td data-l="PDS feitos" class="cel-lado" style="text-align:center">${+o.pdsFeitos||0}</td><td data-l="Prazo">${prazoBarHTML(o)} ${podeEditarPrazo()?`<button class="btn-o" style="padding:1px 6px;margin-top:3px" title="Conceder mais dias (Gestão, Gestora de Formação ou Formador)" onclick="abrirEditarPrazo(${i})">✎</button>`:""}</td><td data-l="Próximo PDS">${(function(){syncProx(o);var arr=o.pds||[];var _hs=_dISO(new Date());var h=arr.map(function(p,pi){var atras=p.data<_hs,hj=p.data===_hs;return '<div style="margin:1px 0;white-space:nowrap">'+fmtDataCurta(p.data)+(p.hora?' '+esc(p.hora):'')+(p.rec?' ♻':'')+(p.parceiro?' 🤝 '+esc(p.parceiro):'')+(atras?' <span class="pill p-verm" style="padding:0 5px">atraso</span>':(hj?' <span class="pill p-dour" style="padding:0 5px">hoje</span>':''))+' <button class="btn-o" style="padding:0 5px" title="Cancelar este PDS" onclick="cancelPdsItem('+i+','+pi+',\''+esc(p.id||"")+'\')">✕</button></div>';}).join("")||'<span class="muted">—</span>';var recs=(o.recs||[]).map(function(r,ri){return '<span class="pill p-verde" style="padding:1px 6px;margin:1px 2px 0 0;display:inline-block">♻ '+DIAS_NOME[r.dia]+' '+esc(r.hora||"")+(r.parceiro?' 🤝 '+esc(r.parceiro):'')+' <a onclick="delRec('+i+','+ri+')" style="cursor:pointer">✕</a></span>';}).join("");return h+(recs?'<div style="margin-top:3px">'+recs+'</div>':'');})()}</td><td data-l="Formador" class="cel-lado">${esc(o.formador||"")}</td><td data-l="Situação" class="cel-lado"><span class="pill ${fl.c}">${fl.t}</span></td><td class="flex cel-accoes" style="gap:5px;flex-wrap:wrap">${(done||o.status==='Parado')?"":`<button class="btn-o" style="padding:4px 8px" onclick="agendarPDS(${i})">📅 Marcar PDS</button>`}<button class="btn-o" style="padding:4px 8px" onclick="verDetalhe(${i})">👤 Detalhe</button><button class="btn-o" style="padding:4px 8px" title="Eliminar, PDS feito, PDS não realizado, trocar formador, transferir, editar…" onclick="toggleOnDefMenu(${i})">⋯ Mais</button>${onDefMenuHTML(i,done)}</td></tr>`;}
 const _COLS_ONLINE_TBL=['Nome','Nível','Fase','Status','Tarefa','Aval.','PDS feitos','Prazo','Próximo PDS','Formador','Situação',''];
 function vOnlineAcompanhamentoHTML(hoje,wk,theadTop){
  const q=onSearch.toLowerCase();
@@ -5197,7 +5197,7 @@ function vOnlineAcompanhamentoHTML(hoje,wk,theadTop){
     nunca se mostra duas vezes a mesma pessoa no mesmo dia e hora. Cobre o caso em que o mesmo
     formando existe por engano em dois registos separados (nomes iguais), que de outra forma
     apareceria como duas linhas idênticas na Agenda. */
- data.online.forEach(function(o){if(o.status==="Concluído"||o.status==="Transferido")return;ensurePds(o);(o.pds||[]).forEach(function(p,pidx){var k=p.groupId?p.groupId+"|"+p.data:null;if(k&&_seen[k])return;if(k)_seen[k]=true;var kNome="n|"+(o.nome||"").trim().toLowerCase()+"|"+p.data+"|"+(p.hora||"");if(_seen[kNome])return;_seen[kNome]=true;_ag.push({o:o,idx:pidx,data:p.data,hora:p.hora,rec:p.rec,parceiro:p.parceiro});});});
+ data.online.forEach(function(o){if(o.status==="Concluído"||o.status==="Transferido")return;ensurePds(o);(o.pds||[]).forEach(function(p,pidx){var k=p.groupId?p.groupId+"|"+p.data:null;if(k&&_seen[k])return;if(k)_seen[k]=true;var kNome="n|"+(o.nome||"").trim().toLowerCase()+"|"+p.data+"|"+(p.hora||"");if(_seen[kNome])return;_seen[kNome]=true;_ag.push({o:o,idx:pidx,id:p.id,data:p.data,hora:p.hora,rec:p.rec,parceiro:p.parceiro});});});
  _ag.sort(function(a,b){return (a.data+(a.hora||"")).localeCompare(b.data+(b.hora||""));});
  /* L96-5/6: dentro da Agenda de PDS, "Não realizado" passa a "PDS não realizado" (L101-3: legenda
     explicativa removida — o nome do botão já é claro sozinho).
@@ -5208,7 +5208,7 @@ function vOnlineAcompanhamentoHTML(hoje,wk,theadTop){
     calculado para a tabela grande ficava errado aqui, fazendo o cabeçalho aparecer preso a meio
     da lista em vez de no topo. Como esta lista é normalmente curta, tira-se o "sticky" — o
     cabeçalho passa a ficar sempre e só no topo da própria tabela, sem ambiguidade possível. */
- const agendaHtml=`<details class="sec accdet"><summary>Agenda de PDS <span class="pill p-cinza">${_ag.length}</span></summary>${(role==="admin"||podeEditarPrazo())?'<div class="flex" style="gap:8px;margin:2px 0 8px;align-items:center;flex-wrap:wrap"><button class="btn-o" style="padding:4px 10px" onclick="limparPdsIndevidos()">🧹 Limpar PDS repetidos/indevidos</button><span class="muted" style="font-size:11.5px">Apaga marcações repetidas e as que caem em dias fora da recorrência do aluno. Não mexe nas marcações feitas à mão.</span></div>':''}<table><thead><tr>${['Data','Hora','Aluno','Formador',''].map(function(h){return '<th>'+h+'</th>';}).join('')}</tr></thead><tbody>${_ag.map(function(x){var atras=x.data<_hs,hj=x.data===_hs;var oi=data.online.indexOf(x.o);return '<tr><td style="white-space:nowrap"><div class="flex" style="gap:4px;align-items:center;flex-wrap:wrap">'+fmtDataCurta(x.data)+(atras?'<span class="pill p-verm">atraso</span>':(hj?'<span class="pill p-dour">hoje</span>':''))+'</div></td><td>'+esc(x.hora||"—")+'</td><td>'+esc(x.o.nome)+(x.parceiro?' 🤝 '+esc(x.parceiro):'')+(x.rec?' ♻':'')+(x.o.combinado?'<br><span class="muted" style="font-size:11px">📝 Combinado: '+esc(x.o.combinado)+'</span>':'')+'</td><td>'+esc(x.o.formador||"—")+'</td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:4px 8px" onclick="verDetalhe('+oi+')">Ver perfil</button><button class="btn-g" style="padding:4px 8px" onclick="doPDS('+oi+','+x.idx+')">PDS feito</button><button class="btn-o" style="padding:4px 8px" onclick="naoRealizadoPDS('+oi+','+x.idx+')">PDS não realizado</button><button class="btn-o" style="padding:4px 8px" onclick="editarPdsItem('+oi+','+x.idx+')">Editar</button><button class="btn-o" style="padding:4px 8px" onclick="cancelPdsItem('+oi+','+x.idx+')">Cancelar</button></td></tr>';}).join("")||'<tr><td colspan="5" class="muted">Sem PDS agendados.</td></tr>'}</tbody></table></details>`;
+ const agendaHtml=`<details class="sec accdet"><summary>Agenda de PDS <span class="pill p-cinza">${_ag.length}</span></summary>${(role==="admin"||podeEditarPrazo())?'<div class="flex" style="gap:8px;margin:2px 0 8px;align-items:center;flex-wrap:wrap"><button class="btn-o" style="padding:4px 10px" onclick="limparPdsIndevidos()">🧹 Limpar PDS repetidos/indevidos</button><span class="muted" style="font-size:11.5px">Apaga marcações repetidas e as que caem em dias fora da recorrência do aluno. Não mexe nas marcações feitas à mão.</span></div>':''}<table><thead><tr>${['Data','Hora','Aluno','Formador',''].map(function(h){return '<th>'+h+'</th>';}).join('')}</tr></thead><tbody>${_ag.map(function(x){var atras=x.data<_hs,hj=x.data===_hs;var oi=data.online.indexOf(x.o);return '<tr><td style="white-space:nowrap"><div class="flex" style="gap:4px;align-items:center;flex-wrap:wrap">'+fmtDataCurta(x.data)+(atras?'<span class="pill p-verm">atraso</span>':(hj?'<span class="pill p-dour">hoje</span>':''))+'</div></td><td>'+esc(x.hora||"—")+'</td><td>'+esc(x.o.nome)+(x.parceiro?' 🤝 '+esc(x.parceiro):'')+(x.rec?' ♻':'')+(x.o.combinado?'<br><span class="muted" style="font-size:11px">📝 Combinado: '+esc(x.o.combinado)+'</span>':'')+'</td><td>'+esc(x.o.formador||"—")+'</td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:4px 8px" onclick="verDetalhe('+oi+')">Ver perfil</button><button class="btn-g" style="padding:4px 8px" onclick="doPDS('+oi+','+x.idx+',\''+esc(x.id||"")+'\')">PDS feito</button><button class="btn-o" style="padding:4px 8px" onclick="naoRealizadoPDS('+oi+','+x.idx+',\''+esc(x.id||"")+'\')">PDS não realizado</button><button class="btn-o" style="padding:4px 8px" onclick="editarPdsItem('+oi+','+x.idx+',\''+esc(x.id||"")+'\')">Editar</button><button class="btn-o" style="padding:4px 8px" onclick="cancelPdsItem('+oi+','+x.idx+',\''+esc(x.id||"")+'\')">Cancelar</button></td></tr>';}).join("")||'<tr><td colspan="5" class="muted">Sem PDS agendados.</td></tr>'}</tbody></table></details>`;
  const _real=data.online.filter(function(o){return o.ultimoPDS===_hs;});
  const realizadosHtml=_real.length?`<details class="sec accdet"><summary>PDS realizados hoje <span class="pill p-cinza">${_real.length}</span></summary><table><thead><tr><th>Aluno</th><th>Formador</th><th>Combinado</th></tr></thead><tbody>${_real.map(function(o){return '<tr><td>'+esc(o.nome)+'</td><td>'+esc(o.formador||"—")+'</td><td>'+(o.combinado?esc(o.combinado):'<span class="muted">—</span>')+'</td></tr>';}).join("")}</tbody></table></details>`:'';
 
@@ -5636,7 +5636,23 @@ function proxNivel(i){const o=data.online[i];if(!o)return;const nivel=o.nivel||"
  if(o.email){var _L=classroomOnlineLinks();var _link=_L[o.nivel]||"";var _corpo=msgParabensNivel().replace(/\{nome\}/g,o.nome||"").replace(/\{link\}/g,_link||"(link a definir pela Gestão)").replace(/\n/g,"<br>");filaEmail(o.email,"Parabéns pela tua progressão — Knowledge Angola",_corpo);}
  persist();toast(o.nome+" → "+o.nivel+" — novo prazo: "+o.prazo+" dias úteis");render();}
 function gerirNivel(i){if(!(role==="admin"||podeEditar())){toast("Só a Gestão ou colaborador autorizado");return;}var o=data.online[i];if(!o)return;var nv=prompt("Definir/reabrir nível ("+NIVEIS.join(" / ")+"):",o.nivel||NIVEIS[0]);if(nv===null)return;nv=nv.trim();if(NIVEIS.indexOf(nv)<0){toast("Nível inválido");return;}o.nivel=nv;if(o.status==="Concluído"&&NIVEIS.indexOf(nv)<NIVEIS.length-1){o.status="Em andamento";}persist();toast("Nível definido: "+nv);render();}
-function ensurePds(o){if(!Array.isArray(o.pds)){o.pds=[];if(o.proximoPDS)o.pds.push({data:o.proximoPDS,hora:o.proximoHora||"19:30",rec:!!o.recorrente});}if(!Array.isArray(o.recs)){o.recs=[];if(o.recorrente&&o.proximoPDS){o.recs.push({dia:new Date(o.proximoPDS).getDay(),hora:o.proximoHora||"19:30"});}}return o;}
+/* L143: causa-raiz do "PDS feito volta a aparecer como não feito", recorrente em Formadores e
+   Acompanhamento apesar de várias correcções anteriores (L98-1/L109/L111-x/L133-5/L139-1). Todas
+   essas correcções mexiam em QUANDO se cria/lê o índice, mas continuavam a identificar "qual PDS
+   agir" pela posição no array o.pds[idx] — uma posição capturada no momento em que a Agenda foi
+   desenhada. Com Firebase em tempo real (vários formadores/gestão ligados ao mesmo tempo), o
+   array de outro aluno ou do mesmo aluno pode ser reordenado/alterado por OUTRO dispositivo entre
+   o desenho da linha e o clique (ou durante o tempo em que um modal fica aberto à espera do
+   "Combinado"/motivo). Quando isso acontece, o idx antigo passa a apontar para OUTRA ocorrência —
+   o sistema marca "feito" a ocorrência errada, e a que a pessoa realmente clicou continua na
+   Agenda como se nada tivesse sido feito. A correcção definitiva: cada ocorrência de PDS ganha um
+   "id" próprio, estável, que nunca muda de posição. doPDS/naoRealizadoPDS/editarPdsItem/
+   cancelPdsItem passam a resolver SEMPRE pelo id (não pela posição) no momento de agir — e se o id
+   já não existir (porque outro dispositivo já tratou essa ocorrência entretanto), avisa em vez de
+   agir por engano numa ocorrência diferente. */
+function _novoPdsId(){return "pds_"+Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function _pdsIdxById(o,id){if(!o||!id)return -1;return (o.pds||[]).findIndex(function(p){return p.id===id;});}
+function ensurePds(o){if(!Array.isArray(o.pds)){o.pds=[];if(o.proximoPDS)o.pds.push({id:_novoPdsId(),data:o.proximoPDS,hora:o.proximoHora||"19:30",rec:!!o.recorrente});}o.pds.forEach(function(p){if(!p.id)p.id=_novoPdsId();});if(!Array.isArray(o.recs)){o.recs=[];if(o.recorrente&&o.proximoPDS){o.recs.push({dia:new Date(o.proximoPDS).getDay(),hora:o.proximoHora||"19:30"});}}return o;}
 function syncProx(o){ensurePds(o);o.pds.sort(function(a,b){return (a.data+(a.hora||"")).localeCompare(b.data+(b.hora||""));});if(o.pds.length){o.proximoPDS=o.pds[0].data;o.proximoHora=o.pds[0].hora||"";}else{o.proximoPDS="";o.proximoHora="";}}
 function _proximaDataDia(baseISO,wd){var d=new Date(baseISO+"T00:00:00");for(var k=0;k<8;k++){if(d.getDay()===wd)return _dISO(d);d.setDate(d.getDate()+1);}return baseISO;}
 /* L87-5: reparação única, ao carregar — cobre alunos que já tinham este problema antes da
@@ -5667,6 +5683,7 @@ function _addPdsSeguro(o,entry){
  ensurePds(o);
  var hora=entry.hora||"";
  if((o.pds||[]).some(function(p){return p.data===entry.data&&(p.hora||"")===hora;}))return false;
+ if(!entry.id)entry.id=_novoPdsId();
  o.pds.push(entry);
  return true;
 }
@@ -5777,7 +5794,7 @@ function marcarUmPDS(o,idx){idx=idx||0;ensurePds(o);var pds=o.pds[idx];
     aparecer atrasada na Agenda logo a seguir, como se o "feito" não tivesse tido efeito nenhum.
     Agora, se a data calculada ainda ficar no passado, salta directamente para a próxima ocorrência
     real desse dia da semana a partir de hoje (_proximaDataDia), nunca deixando nascer já atrasada. */
- if(pds){o.pds.splice(idx,1);if(pds.rec&&o.status!=="Parado"){var wd=new Date(pds.data).getDay();var recMatch=(o.recs||[]).find(function(r){return r.dia===wd;});if(recMatch){var nd=new Date(pds.data);nd.setDate(nd.getDate()+7);var ndISO=_dISO(nd);var hojeISO=_dISO(new Date());if(ndISO<hojeISO)ndISO=_proximaDataDia(hojeISO,wd);if(!o.pds.some(function(p){return p.data===ndISO&&(p.hora||"")===(pds.hora||"");}))o.pds.push({data:ndISO,hora:pds.hora,rec:true,groupId:recMatch.groupId||null,parceiro:recMatch.parceiro||null});}}}
+ if(pds){o.pds.splice(idx,1);if(pds.rec&&o.status!=="Parado"){var wd=new Date(pds.data).getDay();var recMatch=(o.recs||[]).find(function(r){return r.dia===wd;});if(recMatch){var nd=new Date(pds.data);nd.setDate(nd.getDate()+7);var ndISO=_dISO(nd);var hojeISO=_dISO(new Date());if(ndISO<hojeISO)ndISO=_proximaDataDia(hojeISO,wd);if(!o.pds.some(function(p){return p.data===ndISO&&(p.hora||"")===(pds.hora||"");}))o.pds.push({id:_novoPdsId(),data:ndISO,hora:pds.hora,rec:true,groupId:recMatch.groupId||null,parceiro:recMatch.parceiro||null});}}}
  syncProx(o);}
 /* L123-1: doPDS() dependia de window.prompt() para pedir o "Combinado" — em muitos telemóveis
    (painel instalado no ecrã principal como app, ou aberto dentro do Instagram/Facebook) o
@@ -5787,7 +5804,7 @@ function marcarUmPDS(o,idx){idx=idx||0;ensurePds(o);var pds=o.pds[idx];
    de que os dados se estavam a perder. Mesma causa-raiz que já se tinha corrigido noutro sítio do
    painel (L27-3: "Transferir" trocou prompt() por um dropdown). Aqui troca-se o prompt() por um
    modal próprio (pdsFeitoModalHTML), que funciona em qualquer navegador/telemóvel. */
-let pdsFeitoEdit=null;let pdsFeitoEditIdx=0;
+let pdsFeitoEdit=null;let pdsFeitoEditIdx=0;let pdsFeitoEditId=null;
 /* L139-1: doPDS() só recebia o índice do ALUNO (i), nunca o índice do PDS concreto dentro de
    o.pds[] — e confirmarPdsFeito() assumia sempre o.pds[0]. Isto funcionava enquanto cada aluno só
    tinha um PDS agendado, mas a Agenda de PDS lista TODAS as ocorrências (recorrências futuras,
@@ -5796,24 +5813,43 @@ let pdsFeitoEdit=null;let pdsFeitoEditIdx=0;
    da clicada), e a linha realmente clicada continuava a aparecer na Agenda como se nada tivesse
    acontecido — exactamente o sintoma reportado ("o nome não sai do agendamento"). Agora doPDS
    recebe também o idx da linha clicada (por omissão 0, para os sítios que só têm um PDS por
-   aluno, como o menu "Mais"). */
-function doPDS(i,idx){const o=data.online[i];if(!o)return;if(o.status==="Parado"){toast("Aluno em pausa — não dá para marcar PDS");return;}pdsFeitoEdit=i;pdsFeitoEditIdx=idx||0;render();}
-function fecharPdsFeito(){pdsFeitoEdit=null;pdsFeitoEditIdx=0;render();}
-function confirmarPdsFeito(){if(pdsFeitoEdit===null)return;const oi=pdsFeitoEdit;const o=data.online[oi];if(!o){pdsFeitoEdit=null;pdsFeitoEditIdx=0;render();return;}
- var comb=(val("pdsf_comb")||"").trim();ensurePds(o);syncProx(o);const alvoIdx=Math.min(pdsFeitoEditIdx||0,Math.max(o.pds.length-1,0));const alvo=o.pds[alvoIdx];const gid=alvo?alvo.groupId:null;const ddAlvo=alvo?alvo.data:null;
+   aluno, como o menu "Mais").
+   L143: idx sozinho não bastava — com Firebase em tempo real, o array o.pds pode ser alterado por
+   OUTRO dispositivo enquanto o modal "Combinado" está aberto à espera do utilizador escrever, e
+   nessa altura o idx capturado passa a apontar para uma ocorrência diferente da que foi clicada
+   (ver nota junto a ensurePds/_novoPdsId). Agora doPDS guarda também o "id" estável da ocorrência
+   clicada, e confirmarPdsFeito() resolve SEMPRE por esse id — o idx só serve de aproximação para
+   quando não há id (chamadas antigas, ex.: menu "Mais" com uma única ocorrência). */
+function doPDS(i,idx,pdsId){const o=data.online[i];if(!o)return;if(o.status==="Parado"){toast("Aluno em pausa — não dá para marcar PDS");return;}pdsFeitoEdit=i;pdsFeitoEditIdx=idx||0;pdsFeitoEditId=pdsId||null;render();}
+function fecharPdsFeito(){pdsFeitoEdit=null;pdsFeitoEditIdx=0;pdsFeitoEditId=null;render();}
+function confirmarPdsFeito(){if(pdsFeitoEdit===null)return;const oi=pdsFeitoEdit;const o=data.online[oi];if(!o){pdsFeitoEdit=null;pdsFeitoEditIdx=0;pdsFeitoEditId=null;render();return;}
+ var comb=(val("pdsf_comb")||"").trim();ensurePds(o);
+ var alvoIdx=pdsFeitoEditId?_pdsIdxById(o,pdsFeitoEditId):-1;
+ if(alvoIdx<0&&pdsFeitoEditId){toast("Esta marcação já foi tratada ou alterada noutro dispositivo — actualiza a página e confirma de novo.");pdsFeitoEdit=null;pdsFeitoEditIdx=0;pdsFeitoEditId=null;render();return;}
+ if(alvoIdx<0){syncProx(o);alvoIdx=Math.min(pdsFeitoEditIdx||0,Math.max(o.pds.length-1,0));}
+ const alvo=o.pds[alvoIdx];const gid=alvo?alvo.groupId:null;const ddAlvo=alvo?alvo.data:null;
  marcarUmPDS(o,alvoIdx);o.combinado=comb;if(comb){if(!Array.isArray(o.combinadoHist))o.combinadoHist=[];o.combinadoHist.unshift({data:_dISO(new Date()),texto:comb});}
  if(gid){data.online.forEach(function(other){if(other===o)return;ensurePds(other);var idx=other.pds.findIndex(function(p){return p.groupId===gid&&p.data===ddAlvo;});if(idx>=0)marcarUmPDS(other,idx);});}
- persist();pdsFeitoEdit=null;pdsFeitoEditIdx=0;toast("PDS feito"+(alvo&&alvo.parceiro?" (em conjunto com "+alvo.parceiro+")":"")+(o.pds.length?" — próximo: "+o.proximoPDS:""));render();}
+ persist();pdsFeitoEdit=null;pdsFeitoEditIdx=0;pdsFeitoEditId=null;toast("PDS feito"+(alvo&&alvo.parceiro?" (em conjunto com "+alvo.parceiro+")":"")+(o.pds.length?" — próximo: "+o.proximoPDS:""));render();}
 function pdsFeitoModalHTML(){if(pdsFeitoEdit===null)return"";const o=data.online[pdsFeitoEdit];if(!o)return"";return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharPdsFeito()"><div class="card" style="padding:22px;width:360px;max-width:94vw"><h3 style="color:var(--azul);margin-bottom:2px">PDS feito</h3><div class="muted" style="margin-bottom:12px">${esc(o.nome)}${o.formador?' · '+esc(o.formador):''}</div><label>O que ficou combinado até ao próximo encontro? (opcional)</label><textarea id="pdsf_comb" rows="3" placeholder="Ex.: praticar Procv até quinta"></textarea><div class="flex" style="margin-top:14px;gap:6px"><button class="btn-o" onclick="fecharPdsFeito()">Cancelar</button><button class="btn-g" onclick="confirmarPdsFeito()">Marcar PDS feito</button></div></div></div>`;}
-function cancelPdsItem(i,idx){var o=data.online[i];if(!o)return;ensurePds(o);syncProx(o);if(!o.pds[idx])return;if(!confirm("Cancelar o PDS de "+o.pds[idx].data+"?"))return;var _ref=o.pds[idx].gcalRef;if(_ref)filaCancelarCalendario(_ref,"PDS — "+o.nome);o.pds.splice(idx,1);syncProx(o);persist();toast("PDS cancelado"+(_ref?" (pedido de cancelamento enviado ao Google Calendar)":""));render();}
+/* L143: mesma correcção do id estável — resolve sempre a ocorrência pelo id quando disponível
+   (nunca pela posição antiga no array), e avisa em vez de cancelar a ocorrência errada quando o
+   id já não existe (outro dispositivo tratou-a entretanto). */
+function cancelPdsItem(i,idx,pdsId){var o=data.online[i];if(!o)return;ensurePds(o);
+ var ri=pdsId?_pdsIdxById(o,pdsId):-1;
+ if(ri<0&&pdsId){toast("Este PDS já foi tratado ou alterado noutro dispositivo — actualiza a página.");return;}
+ if(ri<0){syncProx(o);ri=idx;}
+ if(!o.pds[ri])return;if(!confirm("Cancelar o PDS de "+o.pds[ri].data+"?"))return;var _ref=o.pds[ri].gcalRef;if(_ref)filaCancelarCalendario(_ref,"PDS — "+o.nome);o.pds.splice(ri,1);syncProx(o);persist();toast("PDS cancelado"+(_ref?" (pedido de cancelamento enviado ao Google Calendar)":""));render();}
 const MOTIVOS_NAO_REALIZADO=["Aluno não compareceu","Formador indisponível","Reagendado a pedido do aluno","Falha técnica / internet","Outro"];
-let naoRealEdit=null;let naoRealEditIdx=0;
+let naoRealEdit=null;let naoRealEditIdx=0;let naoRealEditId=null;
 /* L139-1: mesma correcção que em doPDS/confirmarPdsFeito — naoRealizadoPDS() só recebia o
    índice do aluno, e as funções de confirmação assumiam sempre o.pds[0]. Agora recebe também
    o idx da linha da Agenda clicada, para nunca tocar num PDS diferente do que foi assinalado
-   como "não realizado". */
-function naoRealizadoPDS(i,idx){naoRealEdit=i;naoRealEditIdx=idx||0;render();}
-function fecharNaoReal(){naoRealEdit=null;naoRealEditIdx=0;render();}
+   como "não realizado".
+   L143: mesma correcção do id estável que em doPDS — idx sozinho fica frágil quando o array
+   muda enquanto o modal do motivo está aberto. */
+function naoRealizadoPDS(i,idx,pdsId){naoRealEdit=i;naoRealEditIdx=idx||0;naoRealEditId=pdsId||null;render();}
+function fecharNaoReal(){naoRealEdit=null;naoRealEditIdx=0;naoRealEditId=null;render();}
 /* L84-2/L87-4: 3 acções distintas neste modal (antes só havia "Remarcar"):
    - Confirmar: regista o motivo (fica no histórico e conta para "PDS não realizados"), sem
      forçar logo a escolha de nova data — para quando ainda não se sabe quando será o próximo.
@@ -5821,10 +5857,14 @@ function fecharNaoReal(){naoRealEdit=null;naoRealEditIdx=0;render();}
      clique — comportamento que já existia.
    - Cancelar: cancela mesmo o PDS agendado (reaproveita cancelPdsItem, com o aviso de Google
      Calendar), sem registar motivo nenhum — para quando o PDS nunca devia ter ficado marcado. */
-function _registarPdsNaoRealizado(oi,idx){const o=data.online[oi];if(!o)return false;ensurePds(o);syncProx(o);const alvoIdx=Math.min(idx||0,Math.max(o.pds.length-1,0));const motivo=val("nr_motivo")==="Outro"?(val("nr_outro")||"Outro"):val("nr_motivo");if(!motivo){toast("Escolhe o motivo");return false;}if(!Array.isArray(o.historicoNaoRealizado))o.historicoNaoRealizado=[];o.historicoNaoRealizado.push({data:_dISO(new Date()),motivo:motivo,pdsData:o.pds[alvoIdx]?o.pds[alvoIdx].data:""});o.pdsNaoRealizados=(+o.pdsNaoRealizados||0)+1;if(o.pds.length)o.pds.splice(alvoIdx,1);syncProx(o);persist();return true;}
-function confirmarNaoRealizado(){if(naoRealEdit===null)return;const oi=naoRealEdit;if(!_registarPdsNaoRealizado(oi,naoRealEditIdx))return;naoRealEdit=null;naoRealEditIdx=0;toast("Motivo registado — escolhe agora a nova data");agendarPDS(oi);}
-function confirmarSemRemarcar(){if(naoRealEdit===null)return;const oi=naoRealEdit;if(!_registarPdsNaoRealizado(oi,naoRealEditIdx))return;naoRealEdit=null;naoRealEditIdx=0;toast("Motivo registado.");render();}
-function cancelarPdsNaoRealizado(){if(naoRealEdit===null)return;const oi=naoRealEdit;ensurePds(data.online[oi]||{});cancelPdsItem(oi,naoRealEditIdx||0);naoRealEdit=null;naoRealEditIdx=0;render();}
+function _registarPdsNaoRealizado(oi,idx,pdsId){const o=data.online[oi];if(!o)return false;ensurePds(o);
+ var alvoIdx=pdsId?_pdsIdxById(o,pdsId):-1;
+ if(alvoIdx<0&&pdsId){toast("Esta marcação já foi tratada ou alterada noutro dispositivo — actualiza a página.");return false;}
+ if(alvoIdx<0){syncProx(o);alvoIdx=Math.min(idx||0,Math.max(o.pds.length-1,0));}
+ const motivo=val("nr_motivo")==="Outro"?(val("nr_outro")||"Outro"):val("nr_motivo");if(!motivo){toast("Escolhe o motivo");return false;}if(!Array.isArray(o.historicoNaoRealizado))o.historicoNaoRealizado=[];o.historicoNaoRealizado.push({data:_dISO(new Date()),motivo:motivo,pdsData:o.pds[alvoIdx]?o.pds[alvoIdx].data:""});o.pdsNaoRealizados=(+o.pdsNaoRealizados||0)+1;if(o.pds.length)o.pds.splice(alvoIdx,1);syncProx(o);persist();return true;}
+function confirmarNaoRealizado(){if(naoRealEdit===null)return;const oi=naoRealEdit;if(!_registarPdsNaoRealizado(oi,naoRealEditIdx,naoRealEditId))return;naoRealEdit=null;naoRealEditIdx=0;naoRealEditId=null;toast("Motivo registado — escolhe agora a nova data");agendarPDS(oi);}
+function confirmarSemRemarcar(){if(naoRealEdit===null)return;const oi=naoRealEdit;if(!_registarPdsNaoRealizado(oi,naoRealEditIdx,naoRealEditId))return;naoRealEdit=null;naoRealEditIdx=0;naoRealEditId=null;toast("Motivo registado.");render();}
+function cancelarPdsNaoRealizado(){if(naoRealEdit===null)return;const oi=naoRealEdit;ensurePds(data.online[oi]||{});cancelPdsItem(oi,naoRealEditIdx||0,naoRealEditId);naoRealEdit=null;naoRealEditIdx=0;naoRealEditId=null;render();}
 function naoRealModalHTML(){if(naoRealEdit===null)return"";const o=data.online[naoRealEdit];if(!o)return"";return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharNaoReal()"><div class="card" style="padding:22px;width:360px;max-width:94vw"><h3 style="color:var(--azul);margin-bottom:2px">PDS não realizado</h3><div class="muted" style="margin-bottom:12px">${esc(o.nome)}${o.formador?' · '+esc(o.formador):''}</div><label>Motivo</label><select id="nr_motivo" onchange="document.getElementById('nr_outro_wrap').style.display=this.value==='Outro'?'block':'none'">${MOTIVOS_NAO_REALIZADO.map(m=>`<option>${esc(m)}</option>`).join("")}</select><div id="nr_outro_wrap" style="display:none;margin-top:8px"><label>Especifica</label><input id="nr_outro" placeholder="Descreve o motivo"></div><div class="muted" style="margin-top:8px;font-size:12px">Confirmar regista o motivo sem remarcar já. Remarcar regista o motivo e abre logo a nova data. Cancelar cancela mesmo o PDS agendado (sem registar motivo).</div><div class="flex" style="margin-top:14px;flex-wrap:wrap;gap:6px"><button class="btn-o" onclick="confirmarSemRemarcar()">Confirmar</button><button class="btn-p" onclick="confirmarNaoRealizado()">Remarcar</button><button class="btn-o" style="color:var(--verm)" onclick="cancelarPdsNaoRealizado()">Cancelar PDS</button></div></div></div>`;}
 /* L90-7: antes só apagava o padrão de recorrência (recs[]), mas deixava ficar quaisquer PDS já
    marcados para esse dia da semana (em pds[]) — o aluno continuava a ver/receber esses encontros
@@ -5841,10 +5881,10 @@ function delRec(i,idx){var o=data.online[i];if(!o)return;ensurePds(o);var r=o.re
   return false;
  });
  syncProx(o);persist();toast("Recorrência removida"+(doDia.length?" — "+doDia.length+" PDS cancelado(s)":""));render();}
-let pdsEdit=null;let pdsEditIdx=null;
-function agendarPDS(i){var o=data.online[i];if(o&&o.status==="Parado"){toast("Aluno em pausa — tira-o da pausa para marcar PDS");return;}pdsEdit=i;pdsEditIdx=null;render();}
-function editarPdsItem(i,idx){pdsEdit=i;pdsEditIdx=idx;render();}
-function cancelPds(){pdsEdit=null;pdsEditIdx=null;render();}
+let pdsEdit=null;let pdsEditIdx=null;let pdsEditId=null;
+function agendarPDS(i){var o=data.online[i];if(o&&o.status==="Parado"){toast("Aluno em pausa — tira-o da pausa para marcar PDS");return;}pdsEdit=i;pdsEditIdx=null;pdsEditId=null;render();}
+function editarPdsItem(i,idx,pdsId){pdsEdit=i;pdsEditIdx=idx;pdsEditId=pdsId||null;render();}
+function cancelPds(){pdsEdit=null;pdsEditIdx=null;pdsEditId=null;render();}
 function cancelarMarcacao(i){const o=data.online[i];if(!o)return;if(!o.proximoPDS){toast("Não há PDS marcado");return;}if(!confirm("Cancelar o PDS marcado para "+o.proximoPDS+"?"))return;ensurePds(o);const alvo=(o.pds||[]).find(p=>p.data===o.proximoPDS&&(p.hora||"")===(o.proximoHora||""));if(alvo&&alvo.gcalRef)filaCancelarCalendario(alvo.gcalRef,"PDS — "+o.nome);o.proximoPDS="";o.proximoHora="";persist();toast("PDS cancelado"+(alvo&&alvo.gcalRef?" (pedido de cancelamento enviado ao Google Calendar)":""));render();}
 /* L102-3: um formador não pode ficar com dois PDS marcados na mesma data+hora para alunos
    diferentes — excepto quando é intencional (o próprio mecanismo de "juntar" um parceiro no
@@ -5858,15 +5898,20 @@ function _pdsChoqueFormador(formador,dataISO,hora,permitidos){
  });
  return choque;
 }
-function marcarPds(){if(pdsEdit===null)return;const o=data.online[pdsEdit];if(!o){pdsEdit=null;pdsEditIdx=null;render();return;}
+function marcarPds(){if(pdsEdit===null)return;const o=data.online[pdsEdit];if(!o){pdsEdit=null;pdsEditIdx=null;pdsEditId=null;render();return;}
  /* L104-2: guarda defensiva — mesmo que este modal tenha sido aberto por outro caminho que não
     agendarPDS()/doPDS() (que já bloqueiam à entrada), nunca se cria aqui um PDS novo com o aluno
     em pausa. */
- if(o.status==="Parado"){toast("Aluno em pausa — não é possível marcar PDS até ao regresso");pdsEdit=null;pdsEditIdx=null;render();return;}
+ if(o.status==="Parado"){toast("Aluno em pausa — não é possível marcar PDS até ao regresso");pdsEdit=null;pdsEditIdx=null;pdsEditId=null;render();return;}
  const dd=val("pds_data");const hh=val("pds_hora")||"19:30";if(!dd){toast("Escolhe a data");return;}ensurePds(o);
  const durMin=+val("pds_dur")||60;
  if(pdsEditIdx!==null){
-  const alvo=o.pds[pdsEditIdx];if(!alvo){pdsEdit=null;pdsEditIdx=null;render();return;}
+  /* L143: mesma correcção do id estável — resolve pela ocorrência com este id, não pela posição
+     antiga capturada quando o modal "Editar" foi aberto. */
+  var _ri=pdsEditId?_pdsIdxById(o,pdsEditId):-1;
+  if(_ri<0&&pdsEditId){toast("Este PDS já foi alterado noutro dispositivo — actualiza a página e tenta editar de novo.");pdsEdit=null;pdsEditIdx=null;pdsEditId=null;render();return;}
+  if(_ri<0)_ri=pdsEditIdx;
+  const alvo=o.pds[_ri];if(!alvo){pdsEdit=null;pdsEditIdx=null;pdsEditId=null;render();return;}
   var _ch1=_pdsChoqueFormador(o.formador,dd,hh,[o.nome]);
   if(_ch1){toast("O formador "+esc(o.formador||"")+" já tem um PDS marcado nesse dia e hora, com "+esc(_ch1)+". Escolhe outra hora.");return;}
   if(alvo.gcalRef)filaCancelarCalendario(alvo.gcalRef,"PDS — "+o.nome);
@@ -5878,7 +5923,7 @@ function marcarPds(){if(pdsEdit===null)return;const o=data.online[pdsEdit];if(!o
   syncProx(o);persist();
   if(o.email)filaEmail(o.email,"Ponto de Situação reagendado — Knowledge Angola","Olá "+esc(o.nome)+",<br><br>O teu Ponto de Situação (PDS) foi reagendado para <b>"+esc(dd)+" às "+esc(hh)+"</b>.<br><br>Até lá!<br>Knowledge Angola");
   if(_emailForm)filaEmail(_emailForm,"PDS reagendado — "+o.nome+" — Knowledge Angola","Olá "+esc(o.formador)+",<br><br>O PDS de <b>"+esc(o.nome)+"</b> foi reagendado para <b>"+esc(dd)+" às "+esc(hh)+"</b>. Foste convidado(a) automaticamente — o evento já está no teu Google Calendar, com o link para participar.<br><br>Knowledge Angola");
-  pdsEdit=null;pdsEditIdx=null;toast("PDS actualizado p/ "+dd+" "+hh);render();return;
+  pdsEdit=null;pdsEditIdx=null;pdsEditId=null;toast("PDS actualizado p/ "+dd+" "+hh);render();return;
  }
  var recCk=(document.getElementById("pds_rec")||{}).checked;
  var diasCk=recCk?[...document.querySelectorAll(".pds_dia:checked")].map(c=>+c.value):[];
@@ -5890,7 +5935,7 @@ function marcarPds(){if(pdsEdit===null)return;const o=data.online[pdsEdit];if(!o
  if(_ch2){toast("O formador "+esc(o.formador||"")+" já tem um PDS marcado nesse dia e hora, com "+esc(_ch2)+". Se é para juntar os dois no mesmo horário, usa o campo \"Juntar outra pessoa\" abaixo.");return;}
  var groupId=comp?("g"+Date.now()):null;
  var compInRec=comp?((document.getElementById("pds_comp_rec")||{checked:true}).checked):false;
- var pdsEntry={data:dd,hora:hh,rec:recCk,groupId:groupId,parceiro:comp?comp.nome:null,duracao:durMin};
+ var pdsEntry={id:_novoPdsId(),data:dd,hora:hh,rec:recCk,groupId:groupId,parceiro:comp?comp.nome:null,duracao:durMin};
  /* Correcção (grave): faltava aqui a verificação de duplicado que já existia para os "dias extra"
     da recorrência (linhas abaixo) — sem ela, um clique duplo em "Marcar" (ou um reenvio do
     formulário) criava dois PDS iguais (mesma data e hora) para o mesmo aluno, que depois
@@ -5898,7 +5943,7 @@ function marcarPds(){if(pdsEdit===null)return;const o=data.online[pdsEdit];if(!o
     data+hora para este aluno. */
  if(!o.pds.some(function(p){return p.data===dd&&(p.hora||"")===hh;}))o.pds.push(pdsEntry);
  var compEntry=null;
- if(comp){ensurePds(comp);compEntry={data:dd,hora:hh,rec:recCk,groupId:groupId,parceiro:o.nome,duracao:durMin};if(!comp.pds.some(function(p){return p.data===dd&&(p.hora||"")===hh;}))comp.pds.push(compEntry);}
+ if(comp){ensurePds(comp);compEntry={id:_novoPdsId(),data:dd,hora:hh,rec:recCk,groupId:groupId,parceiro:o.nome,duracao:durMin};if(!comp.pds.some(function(p){return p.data===dd&&(p.hora||"")===hh;}))comp.pds.push(compEntry);}
  if(recCk){var _wdPrincipal=new Date(dd).getDay();diasCk.forEach(function(wd){
    if(!o.recs.some(r=>r.dia===wd&&(r.hora||"")===hh))o.recs.push({dia:wd,hora:hh,groupId:compInRec?groupId:null,parceiro:compInRec&&comp?comp.nome:null});
    if(comp&&compInRec&&!comp.recs.some(r=>r.dia===wd&&(r.hora||"")===hh))comp.recs.push({dia:wd,hora:hh,groupId:groupId,parceiro:o.nome});
@@ -5912,8 +5957,8 @@ function marcarPds(){if(pdsEdit===null)return;const o=data.online[pdsEdit];if(!o
     var _permExtra=[o.nome];if(compInRec&&comp)_permExtra.push(comp.nome);
     var _chExtra=_pdsChoqueFormador(o.formador,_nd,hh,_permExtra);
     if(_chExtra){toast("Aviso: "+DIAS_NOME[wd]+" ("+_nd+") "+hh+" não foi marcado — o formador "+esc(o.formador||"")+" já tem PDS com "+esc(_chExtra)+" nesse dia/hora.");return;}
-    if(!o.pds.some(function(p){return p.data===_nd&&(p.hora||"")===hh;}))o.pds.push({data:_nd,hora:hh,rec:true,groupId:compInRec?groupId:null,parceiro:compInRec&&comp?comp.nome:null});
-    if(comp&&compInRec&&!comp.pds.some(function(p){return p.data===_nd&&(p.hora||"")===hh;}))comp.pds.push({data:_nd,hora:hh,rec:true,groupId:groupId,parceiro:o.nome});
+    if(!o.pds.some(function(p){return p.data===_nd&&(p.hora||"")===hh;}))o.pds.push({id:_novoPdsId(),data:_nd,hora:hh,rec:true,groupId:compInRec?groupId:null,parceiro:compInRec&&comp?comp.nome:null});
+    if(comp&&compInRec&&!comp.pds.some(function(p){return p.data===_nd&&(p.hora||"")===hh;}))comp.pds.push({id:_novoPdsId(),data:_nd,hora:hh,rec:true,groupId:groupId,parceiro:o.nome});
    }
  });}
  syncProx(o);if(comp)syncProx(comp);
@@ -6309,7 +6354,7 @@ function detalheMarcacaoGradeHTML(){
   +(prevista?'<div style="margin-top:8px"><span class="pill p-cinza">Prevista pela recorrência semanal — ainda sem ocorrência concreta</span></div>':"")
   +(pode
    ?('<div class="flex" style="gap:8px;margin-top:14px;flex-wrap:wrap">'
-     +(pdsIdx>=0?('<button class="btn-o" onclick="fecharDetalheMarcacaoGrade();editarPdsItem('+g.oi+','+pdsIdx+')">✎ Editar</button><button class="btn-o" onclick="fecharDetalheMarcacaoGrade();cancelPdsItem('+g.oi+','+pdsIdx+')">Cancelar PDS</button>'):'<div class="muted" style="font-size:12px">Ainda só prevista — vai gerar-se uma ocorrência concreta perto da data.</div>')
+     +(pdsIdx>=0?('<button class="btn-o" onclick="fecharDetalheMarcacaoGrade();editarPdsItem('+g.oi+','+pdsIdx+',\''+esc(pd.id||"")+'\')">✎ Editar</button><button class="btn-o" onclick="fecharDetalheMarcacaoGrade();cancelPdsItem('+g.oi+','+pdsIdx+',\''+esc(pd.id||"")+'\')">Cancelar PDS</button>'):'<div class="muted" style="font-size:12px">Ainda só prevista — vai gerar-se uma ocorrência concreta perto da data.</div>')
      +'<button class="btn-o" onclick="fecharDetalheMarcacaoGrade();verDetalhe('+g.oi+')">Ver ficha completa</button></div>')
    :('<div class="muted" style="margin-top:14px;font-size:12px">Só a Gestão, o(a) próprio(a) formador(a), a Gestora de Formação, ou quem tiver autorização, podem editar esta marcação a partir daqui.</div><button class="btn-o" style="margin-top:8px" onclick="fecharDetalheMarcacaoGrade();verDetalhe('+g.oi+')">Ver ficha completa</button>'))
   +'</div>';
