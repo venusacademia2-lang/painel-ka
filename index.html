@@ -1308,7 +1308,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.73";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.74";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -3908,10 +3908,38 @@ function confirmarTransferAluno(){const cod=transferAlunoCod;const f=data.forman
  if(!Array.isArray(data.transferencias))data.transferencias=[];
  data.transferencias.unshift({cod:cod,nome:f.nome,de:de,para:t.cod,mesmaEdicao:mesmaEdicao,taxa:taxaAplicada,custoZero:(taxa>0&&taxaAplicada===0),nota:nota,por:(currentUser&&currentUser.nome)||role,quando:new Date().toISOString().slice(0,16).replace("T"," ")});
  transferAlunoCod=null;transferAlunoAnterioresOK=false;persist();toast((mesmaEdicao?"Horário actualizado na "+t.ed+"ª":"Transferido para "+t.ed+"ª")+(taxaAplicada?" · taxa "+taxaAplicada.toLocaleString("de-DE")+" Kz":""));render();}
-function exportTurma(cod,turno){const t=turmaByCod(cod);let alunos=data.formandos.filter(f=>f.turma===cod);if(turno)alunos=alunos.filter(f=>(f.horario||f.turno||"")===turno);if(!alunos.length){toast("Turma sem formandos"+(turno?" neste turno":""));return;}const admin=role==="admin";const keys=["Nome","Telefone","E-mail","Curso","Turno"].concat(admin?["Em dívida (Kz)"]:[]);
- const linhas=alunos.map(f=>{const p=payOf(f.cod);const arr=[f.nome,f.tel,f.email,f.curso,f.turno||""];if(admin)arr.push(p?divida(p):0);return arr;});
- const csv=[keys.join(",")].concat(linhas.map(r=>r.map(x=>`"${String(x==null?"":x).replace(/"/g,'""')}"`).join(","))).join("\n");
- const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download=(t?t.ed+"a-edicao":cod)+"-formandos"+(turno?"-"+turno.replace(/[^\w]+/g,"_"):"")+".csv";a.click();toast("Lista exportada"+(turno?" ("+turno+")":""));}
+/* L146-4: CSV trocado por .xlsx real (SheetJS, já usado noutros exports do painel) — mesmo nome de
+   função e mesmos parâmetros, para não mexer em quem já chama exportTurma(cod,turno). Acrescenta
+   "Valor pago (Kz)" (visível a todos) além da dívida (continua só Gestão), a pedido do Ventura. */
+function exportTurma(cod,turno){const t=turmaByCod(cod);let alunos=data.formandos.filter(f=>f.turma===cod);if(turno)alunos=alunos.filter(f=>(f.horario||f.turno||"")===turno);if(!alunos.length){toast("Turma sem formandos"+(turno?" neste turno":""));return;}if(typeof XLSX==="undefined"){toast("Biblioteca Excel ainda a carregar — tenta daqui a instantes");return;}const admin=role==="admin";
+ const linhas=alunos.map(f=>{const p=payOf(f.cod);const row={Nome:f.nome||"",Telefone:f.tel||"","E-mail":f.email||"",Curso:f.curso||"",Turno:f.turno||"","Valor pago (Kz)":p?(+p.pago||0):0};if(admin)row["Em dívida (Kz)"]=p?divida(p):0;return row;});
+ const wb=XLSX.utils.book_new();const ws=XLSX.utils.json_to_sheet(linhas);XLSX.utils.book_append_sheet(wb,ws,"Formandos");
+ XLSX.writeFile(wb,(t?t.ed+"a-edicao":cod)+"-formandos"+(turno?"-"+turno.replace(/[^\w]+/g,"_"):"")+".xlsx");toast("Lista exportada"+(turno?" ("+turno+")":""));}
+/* L146-4 (Turma Online): exporta em .xlsx exactamente os alunos visíveis na Acompanhamento no
+   momento — mesmo filtro de Situação/Nível/pesquisa já seleccionado (onFilter/onNivel/onSearch),
+   recalculado aqui à parte para não mexer em vOnlineAcompanhamentoHTML (que já está a funcionar). */
+function exportOnlineExcel(){
+ if(typeof XLSX==="undefined"){toast("Biblioteca Excel ainda a carregar — tenta daqui a instantes");return;}
+ const q=(onSearch||"").toLowerCase();
+ const rowsBase=data.online.filter(function(o){return o.status!=="Transferido";}).filter(function(o){return !q||(o.nome||"").toLowerCase().includes(q)||(o.formador||"").toLowerCase().includes(q);});
+ const hoje=new Date(new Date().toDateString());const wk=new Date(hoje);wk.setDate(hoje.getDate()+7);
+ const _matchSitu=function(o,id){
+  if(id==='andamento')return o.status==='Em andamento';
+  if(id==='pausa')return o.status==='Parado';
+  if(id==='sem')return !o.proximoPDS&&o.status!=='Parado'&&o.status!=='Concluído';
+  if(id==='concluido')return o.status==='Concluído';
+  if(id==='breve'){var d=diasParaConcluirNum(o);return d!==null&&d>=0&&d<=3;}
+  if(id==='proximos')return o.proximoPDS&&new Date(o.proximoPDS)>=hoje&&new Date(o.proximoPDS)<=wk;
+  return true;
+ };
+ const rows=rowsBase.filter(function(o){return _matchSitu(o,onFilter)&&(!onNivel||o.nivel===onNivel);});
+ if(!rows.length){toast("Sem alunos nesta situação/nível");return;}
+ const admin=role==="admin";
+ const linhas=rows.map(function(o){const p=payOf(o.cod);const row={Nome:o.nome||"",Telefone:o.contacto||o.tel||"","E-mail":o.email||"",Nível:o.nivel||"",Formador:o.formador||"",Situação:o.status||"","Valor pago (Kz)":p?(+p.pago||0):0};if(admin)row["Em dívida (Kz)"]=p?divida(p):0;return row;});
+ const wb=XLSX.utils.book_new();const ws=XLSX.utils.json_to_sheet(linhas);XLSX.utils.book_append_sheet(wb,ws,"Turma Online");
+ XLSX.writeFile(wb,"turma-online-alunos"+(onFilter?"-"+onFilter:"")+(onNivel?"-"+onNivel.replace(/[^\w]+/g,"_"):"")+".xlsx");
+ toast("Lista exportada ("+rows.length+" aluno(s))");
+}
 /* L37-A1: as duas funções abaixo passaram a aceitar "turno" — quando o ecrã "Ver alunos" tem um turno seleccionado (edTurno),
    os cards/exportação respeitam-no, em vez de sair sempre com todos os turnos da edição misturados. */
 function gerarCards(cod,incluirTodos,turno){const t=turmaByCod(cod);if(!t)return;let base=data.formandos.filter(f=>f.turma===cod&&f.estado!=="Transferido p/ Online");if(turno)base=base.filter(f=>(f.horario||f.turno||"")===turno);const alunos=incluirTodos?base:base.filter(fezPagamento);if(!alunos.length){toast(incluirTodos?("Turma sem formandos inscritos"+(turno?" neste turno.":".")):"Turma sem formandos que já tenham pago (só quem pagou entra nos cards por defeito — usa \"Cards (todos)\" para incluir quem ainda não pagou)");return;}const c=data.comp||{};const logo=c.logo||"";
@@ -4198,10 +4226,14 @@ function vQuizLeads(){
    +(convertidosArr.map(function(x){return '<tr><td>'+esc((x.r.quando||"").slice(0,16).replace("T"," "))+'</td><td>'+esc(x.r.nome||"")+'</td><td>'+esc(x.r.tel||"")+'</td><td>'+esc(x.r.curso||"")+'</td><td>'+(x.r.fonte?'<span class="pill p-azul">'+esc(x.r.fonte)+'</span>':'<span class="muted">—</span>')+'</td><td><span class="pill p-verde">Já inscrito</span> <button class="btn-o" style="padding:3px 9px" onclick="fFicha=\''+esc(x.f.cod)+'\';show(\'formandos\')">Ficha do aluno</button></td></tr>';}).join("")||'<tr><td colspan="6" class="muted">Ainda nenhum.</td></tr>')
    +'</tbody></table>');
  }
+ /* L146-3 — chip "Quiz & Catálogo — por confirmar" removido a pedido: o sistema já cria o lead
+    sozinho assim que a submissão chega (autoSeguimentoInscricoes), pelo que esta vista manual
+    ficava confusa. qlView nunca mais é posto a "pend" (só o botão o fazia), mas o ramo abaixo
+    fica no código como rede de segurança — não estraga nada se sobrar estado antigo. */
+ if(qlView==="pend")qlView="leads";
  return contactarLeadModalHTML()+'<div class="sec">'
   +'<div class="flex" style="gap:8px;flex-wrap:wrap">'
   +slicer("leads","Leads do Quiz",totalLeadsQuiz,novosCount?novosCount+" novos":"")
-  +slicer("pend","Quiz & Catálogo — por confirmar",pendCount,"")
   +slicer("insc","Já inscritos",convCount,"")
   +'</div>'
   +taxaStrip
@@ -5228,6 +5260,7 @@ function vOnlineAcompanhamentoHTML(hoje,wk,theadTop){
   ${formDispBanner}
   ${agendaHtml}${realizadosHtml}
   <div class="muted" style="margin:8px 0 2px">${onFilter==='concluido'?'A mostrar quem já concluiu — usa o chip &quot;Todos&quot; para voltar a escondê-los.':'Concluídos ficam escondidos por defeito — usa o chip &quot;Concluídos&quot; acima para os ver (com o estado do certificado por aluno).'}</div>
+  ${podeExportar()?`<div class="flex" style="gap:8px;margin:4px 0 8px"><button class="btn-o" style="padding:4px 10px" onclick="exportOnlineExcel()">📊 Exportar Excel (${rows.length})</button></div>`:''}
   <table class="tbl-movel"><thead><tr>${_COLS_ONLINE_TBL.map(function(h){return '<th class="stickyhead-on">'+h+'</th>';}).join('')}</tr></thead><tbody>
   ${rows.map(_linhaOnlineTbl).join("")||`<tr><td colspan="12" class="muted">Sem alunos nesta situação/nível.</td></tr>`}
   </tbody></table></div>`;
@@ -7209,13 +7242,15 @@ function vInscricoes(){
   }).join("")+'</div>';
  listaIns=listaIns.slice().sort(function(a,b){return (a.quando||"").localeCompare(b.quando||"");});
  if(inscDir==="desc")listaIns.reverse();
- return `${inscModalHTML()}${confirmarInscricaoModalHTML()}<div class="sec"><h2>Partilhar a nossa página</h2><div class="muted">Envia o link da inscrição aos interessados.</div>
-  <div class="flex" style="margin-top:8px;gap:8px;flex-wrap:wrap"><input id="ins_url" value="${esc(landingUrl())}" style="max-width:340px" onchange="if(!data.comp)data.comp={};data.comp.landingUrl=this.value;persist();toast('Link actualizado')"><button class="btn-o" onclick="copiarLink()">Copiar link da inscrição</button><button class="btn-g" onclick="partilharWA('','')">WhatsApp landing</button><button class="btn-o" onclick="copiarCatalogo()">Copiar catálogo</button><button class="btn-g" onclick="partilharCatalogoWA('','')">WhatsApp catálogo</button><button class="btn-o" onclick="partilharEmail()">E-mail</button></div></div>
+ return `${inscModalHTML()}${confirmarInscricaoModalHTML()}
   <div class="sec"><div class="flex"><div><h2>Captação pela Página de Inscrição</h2><div class="muted">Todas as inscrições feitas na página pública — com ou sem comprovativo. Confirma o pagamento e converte em interessado ou formando.</div></div><div class="spacer"></div><button class="btn-o" onclick="render()" title="Os dados já ficam sempre actualizados sozinhos — este botão só força a lista a redesenhar">↻ Actualizar</button></div>
   <input id="q_insc" class="search" placeholder="Pesquisar por nome ou contacto…" value="${esc(inscBusca)}" oninput="inscBusca=this.value;refocusSearch('q_insc');renderDebounced()">
   ${inscChips}
   <table style="margin-top:8px"><thead><tr>${inscHead()}<th class="stickyhead">Nome</th><th class="stickyhead">Contacto</th><th class="stickyhead">Curso</th><th class="stickyhead">Tipo</th><th class="stickyhead">Fonte</th><th class="stickyhead">Valor</th><th class="stickyhead">Comprovativo</th><th class="stickyhead"></th></tr></thead><tbody>
-  ${listaIns.map(function(r){const i=INSCR.indexOf(r);return `<tr><td>${esc((r.quando||"").slice(0,16).replace("T"," "))}</td><td>${esc(r.nome||"")}${r.edicao?'<br><span class="muted">'+esc(r.edicao)+'ª ed.</span>':''}</td><td>${esc(r.tel||"")}</td><td>${esc(r.curso||"")}${r.modalidade?'<br><span class="muted">'+esc(r.modalidade)+'</span>':''}</td><td><span class="pill ${r.tipo==='Pagamento'?'p-verde':'p-dour'}">${esc(r.tipo||"Interesse")}</span></td><td>${r.fonte?'<span class="pill p-azul">'+esc(r.fonte)+'</span>':'<span class="muted">—</span>'}</td><td>${r.valorPago?kz(r.valorPago):'—'}</td><td>${r.comprovativo?`<button class="btn-o" style="padding:3px 9px" onclick="verComp(${i})">Ver</button>`:(r.viaWhatsapp?'<span class="muted">via WhatsApp</span>':'—')}</td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:4px 8px" onclick="verFicha(${i})">Ver ficha</button><button class="btn-p" style="padding:4px 8px" onclick="abrirConfirmarInscricao(${i})">→ Inscrever na turma</button><button class="btn-g" style="padding:4px 8px" onclick="inscParaLead(${i})">→ Interessado</button><button class="btn-o" style="padding:4px 8px" onclick="inscApagar(${i})">✕</button></td></tr>`;}).join("")||`<tr><td colspan="9" class="muted">${inscBusca?"Sem resultados para esta pesquisa.":(inscFiltro==="pag"?"Nenhuma inscrição com comprovativo anexado — vê o chip «Todas».":(inscFiltro==="int"?"Nenhuma inscrição à espera de pagamento.":"Ainda ninguém se inscreveu pela página pública."))}</td></tr>`}
+  ${listaIns.map(function(r){const i=INSCR.indexOf(r);
+   /* L146-2 — edição/turno visíveis logo na lista, sem precisar de clicar em "Ver ficha". */
+   const _edTurno=[r.edicao?esc(r.edicao)+'ª ed.':'',esc(r.periodo||''),esc(r.horario||'')].filter(Boolean).join(' · ');
+   return `<tr><td>${esc((r.quando||"").slice(0,16).replace("T"," "))}</td><td>${esc(r.nome||"")}</td><td>${esc(r.tel||"")}</td><td>${esc(r.curso||"")}${r.modalidade?'<br><span class="muted">'+esc(r.modalidade)+'</span>':''}${_edTurno?'<br><span class="muted">'+_edTurno+'</span>':''}</td><td><span class="pill ${r.tipo==='Pagamento'?'p-verde':'p-dour'}">${esc(r.tipo||"Interesse")}</span></td><td>${r.fonte?'<span class="pill p-azul">'+esc(r.fonte)+'</span>':'<span class="muted">—</span>'}</td><td>${r.valorPago?kz(r.valorPago):'—'}</td><td>${r.comprovativo?`<button class="btn-o" style="padding:3px 9px" onclick="verComp(${i})">Ver</button>`:(r.viaWhatsapp?'<span class="muted">via WhatsApp</span>':'—')}</td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:4px 8px" onclick="verFicha(${i})">Ver ficha</button><button class="btn-p" style="padding:4px 8px" onclick="abrirConfirmarInscricao(${i})">→ Inscrever na turma</button><button class="btn-g" style="padding:4px 8px" onclick="inscParaLead(${i})">→ Interessado</button><button class="btn-o" style="padding:4px 8px" onclick="inscApagar(${i})">✕</button></td></tr>`;}).join("")||`<tr><td colspan="9" class="muted">${inscBusca?"Sem resultados para esta pesquisa.":(inscFiltro==="pag"?"Nenhuma inscrição com comprovativo anexado — vê o chip «Todas».":(inscFiltro==="int"?"Nenhuma inscrição à espera de pagamento.":"Ainda ninguém se inscreveu pela página pública."))}</td></tr>`}
   </tbody></table></div>`;}
 function verComp(i){_inscModal=i;_inscModalModo="comp";render();}
 function verFicha(i){_inscModal=i;_inscModalModo="ficha";render();}
