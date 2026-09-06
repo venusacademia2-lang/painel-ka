@@ -528,7 +528,15 @@ function _estadoGravacao(txt,cor,fixo){
  if(el._t)clearTimeout(el._t);
  if(!fixo)el._t=setTimeout(function(){el.style.opacity="0";},1800);
 }
-function persistFB(){if(_saveT)clearTimeout(_saveT);_estadoGravacao("A gravar…","#8a6200",true);_saveT=setTimeout(function(){_saveT=null;try{var str=JSON.stringify(data);_lastRemote=str;_fbRef.set(str).then(function(){_estadoGravacao("Gravado ✓","#1e7d34",false);try{_aplicarRemotoPendente();}catch(e){}}).catch(function(){_estadoGravacao("⚠ NÃO gravou — sem internet. Tenta de novo.","#b3261e",true);sysAlerta("Falha ao gravar na nuvem — verifica a internet e tenta de novo.");});}catch(e){_estadoGravacao("⚠ NÃO gravou — erro no sistema.","#b3261e",true);sysAlerta("Falha ao preparar a gravação dos dados.");}},600);}
+function persistFB(){if(_saveT)clearTimeout(_saveT);_estadoGravacao("A gravar…","#8a6200",true);_saveT=setTimeout(function(){_saveT=null;try{
+ /* L148-1: antes de escrever, se houver uma versão remota em espera (chegou enquanto um campo
+    estava aberto), traz-se primeiro o que ela ACRESCENTOU — senão esta gravação, feita com os
+    dados locais apenas, apagava-o da nuvem (ver nota grande junto a _remotePendente). */
+ if(_remotePendente!=null){
+  try{var baseD=_remotePendenteBase?JSON.parse(_remotePendenteBase):null;var remD=JSON.parse(_remotePendente);_aplicarAdicoesRemotas(baseD,remD);}catch(e){}
+  _lastRemote=_remotePendente;_remotePendente=null;_remotePendenteBase=null;
+ }
+ var str=JSON.stringify(data);_lastRemote=str;_fbRef.set(str).then(function(){_estadoGravacao("Gravado ✓","#1e7d34",false);try{_aplicarRemotoPendente();}catch(e){}}).catch(function(){_estadoGravacao("⚠ NÃO gravou — sem internet. Tenta de novo.","#b3261e",true);sysAlerta("Falha ao gravar na nuvem — verifica a internet e tenta de novo.");});}catch(e){_estadoGravacao("⚠ NÃO gravou — erro no sistema.","#b3261e",true);sysAlerta("Falha ao preparar a gravação dos dados.");}},600);}
 /* Leads captados no catálogo público (clique em "falar no WhatsApp"). O catálogo grava em publico/leadsCatalogo;
    aqui trazemos cada um para data.leads com canal="Catálogo", para dar para identificar e filtrar a origem. */
 let _catLeadsWatching=false;
@@ -580,6 +588,37 @@ function _dedupTodosPds(){var mudou=false;(data.online||[]).forEach(function(o){
    utilizador larga o campo e não há gravação a caminho. Nada se perde.
 ------------------------------------------------------------------------------------------ */
 var _remotePendente=null;var _remoteTimer=null;var _remotePendenteBase=null;
+/* ------------------------------------------------------------------------------------------
+   L148-1 — CAUSA RAIZ ainda por resolver de "fiz um registo e depois não o encontro": duas
+   pessoas a gravar quase ao mesmo tempo, uma delas com um campo aberto (a escrever) durante mais
+   de 2 segundos — tempo normal para preencher um formulário. A gravação da colega ficava em
+   espera (_remotePendente, ver L124/L131 acima). Mas se a primeira pessoa acabasse de gravar o
+   SEU próprio registo antes do temporizador aplicar essa espera, duas coisas erradas aconteciam:
+     1) persistFB() escrevia na nuvem só com os dados locais — sem incluir nada do que a colega
+        tinha acrescentado entretanto — apagando-o de facto da nuvem.
+     2) a verificação seguinte (L131) via que os dados locais tinham mudado (o próprio registo
+        novo) e descartava a espera como "desactualizada" — o registo da colega perdia-se para
+        sempre, mesmo não havendo qualquer conflito real (eram dois registos diferentes).
+   Correcção: em vez de tudo-ou-nada, comparamos a versão em espera com a base guardada no
+   momento em que ficou em espera, e trazemos para os dados locais só o que foi ACRESCENTADO
+   nas listas (formandos, pagamentos, chamadas, etc.) — nunca se perde um registo novo só por
+   haver, ao mesmo tempo, outro registo novo de outra pessoa. */
+var _LISTAS_ADITIVAS=["formandos","pagamentos","leads","chamadas","certificados","presencas","online","comunicados","notas","transferencias","b2b","indicacoes","tarefasGerais","tarefasEspecificas","tarefasFeitasDia","historicoGestoraFormacao","compsLog","arquivoPessoas","projectos","apagados"];
+function _idItem(x){try{if(x&&typeof x==="object"&&x.cod)return "cod:"+x.cod;return JSON.stringify(x);}catch(e){return String(x);}}
+function _aplicarAdicoesRemotas(baseData,remoteData){
+ if(!baseData||!remoteData)return false;
+ var mudou=false;
+ _LISTAS_ADITIVAS.forEach(function(k){
+  var baseArr=Array.isArray(baseData[k])?baseData[k]:[];
+  var remArr=Array.isArray(remoteData[k])?remoteData[k]:[];
+  if(!remArr.length)return;
+  var baseIds={};baseArr.forEach(function(x){baseIds[_idItem(x)]=true;});
+  var localArr=Array.isArray(data[k])?data[k]:(data[k]=[]);
+  var localIds={};localArr.forEach(function(x){localIds[_idItem(x)]=true;});
+  remArr.forEach(function(x){var id=_idItem(x);if(baseIds[id])return;if(localIds[id])return;localArr.push(x);localIds[id]=true;mudou=true;});
+ });
+ return mudou;
+}
 function _podeAplicarRemoto(){
  var ae=document.activeElement;
  if(ae&&/^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName||""))return false;
@@ -611,8 +650,16 @@ function _aplicarRemotoPendente(){
  if(_remotePendente==null)return;
  if(!_podeAplicarRemoto())return;
  var str=_remotePendente,base=_remotePendenteBase;_remotePendente=null;_remotePendenteBase=null;
- if(base!==null&&base!==JSON.stringify(data))return;
  _lastRemote=str;
+ if(base!==null&&base!==JSON.stringify(data)){
+  /* L148-1: os dados locais mudaram entretanto (ex.: um registo novo, feito enquanto isto estava
+     em espera) — já não dá para substituir tudo sem perder essa mudança, mas continua a dar para
+     trazer o que a outra pessoa ACRESCENTOU, comparando com a base guardada quando ficou em espera
+     (ver nota acima de _remotePendente). Nunca se descarta um registo novo só por, ao mesmo tempo,
+     haver aqui também um registo novo doutra pessoa. */
+  try{var baseD=JSON.parse(base),remD=JSON.parse(str);if(_aplicarAdicoesRemotas(baseD,remD))render();}catch(e){}
+  return;
+ }
  if(str===JSON.stringify(data))return;
  try{var d2=JSON.parse(str);data=d2;_viaMergeRemoto=true;try{ensure();}finally{_viaMergeRemoto=false;}render();}catch(e){}
 }
@@ -1308,7 +1355,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.74";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.76";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -8147,9 +8194,12 @@ function vExportar(){var opts=TEAM_ABAS.filter(function(id){return id!=="exporta
  ${opts.map(function(id){return '<tr><td>'+esc(PAGES[id][0])+'</td><td class="flex" style="gap:6px"><button class="btn-o" style="padding:4px 10px" onclick="exportarPagina(\''+id+'\',\'csv\')">⤓ Excel</button><button class="btn-o" style="padding:4px 10px" onclick="exportarPagina(\''+id+'\',\'pdf\')">⤓ PDF</button></td></tr>';}).join("")}
  </tbody></table>
  <div class="muted" style="margin-top:12px">Para exportar tudo de uma vez (todas as listas num só Excel) ou fazer uma cópia de segurança completa, usa a aba <a href="#" onclick="show('dados');return false" style="color:var(--azul2);text-decoration:underline">Importar / Exportar</a>.</div></div>`;}
+/* L147-1: faltava aqui o BOM UTF-8 ("﻿" no início do ficheiro) que já é usado noutros exports
+   (ex.: exportarVista) — sem ele, o Excel adivinha a codificação errada ao abrir o CSV e troca
+   acentos por símbolos (ex.: "João" vira "JoÃ£o"). Com o BOM, o Excel abre sempre em UTF-8. */
 function exportCSV(tipo){const rows=data[tipo];if(!rows.length){toast("Nada para exportar");return}const keys=Object.keys(rows[0]);
  const csv=[keys.join(",")].concat(rows.map(r=>keys.map(k=>`"${String(r[k]==null?"":r[k]).replace(/"/g,'""')}"`).join(","))).join("\n");
- const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download=tipo+"-KA.csv";a.click();toast("Exportado "+tipo);}
+ const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8"}));a.download=tipo+"-KA.csv";a.click();toast("Exportado "+tipo);}
 function importCSV(){const txt=val("imp").trim();if(!txt){toast("Cola os dados primeiro");return}const tipo=val("imptipo");const lines=txt.split(/\r?\n/);const keys=lines[0].split(",").map(s=>s.trim().replace(/^"|"$/g,""));
  const out=lines.slice(1).filter(l=>l.trim()).map(l=>{const cells=parseLine(l);const o={};keys.forEach((k,i)=>o[k]=(cells[i]||"").trim());return o});if(!out.length){toast("Sem linhas");return}
  data[tipo]=out;persist();toast("Importado "+out.length+" registos");show(tipo);}
