@@ -1308,7 +1308,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.72";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.73";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -6971,11 +6971,25 @@ function vPresencial(){var q=presQ.toLowerCase(),qd=q.replace(/\D/g,"");
     "Inscritos" logo abaixo (turnoOcupacaoHTML → inscritosDe), senão os dois números divergem sempre que houver
     pesquisa/filtro de turno activo (a tabela de alunos fica mais curta, mas a ocupação real da turma não muda).
     Por isso guardamos aqui o total REAL (sem filtro) à parte da lista filtrada que aparece na tabela. */
- var blocos=turmasP.map(function(t){var alsTotal=data.formandos.filter(function(f){return f.turma===t.cod&&f.estado!=="Transferido p/ Online";});var als=alsTotal;if(presTurno)als=als.filter(function(f){return (f.horario||f.turno||"")===presTurno;});if(q)als=als.filter(function(f){return (f.nome||"").toLowerCase().includes(q)||(qd&&(f.tel||"").replace(/\D/g,"").includes(qd));});return {t:t,als:als,totalReal:alsTotal.length};}).filter(function(x){return (!q&&!presTurno)||x.als.length;});
+ /* L145-1: resumo por edição (Turmas Presenciais) — total/pagos/não-pagos têm de bater sempre com
+    alsTotal (a contagem-base "real", sem filtro de turno/pesquisa), nunca com a lista filtrada
+    "als" que a tabela mostra — senão o resumo muda sozinho ao pesquisar, o que o Ventura chamou de
+    "contagem verídica". "Não pago" = quem pagou exactamente 0 Kz (p.pago||0===0), não dívida
+    parcial. Pendentes da landing usa turmaAutoPara(r) — a MESMA função que já resolve a turma de
+    uma inscrição pendente no ecrã "Confirmar Inscrição" — para nunca divergir do que "Confirmar
+    inscrição" mostraria para essa mesma pessoa. */
+ var blocos=turmasP.map(function(t){var alsTotal=data.formandos.filter(function(f){return f.turma===t.cod&&f.estado!=="Transferido p/ Online";});var als=alsTotal;if(presTurno)als=als.filter(function(f){return (f.horario||f.turno||"")===presTurno;});if(q)als=als.filter(function(f){return (f.nome||"").toLowerCase().includes(q)||(qd&&(f.tel||"").replace(/\D/g,"").includes(qd));});
+  var pagosReal=alsTotal.filter(function(f){var p=payOf(f.cod);return (+((p&&p.pago)||0))>0;}).length;
+  var naoPagosReal=alsTotal.length-pagosReal;
+  var pendReal=inscricoesPendentesDaTurma(t).length;
+  return {t:t,als:als,totalReal:alsTotal.length,pagosReal:pagosReal,naoPagosReal:naoPagosReal,pendReal:pendReal};}).filter(function(x){return (!q&&!presTurno)||x.als.length;});
  return `${pdsPickerFHTML()}${transferParaOnlineModalHTML()}${transferAlunoModalHTML()}<div class="sec"><h2>Turmas presenciais</h2><div class="muted">Pesquisa por nome ou número e gera os cards da turma.</div>
   <div class="flex" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><input id="q_pres" class="search" style="margin:0" placeholder="Procurar por nome ou nº…" value="${esc(presQ)}" oninput="presQ=this.value;refocusSearch('q_pres');renderDebounced()"><select onchange="presTurno=this.value;render()" style="width:auto">${turnoOptsHTML(presTurno,presEds.length===1?presEds[0]:null)}</select></div>
   ${presSeletorHTML()}</div>
-  ${blocos.map(function(x){var t=x.t;return '<div class="sec"><div class="flex" style="flex-wrap:wrap;gap:8px"><div><h2 style="margin:0">'+esc(t.ed)+'ª Edição — '+esc(t.curso||"")+'</h2><div class="muted">Formador: '+esc(t.resp||"—")+' · '+x.totalReal+' aluno(s) no total'+(x.als.length!==x.totalReal?' <span class="pill p-cinza" title="Pesquisa ou filtro de turno activo — a lista abaixo não mostra todos">(a mostrar '+x.als.length+')</span>':'')+'</div></div><div class="spacer"></div><button class="btn-o" onclick="gerarCards(\''+esc(t.cod)+'\')" title="Só quem já pagou">🖨 Cards</button><button class="btn-o" onclick="gerarCardsTodos(\''+esc(t.cod)+'\')" title="Inclui também quem ainda não pagou — pede código da Gestão">🖨 Cards (todos)</button>'+(podeExportar()?'<button class="btn-o" onclick="exportTurma(\''+esc(t.cod)+'\')">Exportar</button>':'')+'</div>'+acompanhamentoTurmaHTML(t)+turnoOcupacaoHTML(t)+'<table style="margin-top:8px"><thead><tr><th class="stickyhead">Nome</th><th class="stickyhead">Telefone</th><th class="stickyhead">Turno</th><th class="stickyhead">Pagamento</th><th class="stickyhead"></th></tr></thead><tbody>'+x.als.map(function(f){var p=payOf(f.cod);var d=p?divida(p):0;return '<tr><td>'+esc(f.nome)+'</td><td>'+esc(f.tel||"")+'</td><td>'+esc(f.horario||f.turno||"—")+'</td><td>'+(d>0?'<span class="pill p-verm">Deve '+kz(d)+'</span>':'<span class="pill p-verde">Pago</span>')+'</td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:3px 9px" onclick="fFicha=\''+esc(f.cod)+'\';show(\'formandos\')">Ficha</button>'+((role==="admin"||podeEditar())?'<button class="btn-o" style="padding:3px 9px" onclick="transferAluno(\''+esc(f.cod)+'\')">Transferir</button><button class="btn-o" style="padding:3px 9px" onclick="agendarPdsF(\''+esc(f.cod)+'\')">Marcar PDS</button><button class="btn-o" style="padding:3px 9px" onclick="abrirTransferParaOnline(\''+esc(f.cod)+'\')">→ Online</button>':'')+((d>0&&podeEditar())?'<button class="btn-o" style="padding:3px 9px" onclick="irPagar(\''+esc(f.cod)+'\')">Pagar</button>':'')+'<button class="btn-g" style="padding:3px 9px" onclick="setChamada(\''+esc(f.nome)+'\',\''+esc(f.tel||"")+'\',\'Formando\')">☎</button>'+rowActs('formandos',data.formandos.indexOf(f))+'</td></tr>';}).join("")+'</tbody></table></div>';}).join("")||'<div class="sec"><div class="muted">Sem turmas presenciais'+(q?' com esse nome/nº':'')+'.</div></div>'}`;}
+  ${blocos.map(function(x){var t=x.t;return '<div class="sec"><div class="flex" style="flex-wrap:wrap;gap:8px"><div><h2 style="margin:0">'+esc(t.ed)+'ª Edição — '+esc(t.curso||"")+'</h2><div class="muted">Formador: '+esc(t.resp||"—")+' · '+x.totalReal+' aluno(s) no total'+(x.als.length!==x.totalReal?' <span class="pill p-cinza" title="Pesquisa ou filtro de turno activo — a lista abaixo não mostra todos">(a mostrar '+x.als.length+')</span>':'')+'</div></div><div class="spacer"></div><button class="btn-o" onclick="gerarCards(\''+esc(t.cod)+'\')" title="Só quem já pagou">🖨 Cards</button><button class="btn-o" onclick="gerarCardsTodos(\''+esc(t.cod)+'\')" title="Inclui também quem ainda não pagou — pede código da Gestão">🖨 Cards (todos)</button>'+(podeExportar()?'<button class="btn-o" onclick="exportTurma(\''+esc(t.cod)+'\')">Exportar</button>':'')+'</div>'
+   +'<div class="flex" style="gap:8px;flex-wrap:wrap;margin:8px 0"><span class="pill p-azul">'+x.totalReal+' aluno(s) no total</span><span class="pill p-verde">'+x.pagosReal+' pago(s)</span><span class="pill p-verm">'+x.naoPagosReal+' não pago(s)</span></div>'
+   +(x.pendReal?('<div class="note" style="background:#fff4e5;border-color:#f0c987;color:#7a4b06;margin:0 0 8px">⚠ <b>'+x.pendReal+'</b> pessoa(s) já se inscreveu'+(x.pendReal===1?'':'ram')+' pela página de inscrição para esta edição e ainda não '+(x.pendReal===1?'foi confirmada':'foram confirmadas')+' numa turma. <button class="btn-o" style="padding:3px 9px;margin-left:6px" onclick="show(\'inscricoes\')">Ver inscrições</button></div>'):'')
+   +acompanhamentoTurmaHTML(t)+turnoOcupacaoHTML(t)+'<table style="margin-top:8px"><thead><tr><th class="stickyhead">Nome</th><th class="stickyhead">Telefone</th><th class="stickyhead">Turno</th><th class="stickyhead">Pagamento</th><th class="stickyhead"></th></tr></thead><tbody>'+x.als.map(function(f){var p=payOf(f.cod);var d=p?divida(p):0;return '<tr><td>'+esc(f.nome)+'</td><td>'+esc(f.tel||"")+'</td><td>'+esc(f.horario||f.turno||"—")+'</td><td>'+(d>0?'<span class="pill p-verm">Deve '+kz(d)+'</span>':'<span class="pill p-verde">Pago</span>')+'</td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:3px 9px" onclick="fFicha=\''+esc(f.cod)+'\';show(\'formandos\')">Ficha</button>'+((role==="admin"||podeEditar())?'<button class="btn-o" style="padding:3px 9px" onclick="transferAluno(\''+esc(f.cod)+'\')">Transferir</button><button class="btn-o" style="padding:3px 9px" onclick="agendarPdsF(\''+esc(f.cod)+'\')">Marcar PDS</button><button class="btn-o" style="padding:3px 9px" onclick="abrirTransferParaOnline(\''+esc(f.cod)+'\')">→ Online</button>':'')+((d>0&&podeEditar())?'<button class="btn-o" style="padding:3px 9px" onclick="irPagar(\''+esc(f.cod)+'\')">Pagar</button>':'')+'<button class="btn-g" style="padding:3px 9px" onclick="setChamada(\''+esc(f.nome)+'\',\''+esc(f.tel||"")+'\',\'Formando\')">☎</button>'+rowActs('formandos',data.formandos.indexOf(f))+'</td></tr>';}).join("")+'</tbody></table></div>';}).join("")||'<div class="sec"><div class="muted">Sem turmas presenciais'+(q?' com esse nome/nº':'')+'.</div></div>'}`;}
 /* COMPROVATIVO */
 function vComprovativo(){return `<div class="sec noprint"><h2>Comprovativo de inscrição</h2><div class="muted">Pesquisa o formando por nome ou telefone, confirma os dados e exporta em PDF. O texto de WhatsApp já vem pronto (o PDF anexas tu na partilha).</div>
   <div class="formgrid">
@@ -7119,6 +7133,22 @@ function inscricoesPendentesParaBusca(q,dq){
   if(!bate)return false;
   var nt=normTel(r.tel);if(!nt)return false;
   if((data.formandos||[]).some(function(f){return normTel(f.tel)===nt;}))return false;
+  return true;
+ }).sort(function(a,b){return (b.r.quando||"").localeCompare(a.r.quando||"");})
+  .filter(function(x){var nt=normTel(x.r.tel);if(vistos[nt])return false;vistos[nt]=true;return true;});
+}
+/* L145-1: mesma lógica de inscricoesPendentesParaBusca, mas para UMA turma/edição específica (usada
+   no resumo de Turmas Presenciais). Reaproveita turmaAutoPara(r) — a função que já decide para que
+   turma uma inscrição pendente da landing aponta (usada em "Confirmar Inscrição") — para o alerta
+   nunca contradizer o que aparece nesse ecrã para a mesma pessoa. */
+function inscricoesPendentesDaTurma(t){
+ if(!Array.isArray(INSCR)||!INSCR.length||!t)return[];
+ var vistos={};
+ return INSCR.map(function(r,i){return {r:r,i:i};}).filter(function(x){
+  var r=x.r;if(!r.tel)return false;
+  var nt=normTel(r.tel);if(!nt)return false;
+  if((data.formandos||[]).some(function(f){return normTel(f.tel)===nt;}))return false;
+  if(turmaAutoPara(r)!==t.cod)return false;
   return true;
  }).sort(function(a,b){return (b.r.quando||"").localeCompare(a.r.quando||"");})
   .filter(function(x){var nt=normTel(x.r.tel);if(vistos[nt])return false;vistos[nt]=true;return true;});
