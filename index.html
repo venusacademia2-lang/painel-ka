@@ -1131,7 +1131,11 @@ function syncPagOnline(o){const cod=ensureOnlineCod(o);const val=+o.valorPago||0
  if(cupomCod){p.total=total;p.cupom=cupomCod;}
  _ajustarPago(p,val,val);}
 let _rowEdit=null;
-const EDIT_LABELS={nome:"Nome",tel:"Telefone",contacto:"Contacto",email:"E-mail",curso:"Curso",area:"Área de formação/trabalho",canal:"Canal",estado:"Estado",resp:"Responsável",notas:"Notas",nivel:"Nível",fase:"Fase",formador:"Formador",inicio:"Data de início",valorPago:"Valor pago (Kz)",vendedor:"Responsável",turma:"Turma",data:"Data",tipo:"Tipo",resultado:"Resultado",seguimento:"Seguimento",horaPedida:"Hora pedida para contacto",msg:"Mensagem",usaPC:"Usa PC",cupom:"Código promocional",morada:"Morada"};
+const EDIT_LABELS={nome:"Nome",tel:"Telefone",contacto:"Contacto",email:"E-mail",curso:"Curso",area:"Área de formação/trabalho",canal:"Como chegou",estado:"Estado",resp:"Responsável",notas:"Notas",nivel:"Nível",fase:"Fase",formador:"Formador",inicio:"Data de início",valorPago:"Valor pago (Kz)",vendedor:"Responsável",turma:"Turma",data:"Data",tipo:"Tipo",resultado:"Resultado",seguimento:"Seguimento",horaPedida:"Hora pedida para contacto",msg:"Mensagem",usaPC:"Usa computador da academia?",cupom:"Código promocional",morada:"Morada",proximoCurso:"Próximo curso que pretende fazer"};
+/* L153: estados válidos de um formando presencial — usados para o dropdown de Estado em "Editar registo".
+   Transferido p/ Online normalmente resulta do fluxo próprio (Passar para turma online), mas fica aqui como
+   opção porque o campo já era editável livremente antes (agora só passa a ser um valor fechado, mais seguro). */
+const FORMANDO_ESTADOS=["Activo","Concluído","Transferido p/ Online"];
 const EDIT_SKIP=["cod","prazo","pdsFeitos","ultimoPDS","proximoPDS","proximoHora","recorrente","tarefa","avaliacao","status","avals","prestacoes","ultimoMov","comprovativo","total","pago","dataPrometida","plano"];
 function editRow(arr,i){_rowEdit={arr:arr,i:i};render();}
 function fecharRowEdit(){_rowEdit=null;render();}
@@ -1143,9 +1147,19 @@ function turnosDropdownOptions(turmaCod,sel){
  if(Array.isArray(t.turnos)&&t.turnos.length)return t.turnos.map(function(tn){return '<option value="'+esc(tn.horario)+'" '+(tn.horario===sel?"selected":"")+'>'+esc(tn.horario)+'</option>';}).join("");
  const h=t.horario||"—";return '<option value="'+esc(h)+'" selected>'+esc(h)+'</option>';
 }
+/* L153 — "Editar registo": Curso e Turma nunca podem voltar a divergir (foi a causa do bug corrigido em
+   L152 — Nelson/Onésia com curso diferente da turma). Mudar o Curso salta a Turma para uma edição desse
+   curso (se existir); mudar directamente a Turma sincroniza o Curso de volta — sincronização nos dois
+   sentidos, sem filtrar a lista de turmas (continuam todas visíveis, para escolher a edição certa). */
+function reOnCursoChange(){const selC=document.getElementById('re_curso');const selT=document.getElementById('re_turma');if(!selC||!selT)return;
+ const curso=selC.value;const actual=turmaByCod(selT.value);
+ if(!actual||(actual.curso||"")!==curso){const alvo=data.turmas.find(function(t){return (t.curso||"")===curso;});if(alvo)selT.value=alvo.cod;}
+ reOnTurmaChange();}
 /* Quando muda a turma no "Editar registo", refaz a lista de turnos dessa turma; quando muda o turno,
    preenche automaticamente período/gestora/formador com os dessa turma/turno (D1: confirmado pelo Ventura). */
-function reOnTurmaChange(){const selT=document.getElementById('re_turma');const selH=document.getElementById('re_horario');if(!selT||!selH)return;selH.innerHTML=turnosDropdownOptions(selT.value,"");reOnHorarioChange();}
+function reOnTurmaChange(){const selT=document.getElementById('re_turma');const selH=document.getElementById('re_horario');if(!selT||!selH)return;selH.innerHTML=turnosDropdownOptions(selT.value,"");
+ const selC=document.getElementById('re_curso');if(selC){const t=turmaByCod(selT.value);if(t&&t.curso)selC.value=t.curso;}
+ reOnHorarioChange();}
 function reOnHorarioChange(){const selT=document.getElementById('re_turma');const selH=document.getElementById('re_horario');if(!selT||!selH)return;const t=turmaByCod(selT.value);if(!t)return;
  const tn=Array.isArray(t.turnos)?t.turnos.find(function(x){return x.horario===selH.value;}):null;
  const info={periodo:tn?(tn.tipo==="semana"?"Dias de semana":"Sábados"):"",gestora:(tn&&tn.gestora)||t.gestora||"",formador:(tn&&tn.formador)||t.resp||""};
@@ -1164,6 +1178,19 @@ function rowEditModalHTML(){if(!_rowEdit)return"";const o=(data[_rowEdit.arr]||[
     depois de a formação já ter começado, como pedido pelo Ventura. */
  if((isForm||_rowEdit.arr==="online")&&keys.indexOf("morada")<0)keys.push("morada");
  const campos=keys.map(function(k){
+  /* L153: campos fechados do sistema passam a dropdown em vez de texto livre — as opções vêm sempre
+     da própria lista já usada noutros sítios do painel (cursos, turmas, canais…), nunca escritas à mão
+     aqui. Se o valor já gravado não constar da lista actual (curso oculto, canal antigo, etc.), acrescenta-se
+     essa opção extra e seleccionada, para não trocar silenciosamente o valor só por abrir o formulário. */
+  if(isForm&&k==="curso"){const lst=cursosLista();const extra=(o.curso&&lst.indexOf(o.curso)<0)?'<option value="'+esc(o.curso)+'" selected>'+esc(o.curso)+' (fora da lista actual)</option>':"";
+   return '<div style="margin-bottom:8px"><label>'+esc(EDIT_LABELS[k]||k)+'</label><select class="re_f" data-k="curso" id="re_curso" onchange="reOnCursoChange()">'+extra+lst.map(function(c){return '<option value="'+esc(c)+'" '+(c===o.curso?"selected":"")+'>'+esc(c)+'</option>';}).join("")+'</select></div>';}
+  if(isForm&&k==="proximoCurso"){const lst=cursosLista();const extra=(o.proximoCurso&&lst.indexOf(o.proximoCurso)<0)?'<option value="'+esc(o.proximoCurso)+'" selected>'+esc(o.proximoCurso)+'</option>':"";
+   return '<div style="margin-bottom:8px"><label>'+esc(EDIT_LABELS[k]||k)+'</label><select class="re_f" data-k="proximoCurso"><option value="" '+(!o.proximoCurso?"selected":"")+'>— sem indicação —</option>'+extra+lst.map(function(c){return '<option value="'+esc(c)+'" '+(c===o.proximoCurso?"selected":"")+'>'+esc(c)+'</option>';}).join("")+'</select></div>';}
+  if(isForm&&k==="usaPC")return '<div style="margin-bottom:8px"><label>'+esc(EDIT_LABELS[k]||k)+'</label><select class="re_f" data-k="usaPC"><option value="Não" '+(o.usaPC!=="Sim"?"selected":"")+'>Não</option><option value="Sim" '+(o.usaPC==="Sim"?"selected":"")+'>Sim</option></select></div>';
+  if(isForm&&k==="canal"){const lst=canaisDisponiveis();const extra=(o.canal&&lst.indexOf(o.canal)<0)?'<option value="'+esc(o.canal)+'" selected>'+esc(o.canal)+'</option>':"";
+   return '<div style="margin-bottom:8px"><label>'+esc(EDIT_LABELS[k]||k)+'</label><select class="re_f" data-k="canal">'+extra+lst.map(function(c){return '<option value="'+esc(c)+'" '+(c===o.canal?"selected":"")+'>'+esc(c)+'</option>';}).join("")+'</select></div>';}
+  if(isForm&&k==="estado"){const extra=(o.estado&&FORMANDO_ESTADOS.indexOf(o.estado)<0)?'<option value="'+esc(o.estado)+'" selected>'+esc(o.estado)+'</option>':"";
+   return '<div style="margin-bottom:8px"><label>'+esc(EDIT_LABELS[k]||k)+'</label><select class="re_f" data-k="estado">'+extra+FORMANDO_ESTADOS.map(function(e){return '<option value="'+esc(e)+'" '+(e===o.estado?"selected":"")+'>'+esc(e)+'</option>';}).join("")+'</select></div>';}
   if(isForm&&k==="turma")return '<div style="margin-bottom:8px"><label>'+esc(EDIT_LABELS[k]||k)+'</label><select class="re_f" data-k="turma" id="re_turma" onchange="reOnTurmaChange()"><option value="">— sem turma —</option>'+data.turmas.map(function(t){return '<option value="'+esc(t.cod)+'" '+(t.cod===o.turma?"selected":"")+'>'+esc(t.ed)+'ª Ed. — '+esc(t.curso||"")+'</option>';}).join("")+'</select></div>';
   if(isForm&&k==="horario")return '<div style="margin-bottom:8px"><label>'+esc(EDIT_LABELS[k]||k)+' (turno)</label><select class="re_f" data-k="horario" id="re_horario" onchange="reOnHorarioChange()">'+turnosDropdownOptions(o.turma,o.horario)+'</select></div>';
   if((isForm||_rowEdit.arr==="online")&&k==="vendedor"){
@@ -1391,7 +1418,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.80";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.81";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
