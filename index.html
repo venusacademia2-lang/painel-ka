@@ -1391,7 +1391,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.78";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.80";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -7012,7 +7012,8 @@ function feedbackModalHTML(){if(!feedbackAlvo)return"";var t=turmaByCod(feedback
   </div></div>`;}
 
 /* TURMAS PRESENCIAIS */
-let presQ="",presEds=null,presTurno="";
+let presQ="",presEds=null,presTurno="",presFriso="turmas";
+function _setPresFriso(id){presFriso=id;render();}
 /* L71-1: presEds=null significa "por inicializar" — na primeira vez que a página é aberta
    calcula-se um valor por omissão (para Gestora de Formação: as turmas dela em andamento);
    depois disso fica sempre um array (mesmo vazio) e nunca mais se recalcula sozinho, para não
@@ -7081,6 +7082,49 @@ function acompanhamentoTurmaHTML(t){
   ${conteudo}
   </div>`;
 }
+/* L152-1: detecta formandos cujos dados (curso ou turno) já não batem com a turma onde estão —
+   a mesma família de bug do Nelson/Onésia/Cleusia (Ed2-EXC): curso trocado, ou horário gravado
+   como texto livre diferente do turno oficial da turma. Correcção é sempre inequívoca (curso vira
+   sempre o da turma; turno só se a turma tiver um único turno definido — com mais de um não dá
+   para adivinhar qual). Ao contrário da colisão de código de turma (essa sim reparada sozinha no
+   arranque, por ser mais rara e mais óbvia), esta precisa de um botão — o Ventura pediu para
+   autorizar antes de qualquer alteração em massa a dados de alunos. */
+let _divergModal=false;
+function turmaDivergencias(){
+ var out=[];
+ data.formandos.forEach(function(f){
+  var t=turmaByCod(f.turma);if(!t||f.estado==="Transferido p/ Online")return;
+  var probs=[];
+  if(f.curso&&t.curso&&f.curso!==t.curso)probs.push({tipo:"curso",de:f.curso,para:t.curso});
+  if(Array.isArray(t.turnos)&&t.turnos.length===1&&t.turnos[0].horario){
+   var h=t.turnos[0].horario,atual=f.horario||f.turno||"";
+   if(atual!==h)probs.push({tipo:"turno",de:atual||"(vazio)",para:h});
+  }
+  if(probs.length)out.push({f:f,t:t,probs:probs});
+ });
+ return out;
+}
+function abrirDivergModal(){_divergModal=true;render();}
+function fecharDivergModal(){_divergModal=false;render();}
+function corrigirDivergencias(){
+ var lista=turmaDivergencias();var nCampos=0;
+ lista.forEach(function(d){d.probs.forEach(function(p){if(p.tipo==="curso")d.f.curso=p.para;if(p.tipo==="turno")d.f.horario=p.para;nCampos++;});});
+ persist();toast("Corrigido: "+nCampos+" campo(s) em "+lista.length+" aluno(s)");_divergModal=false;render();
+}
+function divergNotaHTML(){
+ var lista=turmaDivergencias();if(!lista.length)return"";
+ return '<div class="note" style="background:#fff4e5;border-color:#f0c987;color:#7a4b06;margin:8px 0">⚠ <b>'+lista.length+'</b> aluno(s) com curso ou turno desactualizado face à turma onde estão. <button class="btn-o" style="padding:3px 9px;margin-left:6px" onclick="abrirDivergModal()">Ver e corrigir</button></div>';
+}
+function divergModalHTML(){
+ if(!_divergModal)return"";
+ var lista=turmaDivergencias();
+ return '<div class="modal-bg" onclick="if(event.target===this)fecharDivergModal()"><div class="modal" style="max-width:640px"><h3>Corrigir dados desactualizados</h3><div class="muted" style="margin-bottom:10px">Estes alunos têm curso ou turno gravados diferentes da turma onde estão. A correcção substitui sempre pelo valor da própria turma.</div>'
+  +'<table><thead><tr><th class="stickyhead">Aluno</th><th class="stickyhead">Turma</th><th class="stickyhead">Campo</th><th class="stickyhead">De</th><th class="stickyhead">Para</th></tr></thead><tbody>'
+  +lista.map(function(d){return d.probs.map(function(p){return '<tr><td>'+esc(d.f.nome)+'</td><td>'+esc(d.t.ed)+'ª — '+esc(d.t.curso||"")+'</td><td>'+(p.tipo==="curso"?"Curso":"Turno")+'</td><td class="muted">'+esc(p.de)+'</td><td><b>'+esc(p.para)+'</b></td></tr>';}).join("");}).join("")
+  +'</tbody></table>'
+  +'<div class="row-actions" style="margin-top:12px"><button class="btn-p" onclick="corrigirDivergencias()">Corrigir '+lista.length+' aluno(s)</button><button class="btn-o" onclick="fecharDivergModal()">Cancelar</button></div>'
+  +'</div></div>';
+}
 function vPresencial(){var q=presQ.toLowerCase(),qd=q.replace(/\D/g,"");
  if(presEds===null){
   var _base=turmasVisiveis().filter(function(t){return (t.modalidade||"Presencial")!=="Online";});
@@ -7122,18 +7166,29 @@ function vPresencial(){var q=presQ.toLowerCase(),qd=q.replace(/\D/g,"");
     o cabeçalho passa a ser UM SÓ, juntando os nomes das edições em vez de um cartão por edição. */
  var mostrarBlocos=presEds.length>0&&turmasP.length>0;
  var cabecalhoCombinado=turmasP.map(function(t){return esc(t.ed)+'ª Edição ('+esc(t.curso||"")+')';}).join(' + ');
- return `${pdsPickerFHTML()}${transferParaOnlineModalHTML()}${transferAlunoModalHTML()}<div class="sec"><h2>Turmas presenciais</h2><div class="muted">Pesquisa por nome ou número e gera os cards da turma.</div>
-  <div class="flex" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><input id="q_pres" class="search" style="margin:0" placeholder="Procurar por nome ou nº…" value="${esc(presQ)}" oninput="presQ=this.value;refocusSearch('q_pres');renderDebounced()"><select onchange="presTurno=this.value;render()" style="width:auto">${turnoOptsHTML(presTurno,presEds.length===1?presEds[0]:null)}</select></div>
-  ${presSeletorHTML()}</div>
-  ${mostrarBlocos?('<div class="sec"><h2 style="margin:0 0 10px">'+cabecalhoCombinado+'</h2>'
+ /* L151-1: o Ventura pediu separadores estilo Excel — "Turmas" (quem está inscrito: totais/Cards/
+    Exportar/aviso de pendentes/lista única de alunos) e "Acompanhamento das turmas" (Checklist/
+    Presenças/Avaliações + ocupação por turno) — porque misturar as duas coisas no mesmo cartão
+    era "estruturalmente desorganizado" (números de contextos diferentes lado a lado). Reaproveita
+    o mesmo padrão visual do friso já usado dentro de cada turma (acompanhamentoTurmaHTML). */
+ var frisoTopo='<div class="flex" style="gap:0;border-bottom:2px solid var(--linha);margin:10px 0 0">'
+  +[{id:"turmas",label:"Turmas"},{id:"acomp",label:"Acompanhamento das turmas"}].map(function(a){var ativo=a.id===presFriso;return '<button onclick="_setPresFriso(\''+a.id+'\')" style="border:none;background:'+(ativo?'#fff':'transparent')+';border-bottom:3px solid '+(ativo?'var(--azul)':'transparent')+';padding:9px 16px;font-size:13px;font-weight:'+(ativo?'700':'500')+';color:'+(ativo?'var(--azul)':'#666')+';cursor:pointer;border-radius:6px 6px 0 0">'+esc(a.label)+'</button>';}).join("")+'</div>';
+ var turmasTabHTML=mostrarBlocos?('<div class="sec"><h2 style="margin:0 0 10px">'+cabecalhoCombinado+'</h2>'
    +blocos.map(function(x){var t=x.t;return '<div style="border-top:1px solid var(--linha);padding-top:12px;margin-top:12px"><div class="flex" style="flex-wrap:wrap;gap:8px">'+(turmasP.length>1?'<div class="muted" style="font-weight:700">'+esc(t.ed)+'ª Edição — '+esc(t.curso||"")+'</div><div class="spacer"></div>':'<div class="muted">Formador: '+esc(t.resp||"—")+' · '+x.totalReal+' aluno(s) no total'+(x.als.length!==x.totalReal?' <span class="pill p-cinza" title="Pesquisa ou filtro de turno activo — a lista única mais abaixo não mostra todos">(a mostrar '+x.als.length+')</span>':'')+'</div><div class="spacer"></div>')+'<button class="btn-o" onclick="gerarCards(\''+esc(t.cod)+'\')" title="Só quem já pagou">🖨 Cards</button><button class="btn-o" onclick="gerarCardsTodos(\''+esc(t.cod)+'\')" title="Inclui também quem ainda não pagou — pede código da Gestão">🖨 Cards (todos)</button>'+(podeExportar()?'<button class="btn-o" onclick="exportTurma(\''+esc(t.cod)+'\')">Exportar</button>':'')+'</div>'
     +(turmasP.length>1?'<div class="muted" style="margin-top:4px">Formador: '+esc(t.resp||"—")+' · '+x.totalReal+' aluno(s) no total'+(x.als.length!==x.totalReal?' <span class="pill p-cinza">(a mostrar '+x.als.length+')</span>':'')+'</div>':'')
     +'<div class="flex" style="gap:8px;flex-wrap:wrap;margin:8px 0"><span class="pill p-azul">'+x.totalReal+' aluno(s) no total</span><span class="pill p-verde">'+x.pagosReal+' pago(s)</span><span class="pill p-verm">'+x.naoPagosReal+' não pago(s)</span></div>'
     +(x.pendReal?('<div class="note" style="background:#fff4e5;border-color:#f0c987;color:#7a4b06;margin:0 0 8px">⚠ <b>'+x.pendReal+'</b> pessoa(s) já se inscreveu'+(x.pendReal===1?'':'ram')+' pela página de inscrição para esta edição e ainda não '+(x.pendReal===1?'foi confirmada':'foram confirmadas')+' numa turma. <button class="btn-o" style="padding:3px 9px;margin-left:6px" onclick="show(\'inscricoes\')">Ver inscrições</button></div>'):'')
-    +acompanhamentoTurmaHTML(t)+turnoOcupacaoHTML(t)+'</div>';}).join("")+'</div>'):''}
-  <div class="sec"><h2>Todos os alunos${filtroActivo?' <span class="pill p-cinza" style="font-size:11px;vertical-align:middle">filtrado</span>':''}</h2><div class="muted">Uma só lista, com todas as edições — usa a pesquisa, o turno ou os chips de edição acima para reduzir.</div>
-  <div class="flex" style="gap:8px;flex-wrap:wrap;margin:8px 0"><span class="pill p-azul">${totalGeral} aluno(s) no total</span><span class="pill p-verde">${pagosGeral} pago(s)</span><span class="pill p-verm">${naoPagosGeral} não pago(s)</span></div>
-  <table style="margin-top:8px"><thead><tr><th class="stickyhead">Nome</th><th class="stickyhead">Telefone</th><th class="stickyhead">Edição</th><th class="stickyhead">Curso</th><th class="stickyhead">Turno</th><th class="stickyhead">Pagamento</th><th class="stickyhead"></th></tr></thead><tbody>${todasLinhas.map(function(x){var f=x.f,t=x.t;var p=payOf(f.cod);var d=p?divida(p):0;return '<tr><td>'+esc(f.nome)+'</td><td>'+esc(f.tel||"")+'</td><td>'+esc(t.ed||"")+'ª</td><td>'+esc(t.curso||"")+'</td><td>'+esc(f.horario||f.turno||"—")+'</td><td>'+(d>0?'<span class="pill p-verm">Deve '+kz(d)+'</span>':'<span class="pill p-verde">Pago</span>')+'</td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:3px 9px" onclick="fFicha=\''+esc(f.cod)+'\';show(\'formandos\')">Ficha</button>'+((role==="admin"||podeEditar())?'<button class="btn-o" style="padding:3px 9px" onclick="transferAluno(\''+esc(f.cod)+'\')">Transferir</button><button class="btn-o" style="padding:3px 9px" onclick="agendarPdsF(\''+esc(f.cod)+'\')">Marcar PDS</button><button class="btn-o" style="padding:3px 9px" onclick="abrirTransferParaOnline(\''+esc(f.cod)+'\')">→ Online</button>':'')+((d>0&&podeEditar())?'<button class="btn-o" style="padding:3px 9px" onclick="irPagar(\''+esc(f.cod)+'\')">Pagar</button>':'')+'<button class="btn-g" style="padding:3px 9px" onclick="setChamada(\''+esc(f.nome)+'\',\''+esc(f.tel||"")+'\',\'Formando\')">☎</button>'+rowActs('formandos',data.formandos.indexOf(f))+'</td></tr>';}).join("")||'<tr><td colspan="7" class="muted">Sem alunos'+(filtroActivo?' com este filtro.':'.')+'</td></tr>'}</tbody></table></div>`;}
+    +'</div>';}).join("")+'</div>'):'';
+ var acompTabHTML=mostrarBlocos?(blocos.map(function(x){var t=x.t;return '<div class="sec"><div class="muted" style="font-weight:700;margin-bottom:6px">'+esc(t.ed)+'ª Edição — '+esc(t.curso||"")+'</div>'+acompanhamentoTurmaHTML(t)+turnoOcupacaoHTML(t)+'</div>';}).join("")):'<div class="sec"><div class="muted">Escolhe uma ou mais edições acima (chips) para ver o Checklist, Presenças, Avaliações e ocupação por turno.</div></div>';
+ var todosAlunosHTML='<div class="sec"><h2>Todos os alunos'+(filtroActivo?' <span class="pill p-cinza" style="font-size:11px;vertical-align:middle">filtrado</span>':'')+'</h2><div class="muted">Uma só lista, com todas as edições — usa a pesquisa, o turno ou os chips de edição acima para reduzir.</div>'
+  +'<div class="flex" style="gap:8px;flex-wrap:wrap;margin:8px 0"><span class="pill p-azul">'+totalGeral+' aluno(s) no total</span><span class="pill p-verde">'+pagosGeral+' pago(s)</span><span class="pill p-verm">'+naoPagosGeral+' não pago(s)</span></div>'
+  +'<table style="margin-top:8px"><thead><tr><th class="stickyhead">Nome</th><th class="stickyhead">Telefone</th><th class="stickyhead">Edição</th><th class="stickyhead">Curso</th><th class="stickyhead">Turno</th><th class="stickyhead">Pagamento</th><th class="stickyhead"></th></tr></thead><tbody>'+(todasLinhas.map(function(x){var f=x.f,t=x.t;var p=payOf(f.cod);var d=p?divida(p):0;return '<tr><td>'+esc(f.nome)+'</td><td>'+esc(f.tel||"")+'</td><td>'+esc(t.ed||"")+'ª</td><td>'+esc(t.curso||"")+'</td><td>'+esc(f.horario||f.turno||"—")+'</td><td>'+(d>0?'<span class="pill p-verm">Deve '+kz(d)+'</span>':'<span class="pill p-verde">Pago</span>')+'</td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:3px 9px" onclick="fFicha=\''+esc(f.cod)+'\';show(\'formandos\')">Ficha</button>'+((role==="admin"||podeEditar())?'<button class="btn-o" style="padding:3px 9px" onclick="transferAluno(\''+esc(f.cod)+'\')">Transferir</button><button class="btn-o" style="padding:3px 9px" onclick="agendarPdsF(\''+esc(f.cod)+'\')">Marcar PDS</button><button class="btn-o" style="padding:3px 9px" onclick="abrirTransferParaOnline(\''+esc(f.cod)+'\')">→ Online</button>':'')+((d>0&&podeEditar())?'<button class="btn-o" style="padding:3px 9px" onclick="irPagar(\''+esc(f.cod)+'\')">Pagar</button>':'')+'<button class="btn-g" style="padding:3px 9px" onclick="setChamada(\''+esc(f.nome)+'\',\''+esc(f.tel||"")+'\',\'Formando\')">☎</button>'+rowActs('formandos',data.formandos.indexOf(f))+'</td></tr>';}).join("")||'<tr><td colspan="7" class="muted">Sem alunos'+(filtroActivo?' com este filtro.':'.')+'</td></tr>')+'</tbody></table></div>';
+ return `${pdsPickerFHTML()}${transferParaOnlineModalHTML()}${transferAlunoModalHTML()}${divergModalHTML()}<div class="sec"><h2>Turmas presenciais</h2><div class="muted">Pesquisa por nome ou número e gera os cards da turma.</div>
+  <div class="flex" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><input id="q_pres" class="search" style="margin:0" placeholder="Procurar por nome ou nº…" value="${esc(presQ)}" oninput="presQ=this.value;refocusSearch('q_pres');renderDebounced()"><select onchange="presTurno=this.value;render()" style="width:auto">${turnoOptsHTML(presTurno,presEds.length===1?presEds[0]:null)}</select></div>
+  ${presSeletorHTML()}
+  ${divergNotaHTML()}
+  ${frisoTopo}</div>
+  ${presFriso==="acomp"?acompTabHTML:(turmasTabHTML+todosAlunosHTML)}`;}
 /* COMPROVATIVO */
 function vComprovativo(){return `<div class="sec noprint"><h2>Comprovativo de inscrição</h2><div class="muted">Pesquisa o formando por nome ou telefone, confirma os dados e exporta em PDF. O texto de WhatsApp já vem pronto (o PDF anexas tu na partilha).</div>
   <div class="formgrid">
