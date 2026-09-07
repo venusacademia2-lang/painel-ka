@@ -1423,7 +1423,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.82";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.83";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -4023,10 +4023,32 @@ function confirmarTransferAluno(){const cod=transferAlunoCod;const f=data.forman
  const p=payOf(cod);const pago=p?(+p.pago||0):0;const taxa=mesmaEdicao?0:Math.round(pago*0.30);let taxaAplicada=0;
  if(taxa>0){if(role==="admin"){const z=confirm("Taxa de transferência (30% do recebido) = "+taxa.toLocaleString("de-DE")+" Kz.\n\nOK = cobrar a taxa.\nCancelar = libertar SEM custo (autorização da gestão).");taxaAplicada=z?taxa:0;}else{if(!confirm("Taxa de transferência = "+taxa.toLocaleString("de-DE")+" Kz. Confirmas que já foi PAGA? (sem pagamento, o sistema não transfere)")){toast("Transferência bloqueada: taxa por pagar.");return;}taxaAplicada=taxa;}}
  const nota=val("ta_nota")||"";
- const de=f.turma;f.turma=t.cod;if(novoHorario){f.horario=novoHorario;f.turno=novoHorario;}
+ const de=f.turma;const cursoAntigo=f.curso||((turmaByCod(de)||{}).curso)||"";const cursoNovo=t.curso||"";
+ f.turma=t.cod;if(novoHorario){f.horario=novoHorario;f.turno=novoHorario;}
+ /* L154 — a dívida tinha de continuar a fazer sentido depois de uma transferência: se o curso muda
+    (ex.: Avançado 70.000 → Zero ao Fundamental 24.500), o "Valor total" gravado ficava preso ao preço
+    do curso antigo, e a dívida mostrada deixava de bater certo com o que o aluno realmente deve. Ao
+    mudar de curso, o total recalcula-se sempre para o preço do curso novo (mantendo a % de desconto de
+    um eventual cupão já aplicado). Se o já pago ultrapassar o novo total, isso não é dívida negativa —
+    fica registado como crédito a favor do aluno, visível na Ficha (não é apagado nem devolvido sozinho). */
+ let totalAntes=null,totalDepois=null,creditoGerado=0;
+ if(p&&cursoNovo&&cursoAntigo&&cursoNovo!==cursoAntigo){
+  totalAntes=+p.total||0;
+  let descPct=0;if(p.cupom){const cp=cupomPorCodigo(p.cupom);if(cp)descPct=+cp.percentagem||0;}
+  const base=precoDe(cursoNovo)||0;
+  totalDepois=descPct?Math.round(base*(1-descPct/100)):base;
+  p.total=totalDepois;
+  f.curso=cursoNovo;
+  creditoGerado=Math.max(0,(+p.pago||0)-totalDepois);
+  if(creditoGerado>0)p.creditoTransferencia=creditoGerado;else delete p.creditoTransferencia;
+  if(divida(p)<=0)p.dataPrometida="";
+ }
  if(!Array.isArray(data.transferencias))data.transferencias=[];
- data.transferencias.unshift({cod:cod,nome:f.nome,de:de,para:t.cod,mesmaEdicao:mesmaEdicao,taxa:taxaAplicada,custoZero:(taxa>0&&taxaAplicada===0),nota:nota,por:(currentUser&&currentUser.nome)||role,quando:new Date().toISOString().slice(0,16).replace("T"," ")});
- transferAlunoCod=null;transferAlunoAnterioresOK=false;persist();toast((mesmaEdicao?"Horário actualizado na "+t.ed+"ª":"Transferido para "+t.ed+"ª")+(taxaAplicada?" · taxa "+taxaAplicada.toLocaleString("de-DE")+" Kz":""));render();}
+ data.transferencias.unshift({cod:cod,nome:f.nome,de:de,para:t.cod,mesmaEdicao:mesmaEdicao,taxa:taxaAplicada,custoZero:(taxa>0&&taxaAplicada===0),nota:nota,cursoAntes:totalAntes!==null?cursoAntigo:"",cursoDepois:totalAntes!==null?cursoNovo:"",totalAntes:totalAntes,totalDepois:totalDepois,por:(currentUser&&currentUser.nome)||role,quando:new Date().toISOString().slice(0,16).replace("T"," ")});
+ transferAlunoCod=null;transferAlunoAnterioresOK=false;persist();
+ let msg=(mesmaEdicao?"Horário actualizado na "+t.ed+"ª":"Transferido para "+t.ed+"ª")+(taxaAplicada?" · taxa "+taxaAplicada.toLocaleString("de-DE")+" Kz":"");
+ if(totalAntes!==null)msg+=" · Valor total: "+totalAntes.toLocaleString("de-DE")+" → "+totalDepois.toLocaleString("de-DE")+" Kz"+(creditoGerado>0?" · crédito a favor do aluno: "+creditoGerado.toLocaleString("de-DE")+" Kz":"");
+ toast(msg);render();}
 /* L146-4: CSV trocado por .xlsx real (SheetJS, já usado noutros exports do painel) — mesmo nome de
    função e mesmos parâmetros, para não mexer em quem já chama exportTurma(cod,turno). Acrescenta
    "Valor pago (Kz)" (visível a todos) além da dívida (continua só Gestão), a pedido do Ventura. */
@@ -8104,7 +8126,7 @@ function fichaCard(cod){const f=data.formandos.find(x=>x.cod===cod);if(!f)return
    <div><label>Data de registo</label><div>${fmtDataCurta(f.data)||(f.criadoEm?fmtDataCurta(String(f.criadoEm).slice(0,10)):"—")}</div></div>
    <div><label>Registado por</label><div>${esc(f.criadoPor||f.vendedor||"—")}${f.canal==="Landing"?' <span class="pill p-azul" title="Entrou como interessado pela landing page e foi depois transferido/confirmado nesta turma">via Landing page</span>':''}</div></div>
    ${role==="admin"?`<div><label>Formador potencial</label><div>${f.formadorPotencial?'<span class="pill p-dour">✓ Candidato</span> <span class="muted" style="font-size:11px">'+esc(f.formadorPotencialNota||"")+'</span>':'<span class="muted">—</span>'} <button class="btn-o" style="padding:2px 8px;font-size:12px" onclick="toggleFormadorPotencial('${esc(f.cod)}')">${f.formadorPotencial?"Retirar":"Marcar como candidato"}</button></div></div>`:""}
-   <div><label>Pagamento</label><div>${d>0?'<span class="pill p-verm">Em dívida: '+kz(d)+'</span>':'<span class="pill p-verde">Em dia</span>'} <span class="muted">(${esc(p.plano||"—")})</span>${(d>0&&podeEditar())?' <button class="btn-o" style="padding:2px 8px;font-size:12px" onclick="irPagar(\''+esc(f.cod)+'\')">Registar pagamento</button>':''}${role==="admin"?' · Pago: <b>'+kz(p.pago||0)+'</b> <button class="btn-o" style="padding:2px 8px;font-size:12px" onclick="editPagamentoDeCod(\''+esc(f.cod)+'\')">✎ Editar</button> <button class="btn-o" style="padding:2px 8px;font-size:12px" onclick="zerarBonus(\''+esc(f.cod)+'\')">Zerar (bónus)</button>':''}</div>${comprovativoFichaHTML(f.cod,p)}${pagamentoEditLogHTML(f.cod)}</div>
+   <div><label>Pagamento</label><div>${d>0?'<span class="pill p-verm">Em dívida: '+kz(d)+'</span>':'<span class="pill p-verde">Em dia</span>'}${(+p.creditoTransferencia||0)>0?' <span class="pill p-dour" title="Já pagou mais do que o valor do curso actual — sobra de uma transferência para um curso mais barato">Crédito: '+kz(+p.creditoTransferencia)+'</span>':''} <span class="muted">(${esc(p.plano||"—")})</span>${(d>0&&podeEditar())?' <button class="btn-o" style="padding:2px 8px;font-size:12px" onclick="irPagar(\''+esc(f.cod)+'\')">Registar pagamento</button>':''}${role==="admin"?' · Pago: <b>'+kz(p.pago||0)+'</b> <button class="btn-o" style="padding:2px 8px;font-size:12px" onclick="editPagamentoDeCod(\''+esc(f.cod)+'\')">✎ Editar</button> <button class="btn-o" style="padding:2px 8px;font-size:12px" onclick="zerarBonus(\''+esc(f.cod)+'\')">Zerar (bónus)</button>':''}</div>${comprovativoFichaHTML(f.cod,p)}${pagamentoEditLogHTML(f.cod)}</div>
    <div><label>Certificado</label><div>${(function(){var ci=data.certificados.findIndex(function(x){return x.cod===cod;});if(ci<0)return '<span class="muted">—</span>';return certPerguntasHTML(ci);})()}</div></div>
    <div><label>Faltas</label><div><b>${faltasDe(cod)}</b> <span class="muted">(contadas das presenças)</span></div></div>
    ${faltasDe(cod)>0?`<div><label>Avisou que ia faltar?</label><div>${avisouFalta(f.tel)?'<span class="pill p-dour">Sim</span>':'<span class="pill p-cinza">Não</span>'}</div></div>`:''}
