@@ -1423,7 +1423,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.84";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.85";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -7090,8 +7090,9 @@ function presSeletorHTML(){
    próprio (não usam avEd/pTurma globais) para não interferir umas com as outras. */
 function avaliacoesTurmaConteudo(t){
  var falta=function(f){return !f.doente&&AVAL_LABELS.some(function(l){return !(f.avalsP&&f.avalsP[l]);});};
- var alunos=data.formandos.filter(function(f){return f.turma===t.cod;});
- return `<div class="muted" style="margin:0 0 8px">Sábados: 4 avaliações + 1 final. Marca o que cada aluno entregou.</div>
+ /* L155: mesma contagem-base da aba Turmas (exclui Transferido p/ Online), para não divergir. */
+ var alunos=data.formandos.filter(function(f){return f.turma===t.cod&&f.estado!=="Transferido p/ Online";});
+ return `<div class="muted" style="margin:0 0 8px">${alunos.length} aluno(s) nesta edição · Sábados: 4 avaliações + 1 final. Marca o que cada aluno entregou.</div>
   <table><thead><tr><th class="stickyhead">Aluno</th><th class="stickyhead">Contacto</th>${AVAL_LABELS.map(function(l){return '<th class="stickyhead">'+esc(l)+'</th>';}).join("")}<th class="stickyhead">Notas</th></tr></thead><tbody>
   ${alunos.map(function(f){return '<tr><td>'+esc(f.nome)+' '+(f.doente?'<span class="pill p-dour">doente</span>':(falta(f)?'<span class="pill p-verm">falta</span>':'<span class="pill p-verde">completo</span>'))+' <button class="btn-o" style="padding:1px 6px" title="Marcar/desmarcar doente" onclick="toggleDoente(\''+esc(f.cod)+'\')">'+(f.doente?'↩':'🤒')+'</button></td><td>'+esc(f.tel||"—")+'</td>'+AVAL_LABELS.map(function(l){var d=f.avalsP&&f.avalsP[l];return '<td style="text-align:center"><button class="pill '+(d?"p-verde":"p-verm")+'" style="border:none;cursor:pointer" title="'+(d?"Entregue "+esc(d):"Por entregar")+'" onclick="toggleAvalP(\''+esc(f.cod)+'\',\''+esc(l)+'\')">'+(d?"✓":"—")+'</button></td>';}).join("")+'<td><input value="'+esc(f.avalNotas||"")+'" placeholder="nota…" style="min-width:120px" onchange="setAvalNota(\''+esc(f.cod)+'\',this)"></td></tr>';}).join("")||'<tr><td colspan="'+(AVAL_LABELS.length+3)+'" class="muted">Sem alunos nesta edição.</td></tr>'}
   </tbody></table>`;
@@ -7106,8 +7107,12 @@ function presencasTurmaConteudo(t){
  var hojeStr=_dISO(new Date());
  if(!_presEmbedData[t.cod])_presEmbedData[t.cod]=sess.indexOf(hojeStr)>=0?hojeStr:sess[sess.length-1];
  var d=_presEmbedData[t.cod];
- var alunos=data.formandos.filter(function(f){return f.turma===t.cod;});
- return `<div class="flex" style="gap:8px;flex-wrap:wrap;margin:0 0 8px">${sess.map(function(s){return '<button class="btn-'+(d===s?'p':'o')+'" style="padding:5px 10px" onclick="_presEmbedSet(\''+esc(t.cod)+'\',\''+s+'\')">'+fmtDataCurta(s)+(s===hojeStr?' (hoje)':'')+'</button>';}).join("")}</div>
+ /* L155: o nº de alunos aqui tem de bater sempre com o "X aluno(s) no total" da aba Turmas para
+    a mesma edição — por isso usa o mesmo critério (exclui Transferido p/ Online) e mostra a
+    contagem junto às datas, em vez de só aparecer implicitamente pelo nº de linhas da tabela. */
+ var alunos=data.formandos.filter(function(f){return f.turma===t.cod&&f.estado!=="Transferido p/ Online";});
+ return `<div class="muted" style="margin:0 0 6px">${alunos.length} aluno(s) nesta edição</div>
+  <div class="flex" style="gap:8px;flex-wrap:wrap;margin:0 0 8px">${sess.map(function(s){return '<button class="btn-'+(d===s?'p':'o')+'" style="padding:5px 10px" onclick="_presEmbedSet(\''+esc(t.cod)+'\',\''+s+'\')">'+fmtDataCurta(s)+(s===hojeStr?' (hoje)':'')+'</button>';}).join("")}</div>
   <table><thead><tr><th class="stickyhead">Aluno</th><th class="stickyhead">Turno</th><th class="stickyhead">Presença</th><th class="stickyhead">Comentário</th></tr></thead><tbody>
   ${alunos.map(function(f){var pr=getPres(t.cod,d,f.cod);var est=pr?pr.estado:"";return '<tr><td>'+esc(f.nome)+'</td><td>'+esc(f.horario||f.turno||"—")+'</td><td><button type="button" id="ebtn_'+esc(t.cod)+'_'+esc(f.cod)+'" class="pill '+(est==="Presente"?"p-verde":"p-cinza")+'" style="border:none;cursor:pointer;min-width:96px" onclick="_presEmbedToggle(\''+esc(t.cod)+'\',\''+esc(f.cod)+'\')">'+(est==="Presente"?"✓ Presente":"marcar")+'</button><input type="hidden" id="epr_'+esc(t.cod)+'_'+esc(f.cod)+'" value="'+(est==="Presente"?"Presente":"")+'"></td><td><input id="ecm_'+esc(t.cod)+'_'+esc(f.cod)+'" value="'+esc((pr&&pr.comentario)||"")+'" placeholder="justificação (opcional)…" style="padding:5px 8px;width:auto"></td></tr>';}).join("")||'<tr><td colspan="4" class="muted">Sem alunos nesta edição.</td></tr>'}
   </tbody></table><div class="row-actions"><button class="btn-p" onclick="_presEmbedGravar('${esc(t.cod)}')">Gravar presenças de ${fmtDataCurta(d)}</button></div>`;
