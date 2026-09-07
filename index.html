@@ -223,12 +223,19 @@ html[data-theme="dark"] .cartao-aluno{background:#1a2130}
 .cartao-aluno-accoes{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;padding-top:9px;border-top:1px solid var(--linha)}
 .cartao-aluno-accoes button{padding:6px 14px}
 @page{size:A4;margin:0}
-@media print{html,body{background:#fff!important}body *{visibility:hidden}#compdoc,#compdoc *,#recdoc,#recdoc *{visibility:visible}#compdoc,#recdoc{position:absolute!important;left:0;top:0;width:100%;background:#fff!important;border:none!important;border-radius:0!important;margin:0!important;padding:8mm 13mm!important;font-size:11.5px!important;line-height:1.35!important;box-shadow:none!important}
-#compdoc .det{margin-top:8px!important;padding-top:7px!important}
-#compdoc h2{margin:8px 0 3px!important;font-size:14px!important}
-#compdoc p{margin:3px 0!important}
-#compdoc img{max-height:58px!important}
-#compdoc{page-break-inside:avoid!important}
+/* L150-4: o comprovativo/recibo saía com páginas em branco a mais (3 no computador, 12 no
+   telemóvel) — "visibility:hidden" esconde visualmente o resto do painel, mas não retira o
+   espaço que ele ocupa no documento, por isso o browser continuava a paginar pelo tamanho do
+   painel inteiro (ainda pior no telemóvel, onde o ecrã estreito empilha muito mais na vertical).
+   printComp()/printRecibo() agora clonam só o documento a imprimir para #printTarget, um elemento
+   à parte directamente no <body> — a regra abaixo esconde com display:none (não visibility) TUDO
+   o resto do <body>, o que retira mesmo o espaço, sobrando só a página do documento. */
+@media print{html,body{background:#fff!important}body *{visibility:hidden}#printTarget,#printTarget *{visibility:visible}body>*:not(#printTarget){display:none!important}#printTarget{position:absolute!important;left:0;top:0;width:100%;background:#fff!important;border:none!important;border-radius:0!important;margin:0!important;padding:8mm 13mm!important;font-size:11.5px!important;line-height:1.35!important;box-shadow:none!important}
+#printTarget .det{margin-top:8px!important;padding-top:7px!important}
+#printTarget h2{margin:8px 0 3px!important;font-size:14px!important}
+#printTarget p{margin:3px 0!important}
+#printTarget img{max-height:58px!important}
+#printTarget{page-break-inside:avoid!important}
 html.pv body *{visibility:hidden}
 html.pv #views,html.pv #views *{visibility:visible}
 html.pv #views{position:absolute!important;left:0;top:0;width:100%;padding:8mm!important}
@@ -1384,7 +1391,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.77";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.78";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -2873,28 +2880,35 @@ function atualizarAlertaGlobal(){
  var el=document.getElementById("globalAlert");if(!el)return;
  var me=(currentUser&&currentUser.nome)||"";
  if(!me){el.style.display="none";return;}
- var partes=[];var destino="notas";
+ /* L150-3: cada item do banner passa a ter o seu próprio destino — antes só havia UMA variável
+    "destino" partilhada por todo o banner, que ficava sempre com o valor do ÚLTIMO alerta que
+    corresse a seguir, por isso "clica para ver" quase nunca levava ao aviso que interessava
+    quando havia mais do que um em simultâneo. Agora partes é uma lista de {txt,destino} — cada
+    frase do banner é o seu próprio link, e o Ventura confirmou que basta abrir a aba certa
+    (sem precisar de vir já pré-filtrada). */
+ var partes=[];
+ var add=function(txt,destino){partes.push({txt:txt,destino:destino});};
  if(typeof presencaFaltamHoje==="function"){
   var faltam=presencaFaltamHoje();
-  if(faltam.some(function(p){return p.nome===me;})){partes.push("ainda não confirmaste presença hoje");destino="notificacoes";}
-  if(role==="admin"){var outros=faltam.filter(function(p){return p.nome!==me;});if(outros.length){partes.push(outros.length+" colaborador"+(outros.length>1?"es":"")+" ainda "+(outros.length>1?"não confirmaram":"não confirmou")+" presença");destino="notificacoes";}}
+  if(faltam.some(function(p){return p.nome===me;}))add("ainda não confirmaste presença hoje","notificacoes");
+  if(role==="admin"){var outros=faltam.filter(function(p){return p.nome!==me;});if(outros.length)add(outros.length+" colaborador"+(outros.length>1?"es":"")+" ainda "+(outros.length>1?"não confirmaram":"não confirmou")+" presença","notificacoes");}
  }
  var T=(typeof tarefasDe==="function")?tarefasDe(me):[];
  var atrasadas=T.filter(function(x){return x.atraso;});
- if(atrasadas.length)partes.push(atrasadas.length+" tarefa"+(atrasadas.length>1?"s":"")+" em atraso");
+ if(atrasadas.length)add(atrasadas.length+" tarefa"+(atrasadas.length>1?"s":"")+" em atraso","notas");
  if(typeof chkFormacaoAlertasDe==="function"){
   var chkPend=chkFormacaoAlertasDe(me).filter(function(x){return !x.escalado;});
-  if(chkPend.length)partes.push(chkPend.length+" item"+(chkPend.length>1?"s":"")+" de checklist de formação por marcar");
+  if(chkPend.length)add(chkPend.length+" item"+(chkPend.length>1?"s":"")+" de checklist de formação por marcar","presencial");
   var chkInc=chkFormacaoIncumprimentosDe(me);
-  if(chkInc.length)partes.push(chkInc.length+" incumprimento"+(chkInc.length>1?"s":"")+" de checklist de formação");
-  if(role==="admin"){var incTodos=chkFormacaoIncumprimentosTodos();if(incTodos.length)partes.push(incTodos.length+" incumprimento"+(incTodos.length>1?"s":"")+" na equipa");}
+  if(chkInc.length)add(chkInc.length+" incumprimento"+(chkInc.length>1?"s":"")+" de checklist de formação","presencial");
+  if(role==="admin"){var incTodos=chkFormacaoIncumprimentosTodos();if(incTodos.length)add(incTodos.length+" incumprimento"+(incTodos.length>1?"s":"")+" na equipa","presencial");}
  }
  /* L92-5: leads novos do Quiz/Catálogo por contactar — visível à Gestão e a quem for do
     departamento Marketing e Vendas. Fica visível (não desaparece sozinho) até o lead ser
     marcado "Contactado" — sai da contagem "Novo" nesse momento. */
  if(currentUser&&(currentUser.departamento==="Marketing e Vendas"||role==="admin")){
   var novosLeadsQuiz=(data.leads||[]).filter(function(l){return (l.canal==="Quiz"||l.canal==="Catálogo")&&l.estado==="Novo";});
-  if(novosLeadsQuiz.length){partes.push(novosLeadsQuiz.length+" lead"+(novosLeadsQuiz.length>1?"s":"")+" do quiz/catálogo por contactar");destino="quizleads";}
+  if(novosLeadsQuiz.length)add(novosLeadsQuiz.length+" lead"+(novosLeadsQuiz.length>1?"s":"")+" do quiz/catálogo por contactar","quizleads");
  }
  /* L93-2/L93-3: alertas de acompanhamento da Turma Online — visíveis à Gestora de Formação e à
     Gestão na íntegra; cada formador só vê a contagem dos seus próprios alunos. Banners sempre
@@ -2904,23 +2918,26 @@ function atualizarAlertaGlobal(){
   if(typeof alunosSemPdsSemanaPassada==="function"){
    var semPdsPassada=alunosSemPdsSemanaPassada();
    if(semPdsPassada.length){
-    if(role==="admin"||ehGestoraForm){partes.push(semPdsPassada.length+" aluno(s) da Turma Online sem PDS na semana passada");destino="online";}
-    else if(me){var meusSemPds=semPdsPassada.filter(function(o){return o.formador===me;});if(meusSemPds.length){partes.push(meusSemPds.length+" teu(s) aluno(s) sem PDS na semana passada");destino="online";}}
+    if(role==="admin"||ehGestoraForm)add(semPdsPassada.length+" aluno(s) da Turma Online sem PDS na semana passada","online");
+    else if(me){var meusSemPds=semPdsPassada.filter(function(o){return o.formador===me;});if(meusSemPds.length)add(meusSemPds.length+" teu(s) aluno(s) sem PDS na semana passada","online");}
    }
   }
   if(typeof alunosNuncaTiveramPds==="function"){
    var nuncaPds=alunosNuncaTiveramPds();
    if(nuncaPds.length){
-    if(role==="admin"||ehGestoraForm){partes.push(nuncaPds.length+" aluno(s) da Turma Online nunca tiveram nenhum PDS");destino="online";}
-    else if(me){var meusNuncaPds=nuncaPds.filter(function(o){return o.formador===me;});if(meusNuncaPds.length){partes.push(meusNuncaPds.length+" teu(s) aluno(s) nunca tiveram nenhum PDS");destino="online";}}
+    if(role==="admin"||ehGestoraForm)add(nuncaPds.length+" aluno(s) da Turma Online nunca tiveram nenhum PDS","online");
+    else if(me){var meusNuncaPds=nuncaPds.filter(function(o){return o.formador===me;});if(meusNuncaPds.length)add(meusNuncaPds.length+" teu(s) aluno(s) nunca tiveram nenhum PDS","online");}
    }
   }
  }
  /* L93-5: registo da landing por transferir/confirmar numa turma — persistente (não desaparece
-    sozinho), visível à Gestão e a quem for do departamento Marketing e Vendas, até ser tratado. */
+    sozinho), visível à Gestão e a quem for do departamento Marketing e Vendas, até ser tratado.
+    L150-5: continua restrito a quem já pagou (tipo==="Pagamento") — o Ventura confirmou que quer
+    o aviso só para quem já pagou e ainda não foi transferido/confirmado; quem só demonstrou
+    interesse (sem pagar) segue pelo fluxo normal de Leads/Chamadas, não por este aviso urgente. */
  if(currentUser&&(currentUser.departamento==="Marketing e Vendas"||role==="admin")){
   var porTransferir=(Array.isArray(INSCR)?INSCR:[]).filter(function(r){return r.tipo==="Pagamento"&&!r.confirmada;});
-  if(porTransferir.length){partes.push(porTransferir.length+" registo(s) da landing à espera de transferência/confirmação");destino="inscricoes";}
+  if(porTransferir.length)add(porTransferir.length+" registo(s) da landing à espera de transferência/confirmação","inscricoes");
  }
  /* L106: certificados emitidos da Turma Online por resolver o contacto com o formando — visível
     à Gestora de Formação e à Gestão na íntegra; cada Formador só vê a contagem dos seus próprios
@@ -2931,7 +2948,7 @@ function atualizarAlertaGlobal(){
   if(listaCertContacto.length){
    var ehGestoraFormCert=me&&typeof gestoraOnlineNome==="function"&&me===gestoraOnlineNome();
    var meusCertContacto=(role==="admin"||ehGestoraFormCert)?listaCertContacto:(me?listaCertContacto.filter(function(x){return x.o.formador===me;}):[]);
-   if(meusCertContacto.length){partes.push(meusCertContacto.length+" certificado(s) emitido(s) por resolver o contacto com o formando");destino="online";}
+   if(meusCertContacto.length)add(meusCertContacto.length+" certificado(s) emitido(s) por resolver o contacto com o formando","online");
   }
  }
  /* L107: auditoria de Tarefas do Dia com meta mensurável — visível só à Gestão e a quem for
@@ -2939,18 +2956,12 @@ function atualizarAlertaGlobal(){
     fecha-se na própria página Tarefas do Dia. */
  if(typeof podeAtribuirTarefasDoDia==="function"&&podeAtribuirTarefasDoDia()&&typeof tarefasMetaIncumprimentosOntem==="function"){
   var incMetaGlobal=tarefasMetaIncumprimentosOntem();
-  if(incMetaGlobal.length){partes.push(incMetaGlobal.length+" meta(s) de tarefa do dia não cumprida(s) ontem");destino="tarefasdia";}
+  if(incMetaGlobal.length)add(incMetaGlobal.length+" meta(s) de tarefa do dia não cumprida(s) ontem","tarefasdia");
  }
  if(!partes.length){el.style.display="none";return;}
- /* L110: "clica para ver" tinha deixado de responder ao clique. A frase estava só como texto
-    simples (textContent) dentro do banner — sem sublinhado nem qualquer sinal visual de link — e
-    o único onclick estava no <div> pai. Para além de reforçar o estilo (position:relative,
-    z-index acima da barra do topo, pointer-events explícito, junto do <div> no HTML), a frase
-    "clica para ver" passa a ficar dentro do seu próprio <span> sublinhado, clicável por si, e o
-    onclick volta a ser reatribuído a cada render (nunca fica preso a um destino antigo). */
- el.innerHTML="⚠️ "+esc(partes.join(" · "))+' — <span style="text-decoration:underline">clica para ver</span>.';
+ el.innerHTML="⚠️ "+partes.map(function(p){return '<span onclick="event.stopPropagation();show(\''+p.destino+'\')" style="text-decoration:underline;cursor:pointer">'+esc(p.txt)+'</span>';}).join(" · ")+".";
  el.style.pointerEvents="auto";
- el.onclick=function(){show(destino);};
+ el.onclick=null;
  el.style.display="block";
 }
 /* PAINEL */
@@ -7103,14 +7114,23 @@ function vPresencial(){var q=presQ.toLowerCase(),qd=q.replace(/\D/g,"");
  var pagosGeral=todasLinhas.filter(function(x){var p=payOf(x.f.cod);return (+((p&&p.pago)||0))>0;}).length;
  var naoPagosGeral=totalGeral-pagosGeral;
  var filtroActivo=!!(q||presTurno||presEds.length);
- var blocosVisiveis=blocos.filter(function(x){return (!q&&!presTurno)||x.als.length;});
+ /* L150-1/2: o Ventura já não quer cartão por edição visível por defeito — só a lista única. O
+    cartão (Acompanhamento/Cards/Exportar/aviso de pendentes) só volta a aparecer quando ele
+    escolhe a(s) edição(ões) pelos chips (presEds.length>0); filtrar só por turno ou só por
+    pesquisa continua a reduzir a lista única, mas sem trazer cabeçalho de formação nenhum —
+    "só junta quando eu escolher a edição" (confirmado por ele). Com edição(ões) escolhida(s),
+    o cabeçalho passa a ser UM SÓ, juntando os nomes das edições em vez de um cartão por edição. */
+ var mostrarBlocos=presEds.length>0&&turmasP.length>0;
+ var cabecalhoCombinado=turmasP.map(function(t){return esc(t.ed)+'ª Edição ('+esc(t.curso||"")+')';}).join(' + ');
  return `${pdsPickerFHTML()}${transferParaOnlineModalHTML()}${transferAlunoModalHTML()}<div class="sec"><h2>Turmas presenciais</h2><div class="muted">Pesquisa por nome ou número e gera os cards da turma.</div>
   <div class="flex" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><input id="q_pres" class="search" style="margin:0" placeholder="Procurar por nome ou nº…" value="${esc(presQ)}" oninput="presQ=this.value;refocusSearch('q_pres');renderDebounced()"><select onchange="presTurno=this.value;render()" style="width:auto">${turnoOptsHTML(presTurno,presEds.length===1?presEds[0]:null)}</select></div>
   ${presSeletorHTML()}</div>
-  ${blocosVisiveis.map(function(x){var t=x.t;return '<div class="sec"><div class="flex" style="flex-wrap:wrap;gap:8px"><div><h2 style="margin:0">'+esc(t.ed)+'ª Edição — '+esc(t.curso||"")+'</h2><div class="muted">Formador: '+esc(t.resp||"—")+' · '+x.totalReal+' aluno(s) no total'+(x.als.length!==x.totalReal?' <span class="pill p-cinza" title="Pesquisa ou filtro de turno activo — a lista única mais abaixo não mostra todos">(a mostrar '+x.als.length+')</span>':'')+'</div></div><div class="spacer"></div><button class="btn-o" onclick="gerarCards(\''+esc(t.cod)+'\')" title="Só quem já pagou">🖨 Cards</button><button class="btn-o" onclick="gerarCardsTodos(\''+esc(t.cod)+'\')" title="Inclui também quem ainda não pagou — pede código da Gestão">🖨 Cards (todos)</button>'+(podeExportar()?'<button class="btn-o" onclick="exportTurma(\''+esc(t.cod)+'\')">Exportar</button>':'')+'</div>'
-   +'<div class="flex" style="gap:8px;flex-wrap:wrap;margin:8px 0"><span class="pill p-azul">'+x.totalReal+' aluno(s) no total</span><span class="pill p-verde">'+x.pagosReal+' pago(s)</span><span class="pill p-verm">'+x.naoPagosReal+' não pago(s)</span></div>'
-   +(x.pendReal?('<div class="note" style="background:#fff4e5;border-color:#f0c987;color:#7a4b06;margin:0 0 8px">⚠ <b>'+x.pendReal+'</b> pessoa(s) já se inscreveu'+(x.pendReal===1?'':'ram')+' pela página de inscrição para esta edição e ainda não '+(x.pendReal===1?'foi confirmada':'foram confirmadas')+' numa turma. <button class="btn-o" style="padding:3px 9px;margin-left:6px" onclick="show(\'inscricoes\')">Ver inscrições</button></div>'):'')
-   +acompanhamentoTurmaHTML(t)+turnoOcupacaoHTML(t)+'</div>';}).join("")||'<div class="sec"><div class="muted">Sem turmas presenciais'+(q?' com esse nome/nº':'')+'.</div></div>'}
+  ${mostrarBlocos?('<div class="sec"><h2 style="margin:0 0 10px">'+cabecalhoCombinado+'</h2>'
+   +blocos.map(function(x){var t=x.t;return '<div style="border-top:1px solid var(--linha);padding-top:12px;margin-top:12px"><div class="flex" style="flex-wrap:wrap;gap:8px">'+(turmasP.length>1?'<div class="muted" style="font-weight:700">'+esc(t.ed)+'ª Edição — '+esc(t.curso||"")+'</div><div class="spacer"></div>':'<div class="muted">Formador: '+esc(t.resp||"—")+' · '+x.totalReal+' aluno(s) no total'+(x.als.length!==x.totalReal?' <span class="pill p-cinza" title="Pesquisa ou filtro de turno activo — a lista única mais abaixo não mostra todos">(a mostrar '+x.als.length+')</span>':'')+'</div><div class="spacer"></div>')+'<button class="btn-o" onclick="gerarCards(\''+esc(t.cod)+'\')" title="Só quem já pagou">🖨 Cards</button><button class="btn-o" onclick="gerarCardsTodos(\''+esc(t.cod)+'\')" title="Inclui também quem ainda não pagou — pede código da Gestão">🖨 Cards (todos)</button>'+(podeExportar()?'<button class="btn-o" onclick="exportTurma(\''+esc(t.cod)+'\')">Exportar</button>':'')+'</div>'
+    +(turmasP.length>1?'<div class="muted" style="margin-top:4px">Formador: '+esc(t.resp||"—")+' · '+x.totalReal+' aluno(s) no total'+(x.als.length!==x.totalReal?' <span class="pill p-cinza">(a mostrar '+x.als.length+')</span>':'')+'</div>':'')
+    +'<div class="flex" style="gap:8px;flex-wrap:wrap;margin:8px 0"><span class="pill p-azul">'+x.totalReal+' aluno(s) no total</span><span class="pill p-verde">'+x.pagosReal+' pago(s)</span><span class="pill p-verm">'+x.naoPagosReal+' não pago(s)</span></div>'
+    +(x.pendReal?('<div class="note" style="background:#fff4e5;border-color:#f0c987;color:#7a4b06;margin:0 0 8px">⚠ <b>'+x.pendReal+'</b> pessoa(s) já se inscreveu'+(x.pendReal===1?'':'ram')+' pela página de inscrição para esta edição e ainda não '+(x.pendReal===1?'foi confirmada':'foram confirmadas')+' numa turma. <button class="btn-o" style="padding:3px 9px;margin-left:6px" onclick="show(\'inscricoes\')">Ver inscrições</button></div>'):'')
+    +acompanhamentoTurmaHTML(t)+turnoOcupacaoHTML(t)+'</div>';}).join("")+'</div>'):''}
   <div class="sec"><h2>Todos os alunos${filtroActivo?' <span class="pill p-cinza" style="font-size:11px;vertical-align:middle">filtrado</span>':''}</h2><div class="muted">Uma só lista, com todas as edições — usa a pesquisa, o turno ou os chips de edição acima para reduzir.</div>
   <div class="flex" style="gap:8px;flex-wrap:wrap;margin:8px 0"><span class="pill p-azul">${totalGeral} aluno(s) no total</span><span class="pill p-verde">${pagosGeral} pago(s)</span><span class="pill p-verm">${naoPagosGeral} não pago(s)</span></div>
   <table style="margin-top:8px"><thead><tr><th class="stickyhead">Nome</th><th class="stickyhead">Telefone</th><th class="stickyhead">Edição</th><th class="stickyhead">Curso</th><th class="stickyhead">Turno</th><th class="stickyhead">Pagamento</th><th class="stickyhead"></th></tr></thead><tbody>${todasLinhas.map(function(x){var f=x.f,t=x.t;var p=payOf(f.cod);var d=p?divida(p):0;return '<tr><td>'+esc(f.nome)+'</td><td>'+esc(f.tel||"")+'</td><td>'+esc(t.ed||"")+'ª</td><td>'+esc(t.curso||"")+'</td><td>'+esc(f.horario||f.turno||"—")+'</td><td>'+(d>0?'<span class="pill p-verm">Deve '+kz(d)+'</span>':'<span class="pill p-verde">Pago</span>')+'</td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:3px 9px" onclick="fFicha=\''+esc(f.cod)+'\';show(\'formandos\')">Ficha</button>'+((role==="admin"||podeEditar())?'<button class="btn-o" style="padding:3px 9px" onclick="transferAluno(\''+esc(f.cod)+'\')">Transferir</button><button class="btn-o" style="padding:3px 9px" onclick="agendarPdsF(\''+esc(f.cod)+'\')">Marcar PDS</button><button class="btn-o" style="padding:3px 9px" onclick="abrirTransferParaOnline(\''+esc(f.cod)+'\')">→ Online</button>':'')+((d>0&&podeEditar())?'<button class="btn-o" style="padding:3px 9px" onclick="irPagar(\''+esc(f.cod)+'\')">Pagar</button>':'')+'<button class="btn-g" style="padding:3px 9px" onclick="setChamada(\''+esc(f.nome)+'\',\''+esc(f.tel||"")+'\',\'Formando\')">☎</button>'+rowActs('formandos',data.formandos.indexOf(f))+'</td></tr>';}).join("")||'<tr><td colspan="7" class="muted">Sem alunos'+(filtroActivo?' com este filtro.':'.')+'</td></tr>'}</tbody></table></div>`;}
@@ -7209,18 +7229,27 @@ function fillComp(){_segVia=null;document.getElementById("compwrap").innerHTML=c
 let _segVia=null;
 function reabrirComp(cod,dataEmissao){_segVia={cod:cod,data:dataEmissao||""};const f=data.formandos.find(x=>x.cod===cod);const q=document.getElementById("cp_q");if(q&&f)q.value=f.tel||f.nome||"";const s=document.getElementById("cp_cod");if(s){s.innerHTML=compOptions(f?(f.tel||f.nome):"");s.value=cod;}const w=document.getElementById("compwrap");if(w)w.innerHTML=compDoc(cod);toast("2ª via reaberta (data original mantida)");}
 function apagarCompLog(idx){if(!(role==="admin"||podeEditar())){toast("Sem permissão");return;}if(!confirm("Apagar este registo do histórico de comprovativos?"))return;(data.compsLog||[]).splice(idx,1);persist();render();}
+/* L150-4: clona o documento a imprimir (#compdoc ou #recdoc) para #printTarget, um elemento à
+   parte directamente no <body> — a regra @media print esconde (display:none) tudo o resto do
+   <body>, garantindo 1 página só (ver comentário junto de @page). O clone é removido a seguir,
+   sem tocar no elemento original (que continua a existir normalmente dentro do ecrã). */
+function _printClone(elId){var origem=document.getElementById(elId);if(!origem)return null;
+ var antigo=document.getElementById("printTarget");if(antigo&&antigo.parentNode)antigo.parentNode.removeChild(antigo);
+ var clone=origem.cloneNode(true);clone.removeAttribute("id");clone.id="printTarget";document.body.appendChild(clone);return clone;}
+function _printCleanup(){var alvo=document.getElementById("printTarget");if(alvo&&alvo.parentNode)alvo.parentNode.removeChild(alvo);}
 function printComp(){var cod=val("cp_cod");var alvo=null;
  if(cod&&String(cod).slice(0,4)==="ON::"){var o=data.online[+String(cod).slice(4)]||{};alvo={cod:cod,nome:o.nome||"",tel:o.contacto||""};}
  else {var f=data.formandos.find(x=>x.cod===cod);if(f)alvo={cod:f.cod,nome:f.nome,tel:f.tel||""};}
  document.getElementById("compwrap").innerHTML=compDoc(cod);
  if(alvo&&alvo.cod){if(!data.compsLog)data.compsLog=[];data.compsLog.unshift({cod:alvo.cod,nome:alvo.nome,tel:alvo.tel||"",quando:new Date().toISOString(),por:(currentUser&&currentUser.nome)||role});persist();}
  var tit="Comprovativo - "+(nomeCurto((alvo&&alvo.nome)||"")||"aluno");
- /* Impressão sempre na própria janela (sem popup) — o CSS @media print já isola só #compdoc.
+ /* Impressão sempre na própria janela (sem popup) — o CSS @media print já isola só #printTarget.
     Um popup (window.open) é bloqueado em muitos telemóveis, ou o título dele não chega a ser
     usado pelo sistema ao "Guardar como PDF"; por isso deixou de se usar essa via, que era
     a causa do nome do ficheiro sair errado. */
+ _printClone("compdoc");
  var _t=document.title;document.title=tit;var _restored=false;
- var _restore=function(){if(_restored)return;_restored=true;document.title=_t;};
+ var _restore=function(){if(_restored)return;_restored=true;document.title=_t;_printCleanup();};
  window.addEventListener("afterprint",_restore,{once:true});
  window.print();
  setTimeout(_restore,15000);}
@@ -7730,7 +7759,7 @@ function togglePago(nome){const mes=(typeof rhMes!=="undefined"&&rhMes)||new Dat
 let recSal=null;
 function reciboSalario(nome){recSal=nome;render();}
 function fecharRecibo(){recSal=null;render();}
-function printRecibo(){window.print();}
+function printRecibo(){_printClone("recdoc");var _restored=false;var _restore=function(){if(_restored)return;_restored=true;_printCleanup();};window.addEventListener("afterprint",_restore,{once:true});window.print();setTimeout(_restore,15000);}
 function _mesPT(mYYYYMM){var p=String(mYYYYMM||"").split("-");var mm=+p[1];return (MESES_NOME_CAL[mm-1]||"")+" de "+p[0];}
 function reciboModalHTML(){if(!recSal)return"";const nome=recSal;const c=(data.colaboradores||[]).find(x=>x.nome===nome)||{};const sal=+(data.salarios[nome]||0);const mes=(typeof rhMes!=="undefined"&&rhMes)||new Date().toISOString().slice(0,7);const mesTrabalho=_mesAnterior(mes);const com=comissaoPessoaMes(nome,mes);const sub=subsidioDe(nome);const desc=descontoDe(nome,mes);const P=pagosMes(mes)[nome];const cc=data.comp;return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.45);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharRecibo()"><div class="card" style="padding:0;width:560px;max-width:94vw;max-height:90vh;overflow:auto"><div id="recdoc" style="padding:28px 34px;font-size:13.5px;line-height:1.6;color:#222"><div style="display:flex;justify-content:space-between;align-items:flex-start">${cc.logo?`<img src="${cc.logo}" style="height:40px">`:'<b style="color:var(--azul);font-size:16px">Knowledge Angola</b>'}<div style="text-align:right;font-size:11px;color:#555">${esc(cc.morada||"")}<br>${esc(cc.tel||"")}</div></div><h2 style="color:var(--azul);margin:14px 0 4px;font-size:16px">RECIBO DE SALÁRIO</h2><div class="muted" style="font-size:11.5px;margin-bottom:14px">Referente a <b>${esc(_mesPT(mesTrabalho))}</b> — salário pago em ${esc(_mesPT(mes))} · Emitido em ${new Date().toLocaleDateString("pt-PT")}</div><div>Colaborador: <b>${esc(nome)}</b>${c.categoria?" · "+esc(c.categoria):""}</div>${c.iban?`<div>IBAN: <b>${esc(c.iban)}</b></div>`:""}<div style="border-top:1px solid var(--linha);margin-top:12px;padding-top:10px"><div>Salário base: <b>${kz(sal)}</b></div><div>Comissões: <b>${kz(com)}</b></div><div>Ajuda de custo (Transporte): <b>${kz(sub)}</b></div>${desc>0?`<div>Desconto${(descontosMes(mes)[nome]&&descontosMes(mes)[nome].motivo)?' ('+esc(descontosMes(mes)[nome].motivo)+')':''}: <b>−${kz(desc)}</b></div>`:""}<div style="margin-top:6px;font-size:15px">Total recebido: <b>${kz(sal+com+sub-desc)}</b></div></div><div style="margin-top:12px">${P?'<span class="pill p-verde">Pago em '+fmtDataCurta(P.data)+'</span>':'<span class="pill p-dour">Por pagar</span>'}</div><p style="margin-top:16px">Declara-se que o colaborador recebeu o valor acima na sua conta bancária.</p><div style="margin-top:18px"><b>${esc(cc.director||"")}</b></div></div><div class="row-actions noprint" style="padding:0 34px 22px"><button class="btn-p" onclick="printRecibo()">Imprimir / PDF</button><button class="btn-o" onclick="fecharRecibo()">Fechar</button></div></div></div>`;}
 function aniversariosProximos(dias){const out=[];const hoje=new Date();hoje.setHours(0,0,0,0);const add=(nome,nasc,tipo)=>{if(!nasc)return;const d=new Date(nasc);if(isNaN(d))return;let prox=new Date(hoje.getFullYear(),d.getMonth(),d.getDate());if(prox<hoje)prox=new Date(hoje.getFullYear()+1,d.getMonth(),d.getDate());const diff=Math.round((prox-hoje)/86400000);if(diff<=dias)out.push({nome,tipo,quando:_dISO(prox),dias:diff});};(data.colaboradores||[]).forEach(c=>add(c.nome,c.nasc,"Colaborador"));data.formandos.forEach(f=>add(f.nome,f.nasc,"Formando"));return out.sort((a,b)=>a.dias-b.dias);}
