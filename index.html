@@ -1131,7 +1131,7 @@ function syncPagOnline(o){const cod=ensureOnlineCod(o);const val=+o.valorPago||0
  if(cupomCod){p.total=total;p.cupom=cupomCod;}
  _ajustarPago(p,val,val);}
 let _rowEdit=null;
-const EDIT_LABELS={nome:"Nome",tel:"Telefone",contacto:"Contacto",email:"E-mail",curso:"Curso",area:"Área de formação/trabalho",canal:"Como chegou",estado:"Estado",resp:"Responsável",notas:"Notas",nivel:"Nível",fase:"Fase",formador:"Formador",inicio:"Data de início",valorPago:"Valor pago (Kz)",vendedor:"Responsável",turma:"Turma",data:"Data",tipo:"Tipo",resultado:"Resultado",seguimento:"Seguimento",horaPedida:"Hora pedida para contacto",msg:"Mensagem",usaPC:"Usa computador da academia?",cupom:"Código promocional",morada:"Morada",proximoCurso:"Próximo curso que pretende fazer"};
+const EDIT_LABELS={nome:"Nome",tel:"Telefone",contacto:"Contacto",email:"E-mail",curso:"Curso",area:"Área de formação/trabalho",canal:"Como chegou",estado:"Estado",resp:"Responsável",notas:"Notas",nivel:"Nível",fase:"Fase",formador:"Formador",inicio:"Data de início",valorPago:"Valor pago (Kz)",vendedor:"Responsável",turma:"Turma",data:"Data",tipo:"Tipo",resultado:"Resultado",seguimento:"Seguimento",horaPedida:"Hora pedida para contacto",msg:"Mensagem",usaPC:"Usa computador da academia?",cupom:"Código promocional",morada:"Morada",proximoCurso:"Próximo curso que pretende fazer",periodo:"Período"};
 /* L153: estados válidos de um formando presencial — usados para o dropdown de Estado em "Editar registo".
    Transferido p/ Online normalmente resulta do fluxo próprio (Passar para turma online), mas fica aqui como
    opção porque o campo já era editável livremente antes (agora só passa a ser um valor fechado, mais seguro). */
@@ -1187,6 +1187,11 @@ function rowEditModalHTML(){if(!_rowEdit)return"";const o=(data[_rowEdit.arr]||[
   if(isForm&&k==="proximoCurso"){const lst=cursosLista();const extra=(o.proximoCurso&&lst.indexOf(o.proximoCurso)<0)?'<option value="'+esc(o.proximoCurso)+'" selected>'+esc(o.proximoCurso)+'</option>':"";
    return '<div style="margin-bottom:8px"><label>'+esc(EDIT_LABELS[k]||k)+'</label><select class="re_f" data-k="proximoCurso"><option value="" '+(!o.proximoCurso?"selected":"")+'>— sem indicação —</option>'+extra+lst.map(function(c){return '<option value="'+esc(c)+'" '+(c===o.proximoCurso?"selected":"")+'>'+esc(c)+'</option>';}).join("")+'</select></div>';}
   if(isForm&&k==="usaPC")return '<div style="margin-bottom:8px"><label>'+esc(EDIT_LABELS[k]||k)+'</label><select class="re_f" data-k="usaPC"><option value="Não" '+(o.usaPC!=="Sim"?"selected":"")+'>Não</option><option value="Sim" '+(o.usaPC==="Sim"?"selected":"")+'>Sim</option></select></div>';
+  /* periodo só tem 2 valores possíveis no sistema todo (deriva sempre do turno/tipo de turma) — dropdown
+     em vez de texto livre; reOnHorarioChange() já o preenche sozinho ao mudar a Turma/Turno, isto só
+     impede escrever aqui um valor diferente desses dois à mão. */
+  if(isForm&&k==="periodo"){const lst=["Dias de semana","Sábados"];const extra=(o.periodo&&lst.indexOf(o.periodo)<0)?'<option value="'+esc(o.periodo)+'" selected>'+esc(o.periodo)+'</option>':"";
+   return '<div style="margin-bottom:8px"><label>'+esc(EDIT_LABELS[k]||k)+'</label><select class="re_f" data-k="periodo"><option value="" '+(!o.periodo?"selected":"")+'>—</option>'+extra+lst.map(function(p){return '<option value="'+esc(p)+'" '+(p===o.periodo?"selected":"")+'>'+esc(p)+'</option>';}).join("")+'</select></div>';}
   if(isForm&&k==="canal"){const lst=canaisDisponiveis();const extra=(o.canal&&lst.indexOf(o.canal)<0)?'<option value="'+esc(o.canal)+'" selected>'+esc(o.canal)+'</option>':"";
    return '<div style="margin-bottom:8px"><label>'+esc(EDIT_LABELS[k]||k)+'</label><select class="re_f" data-k="canal">'+extra+lst.map(function(c){return '<option value="'+esc(c)+'" '+(c===o.canal?"selected":"")+'>'+esc(c)+'</option>';}).join("")+'</select></div>';}
   if(isForm&&k==="estado"){const extra=(o.estado&&FORMANDO_ESTADOS.indexOf(o.estado)<0)?'<option value="'+esc(o.estado)+'" selected>'+esc(o.estado)+'</option>':"";
@@ -1418,7 +1423,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.81";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.82";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
