@@ -1448,7 +1448,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.90";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.92";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -7748,6 +7748,31 @@ function comDetItens(nome){return _todosVendaveis().filter(function(f){var div=_
 function _normNome(s){return String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().trim().replace(/\s+/g," ");}
 function comVendedorPendentes(nome){return _todosVendaveis().filter(function(f){return f.vendedor===nome;}).map(function(f){var p=payOf(f.cod);return{cod:f.cod,nome:f.nome||f.cod,pago:p?(+p.pago||0):0};}).filter(function(x){return x.pago<=0;});}
 function comVendasParecidas(nome){var alvo=_normNome(nome);if(!alvo)return[];return _todosVendaveis().filter(function(f){var v=f.vendedor||"";return v&&v!==nome&&_normNome(v)===alvo;}).map(function(f){var com=comissaoDe(f.cod);return{cod:f.cod,nome:f.nome||f.cod,vendedorEscrito:f.vendedor,com:com};});}
+/* L161-1 — comVendasParecidas() só compara contra UM nome à vez (usado no drill-down por pessoa).
+   comNomesParecidosGeral() varre TODO o âmbito seleccionado (edições/Turma Online) à procura de
+   qualquer aluno cujo "Responsável pela venda" seja uma grafia minoritária de um nome — porque
+   todosColaboradores() já lista qualquer string usada em "vendedor" como se fosse um colaborador
+   válido (não sabe distinguir "Fernanda Sofela" de "fernanda sofela" escrito por engano), não dá para
+   comparar contra essa lista. Em vez disso, agrupa TODAS as vendas do sistema por nome normalizado
+   (sem maiúsculas/acentos/espaços a mais) e considera "certa" a grafia mais usada nesse grupo — quem
+   estiver escrito de forma diferente da mais usada, dentro do âmbito escolhido, é sinalizado: a
+   comissão desse aluno não soma para a grafia certa em nenhum ecrã, porque a comparação é exacta. */
+function comNomesParecidosGeral(turmaCods){
+ var turmaSet=(turmaCods&&turmaCods.length)?{}:null;if(turmaSet)turmaCods.forEach(function(c){turmaSet[c]=true;});
+ var scope;
+ if(!turmaSet){scope=_todosVendaveis();}
+ else{scope=(data.formandos||[]).filter(function(f){return turmaSet[f.turma];});if(turmaSet[TURMA_ONLINE_COD])scope=scope.concat(_onlineVendaveis());}
+ var contagem={};
+ _todosVendaveis().forEach(function(f){var v=(f.vendedor||"").trim();if(!v||v==="Gestão")return;var norm=_normNome(v);if(!contagem[norm])contagem[norm]={};contagem[norm][v]=(contagem[norm][v]||0)+1;});
+ var canonPorNorm={};
+ Object.keys(contagem).forEach(function(norm){var variantes=contagem[norm];var melhor=Object.keys(variantes).sort(function(a,b){return variantes[b]-variantes[a]||b.length-a.length;})[0];canonPorNorm[norm]=melhor;});
+ var parecidos=[];
+ scope.forEach(function(f){
+  var v=(f.vendedor||"").trim();if(!v||v==="Gestão")return;
+  var canon=canonPorNorm[_normNome(v)];
+  if(canon&&canon!==v){var p=payOf(f.cod);parecidos.push({cod:f.cod,aluno:f.nome||f.cod,vendedorEscrito:v,vendedorCorrecto:canon,pago:p?(+p.pago||0):0});}
+ });
+ return{parecidos:parecidos,desconhecidos:[]};}
 /* L47-3/L61-2 — a folha de pagamento de um mês paga, por regra, a comissão (ou fatia nova de
    comissão) dos alunos com pagamento novo no mês ANTERIOR ao da folha (ex.: folha de Agosto =
    pagamentos de Julho) — já não é preciso a dívida chegar a zero.
@@ -7811,6 +7836,12 @@ function _comissaoTipoItem(x){var f=_vendavelPorCod(x.cod);return (f&&f.gratifVo
    ser aluno-a-aluno/por-edição e passa a ser por COLABORADOR — um botão só, com o total confirmado no
    âmbito actual, que entra de uma vez na folha de remuneração. */
 let comEdSel=[];let comMesSel=[];let comColabSel="";let comEdFiltro="confirmar";
+/* L160 — Turma Online não tem "edições" (é por nível), mas gera comissão pelo mesmo motor. Passa a
+   aparecer como uma linha única e fixa "Turma Online" na lista de filtro, sempre disponível (não
+   depende de haver ou não edições presenciais). TURMA_ONLINE_COD é um cod pseudo, nunca colide com um
+   cod de turma presencial real. */
+const TURMA_ONLINE_COD="__ONLINE__";
+function _onlineVendaveis(){return _todosVendaveis().filter(function(f){return f._origem==="online";});}
 function comissoesAtribuidasLog(){if(!Array.isArray(data.comissoesAtribuidasLog))data.comissoesAtribuidasLog=[];return data.comissoesAtribuidasLog;}
 function comEdAlunosDaEdicao(turmaCod){return (data.formandos||[]).filter(function(f){return f.turma===turmaCod;});}
 /* Confirmação por aluno: guardada por cod+nome (uma venda dividida tem duas confirmações
@@ -7839,7 +7870,9 @@ function desconfirmarComissaoAluno(cod,nome){if(role!=="admin"){toast("Só a ges
 /* Meses reais com pagamento, dentro do âmbito das edições escolhidas (todas, se nenhuma estiver
    seleccionada) — substitui o antigo campo de mês livre. */
 function comMesesDisponiveis(turmaCods){var turmaSet=(turmaCods&&turmaCods.length)?{}:null;if(turmaSet)turmaCods.forEach(function(c){turmaSet[c]=true;});
- var scope=turmaSet?(data.formandos||[]).filter(function(f){return turmaSet[f.turma];}):(data.formandos||[]);
+ var scope;
+ if(!turmaSet){scope=_todosVendaveis();}
+ else{scope=(data.formandos||[]).filter(function(f){return turmaSet[f.turma];});if(turmaSet[TURMA_ONLINE_COD])scope=scope.concat(_onlineVendaveis());}
  var set={};
  scope.forEach(function(f){var p=payOf(f.cod);if(!p||!((+p.pago||0)>0))return;var ds=(p.prestacoes||[]).map(function(x){return x.data;}).filter(Boolean);if(!ds.length&&p.criadoEm)ds=[p.criadoEm.slice(0,10)];ds.forEach(function(d){set[d.slice(0,7)]=true;});});
  return Object.keys(set).sort();}
@@ -7848,17 +7881,21 @@ function comMesesDisponiveis(turmaCods){var turmaSet=(turmaCods&&turmaCods.lengt
    mostrar, não escondem informação da própria linha. turmaCods/mesesArr vazios = todas as edições/meses. */
 function comLinhasBase(turmaCods,mesesArr){var turmaSet=(turmaCods&&turmaCods.length)?{}:null;if(turmaSet)turmaCods.forEach(function(c){turmaSet[c]=true;});
  var mesSet=(mesesArr&&mesesArr.length)?{}:null;if(mesSet)mesesArr.forEach(function(m){mesSet[m]=true;});
- var scope=turmaSet?(data.formandos||[]).filter(function(f){return turmaSet[f.turma];}):(data.formandos||[]);
+ var scope;
+ if(!turmaSet){scope=_todosVendaveis();}
+ else{scope=(data.formandos||[]).filter(function(f){return turmaSet[f.turma];});if(turmaSet[TURMA_ONLINE_COD])scope=scope.concat(_onlineVendaveis());}
  var out=[];
  scope.forEach(function(f){var p=payOf(f.cod);var pago=p?(+p.pago||0):0;var dividaAluno=p?divida(p):0;if(pago<=0&&dividaAluno<=0)return;
   var div=_comissaoDivisao(f);var pessoas=div.split?[div.closer,div.setter]:[div.closer];
   var du=p?_dataUltimoPagamento(p):"";var mesUlt=du?du.slice(0,7):"";
   if(mesSet&&!(mesUlt&&mesSet[mesUlt]))return;
-  var t=turmaByCod(f.turma);var turmaLabel=t?(t.ed+"ª — "+(t.curso||"")):(f.turma||"—");
+  var isOnline=f._origem==="online";
+  var t=isOnline?null:turmaByCod(f.turma);var turmaLabel=isOnline?("Turma Online"+(f.nivel?" — "+f.nivel:"")):(t?(t.ed+"ª — "+(t.curso||"")):(f.turma||"—"));
+  var turmaCodOut=isOnline?TURMA_ONLINE_COD:f.turma;
   pessoas.forEach(function(nome){if(!nome||nome==="Gestão")return;
    var quota=pago>0?_comissaoQuotaPessoa(f.cod,nome):0;var jaAtribuida=_comissaoJaPagaPessoa(f.cod,nome);var pendente=_comissaoPendentePessoa(f.cod,nome);
    var conf=comissaoConfirmada(f.cod,nome);
-   out.push({cod:f.cod,aluno:f.nome||f.cod,nome:nome,turmaCod:f.turma,turmaLabel:turmaLabel,pago:pago,dividaAluno:dividaAluno,quota:quota,atribuida:jaAtribuida,pendente:pendente,dividida:div.split,mesUltimoPagamento:mesUlt,confirmada:conf.ok,confirmadoPor:conf.por,confirmadoEm:conf.em});
+   out.push({cod:f.cod,aluno:f.nome||f.cod,nome:nome,turmaCod:turmaCodOut,turmaLabel:turmaLabel,pago:pago,dividaAluno:dividaAluno,quota:quota,atribuida:jaAtribuida,pendente:pendente,dividida:div.split,mesUltimoPagamento:mesUlt,confirmada:conf.ok,confirmadoPor:conf.por,confirmadoEm:conf.em});
   });});
  return out.sort(function(a,b){return (a.turmaLabel||"").localeCompare(b.turmaLabel||"")||(a.aluno||"").localeCompare(b.aluno||"");});}
 function comLinhasColab(linhas,nome){return nome?linhas.filter(function(x){return x.nome===nome;}):linhas;}
@@ -7874,6 +7911,14 @@ function comLinhasFiltro(linhas,filtro){
  return linhas;}
 function comEdLinhas(turmaCods,mesesArr,colab,filtro){return comLinhasFiltro(comLinhasColab(comLinhasBase(turmaCods,mesesArr),colab),filtro||"apagar");}
 function toggleComEdicao(cod){var i=comEdSel.indexOf(cod);if(i>=0)comEdSel.splice(i,1);else comEdSel.push(cod);comMesSel=[];render();}
+/* L161-3 — uma edição "fechada" (tudo o que havia a atribuir já foi atribuído a alguém, nada pendente
+   para ninguém) deixa de poluir a lista de checkboxes por defeito. Continua acessível a 1 clique via
+   "Ver edições já fechadas", para o caso de alguém reclamar que falta atribuir algo. Uma edição sem
+   nenhuma linha ainda (turma nova, sem pagamentos) NÃO conta como fechada — só "fechada" quem já teve
+   movimento e ficou tudo liquidado. */
+function comEdicaoFechada(turmaCod){var linhas=comLinhasBase([turmaCod],[]);if(!linhas.length)return false;return linhas.every(function(x){return x.pendente<=0;});}
+let comVerFechadas=false;
+function toggleComVerFechadas(){comVerFechadas=!comVerFechadas;render();}
 function toggleComMes(mes){var i=comMesSel.indexOf(mes);if(i>=0)comMesSel.splice(i,1);else comMesSel.push(mes);render();}
 function setComColab(nome){comColabSel=nome;render();}
 function _horaAgoraCom(){return new Date().toTimeString().slice(0,5);}
@@ -8118,11 +8163,16 @@ function vRH(){const ppl=pessoasKA();const mes=rhMes||new Date().toISOString().s
   <table><thead><tr><th class="stickyhead">Pessoa</th><th class="stickyhead">IBAN</th><th class="stickyhead">Salário</th><th class="stickyhead">Comissões</th><th class="stickyhead">Ajuda de custo (Transporte)</th><th class="stickyhead">Desconto</th><th class="stickyhead">Total</th><th class="stickyhead">Pago?</th><th class="stickyhead">Recibo</th>${role==="admin"?'<th class="stickyhead"></th>':""}</tr></thead><tbody>
   ${linhas.map(r=>{const _cIban=(data.colaboradores||[]).find(function(x){return x.nome===r.n;});return `<tr><td>${esc(r.n)}</td><td>${_cIban&&_cIban.iban?esc(_cIban.iban)+' <button class="btn-o" style="padding:1px 6px" title="Copiar nº de conta (sem AO06, sem pontos/espaços)" onclick="copiarIbanColab(\''+esc(_cIban.iban).replace(/'/g,"\\'")+'\')">📋</button>':'<span class="muted">—</span>'}</td><td>${role==="admin"?`<input type="number" value="${r.sal||''}" style="width:110px" onchange="setSalarioPessoa('${esc(r.n)}',this)">`:kz(r.sal)}</td><td>${r.com>0?'<span style="cursor:pointer;color:var(--azul2);text-decoration:underline" onclick="abrirComDet(\''+esc(r.n).replace(/'/g,"\\'")+'\',\''+mes+'\')" title="Ver alunos que justificam esta comissão">'+kz(r.com)+'</span>':kz(r.com)}</td><td>${role==="admin"?`<input type="number" value="${r.sub||''}" style="width:100px" onchange="setSubsidioPessoa('${esc(r.n)}',this)">`:kz(r.sub)}</td><td>${role==="admin"?'<span style="cursor:pointer;color:'+(r.desc>0?'#C0392B':'var(--azul2)')+';text-decoration:underline" onclick="abrirDesconto(\''+esc(r.n).replace(/'/g,"\\'")+'\',\''+mes+'\')" title="Aplicar/editar desconto (pede código da gestão)">'+(r.desc>0?'−'+kz(r.desc):'—')+'</span>':(r.desc>0?'−'+kz(r.desc):'—')}</td><td><b>${kz(r.sal+r.com+r.sub-r.desc)}</b></td><td><button class="pill ${r.pg?'p-verde':'p-cinza'}" style="border:none;cursor:pointer" title="${r.pg&&r.pg.pagoPor?'Pago por '+esc(r.pg.pagoPor)+(r.pg.hora?' às '+esc(r.pg.hora):''):''}" onclick="togglePago('${esc(r.n)}')">${r.pg?'Pago ✓ '+esc(r.pg.data):'Marcar pago'}</button></td><td><button class="btn-o" style="padding:3px 9px" onclick="reciboSalario('${esc(r.n)}')">Recibo</button></td>${role==="admin"?`<td><button class="btn-o" style="padding:3px 9px" title="Arquivar — sai de todas as abas" onclick="arquivarPessoa('${esc(r.n)}')">Arquivar</button></td>`:""}</tr>`;}).join("")||`<tr><td colspan="10" class="muted">Sem pessoas.</td></tr>`}
   <tr style="background:#eaf0fb"><td><b>Total</b></td><td></td><td><b>${kz(tSal)}</b></td><td><b>${kz(tCom)}</b></td><td><b>${kz(tSub)}</b></td><td><b>${tDesc>0?'−'+kz(tDesc):kz(0)}</b></td><td><b>${kz(tSal+tCom+tSub-tDesc)}</b></td><td colspan="${role==="admin"?3:2}"></td></tr>
-  </tbody></table></div>${presencaEquipaHTML()}
+  </tbody></table></div>
  ${(function(){
   var optsEd=turmasVisiveis().slice().sort(function(a,b){return (+b.ed||0)-(+a.ed||0);});
-  comEdSel=comEdSel.filter(function(c){return optsEd.some(function(t){return t.cod===c;});});
-  var edChips=optsEd.map(function(t){return '<label style="display:inline-flex;align-items:center;gap:4px;margin:2px 12px 2px 0;font-weight:400"><input type="checkbox" '+(comEdSel.indexOf(t.cod)>=0?"checked":"")+' onchange="toggleComEdicao(\''+esc(t.cod)+'\')"> '+esc(t.ed)+'ª — '+esc(t.curso)+'</label>';}).join("")||'<span class="muted">Sem edições.</span>';
+  comEdSel=comEdSel.filter(function(c){return optsEd.some(function(t){return t.cod===c;})||c===TURMA_ONLINE_COD;});
+  var fechadasSet={};optsEd.forEach(function(t){if(comEdicaoFechada(t.cod))fechadasSet[t.cod]=true;});
+  var totalFechadas=Object.keys(fechadasSet).length;
+  var optsVisiveis=optsEd.filter(function(t){return !fechadasSet[t.cod]||comVerFechadas||comEdSel.indexOf(t.cod)>=0;});
+  var edChips=optsVisiveis.map(function(t){return '<label style="display:inline-flex;align-items:center;gap:4px;margin:2px 12px 2px 0;font-weight:400"><input type="checkbox" '+(comEdSel.indexOf(t.cod)>=0?"checked":"")+' onchange="toggleComEdicao(\''+esc(t.cod)+'\')"> '+esc(t.ed)+'ª — '+esc(t.curso)+(fechadasSet[t.cod]?' <span class="pill p-cinza" style="font-size:10px">fechada</span>':'')+'</label>';}).join("")
+   +'<label style="display:inline-flex;align-items:center;gap:4px;margin:2px 12px 2px 0;font-weight:400"><input type="checkbox" '+(comEdSel.indexOf(TURMA_ONLINE_COD)>=0?"checked":"")+' onchange="toggleComEdicao(\''+TURMA_ONLINE_COD+'\')"> Turma Online</label>'
+   +(totalFechadas?'<label style="display:inline-flex;align-items:center;gap:4px;margin:2px 12px 2px 0;font-weight:400;color:var(--azul2)"><input type="checkbox" '+(comVerFechadas?"checked":"")+' onchange="toggleComVerFechadas()"> Ver edições já fechadas ('+totalFechadas+')</label>':'');
   var mesesDisp=comMesesDisponiveis(comEdSel);
   comMesSel=comMesSel.filter(function(m){return mesesDisp.indexOf(m)>=0;});
   var mesChips=mesesDisp.length?mesesDisp.map(function(m){return '<label style="display:inline-flex;align-items:center;gap:4px;margin:2px 12px 2px 0;font-weight:400"><input type="checkbox" '+(comMesSel.indexOf(m)>=0?"checked":"")+' onchange="toggleComMes(\''+m+'\')"> '+m+'</label>';}).join(""):'<span class="muted">Sem pagamentos nesta selecção.</span>';
@@ -8143,13 +8193,25 @@ function vRH(){const ppl=pessoasKA();const mes=rhMes||new Date().toISOString().s
    var confCell=x.confirmada
     ?'<span class="pill p-verde" title="Confirmado por '+esc(x.confirmadoPor||"—")+'">✓ Confirmado</span>'+(role==="admin"?' <button class="btn-o" style="padding:2px 7px" onclick="desconfirmarComissaoAluno(\''+esc(x.cod)+'\',\''+esc(x.nome).replace(/'/g,"\\'")+'\')">Desfazer</button>':'')
     :(role==="admin"&&x.pendente>0?'<button class="btn-p" style="padding:3px 9px" onclick="confirmarComissaoAluno(\''+esc(x.cod)+'\',\''+esc(x.nome).replace(/'/g,"\\'")+'\')">Confirmar</button>':'<span class="pill p-cinza">por confirmar</span>');
-   var fichaBtn='<button class="btn-o" style="padding:2px 7px" title="Ver ficha / editar Responsável pela venda" onclick="fFicha=\''+esc(x.cod)+'\';show(\'formandos\')">Ficha</button>';
+   var fichaBtn='<button class="btn-o" style="padding:2px 7px" title="Ver ficha / editar Responsável pela venda" onclick="finDetVerFicha(\''+esc(x.cod)+'\')">Ficha</button>';
    return '<tr><td>'+esc(x.aluno)+'</td><td>'+esc(x.turmaLabel)+'</td><td>'+esc(x.nome)+(x.dividida?' <span class="pill p-cinza" title="Comissão dividida a meio com o 2º responsável pela venda">÷2</span>':'')+'</td><td>'+kz(x.pago)+'</td><td>'+(x.dividaAluno>0?'<span style="color:#a3311f">'+kz(x.dividaAluno)+'</span>':kz(0))+'</td><td>'+kz(x.quota)+'</td><td>'+kz(x.atribuida)+'</td><td>'+(x.pendente>0?'<b>'+kz(x.pendente)+'</b>':kz(0))+'</td><td>'+confCell+'</td><td>'+fichaBtn+'</td></tr>';
   }).join("")||'<tr><td colspan="10" class="muted">Sem linhas nesta selecção.</td></tr>';
 
   var botaoExport=(role==="admin"&&confirmadasPagar.length)?'<button class="btn-o" style="padding:5px 12px" onclick="exportComissoesEdicaoXLSX()">Exportar Excel (confirmadas)</button>':'';
 
+  var nomesP=comNomesParecidosGeral(comEdSel);
+  var nomesParecidosHTML="";
+  if(role==="admin"&&(nomesP.parecidos.length||nomesP.desconhecidos.length)){
+   var linhaAluno=function(x,motivoHTML){return '<div class="flex" style="gap:8px;align-items:center;padding:3px 0"><span>'+esc(x.aluno)+'</span><span class="muted" style="font-size:11.5px">'+motivoHTML+'</span><div class="spacer"></div><button class="btn-o" style="padding:2px 7px" onclick="finDetVerFicha(\''+esc(x.cod)+'\')">Ficha</button></div>';};
+   nomesParecidosHTML='<div class="note" style="background:#fff7e6;border-color:#f0d999;color:#8a6d00;margin:10px 0">'
+    +'<b>⚠ '+(nomesP.parecidos.length+nomesP.desconhecidos.length)+' aluno(s) nesta selecção com "Responsável pela venda" que pode não estar a contar para a pessoa certa</b> — a comparação é exacta (maiúsculas/espaços/acentos contam), por isso um nome escrito de forma ligeiramente diferente fica invisível à comissão em qualquer ecrã, não só aqui.'
+    +(nomesP.parecidos.length?'<div style="margin-top:6px"><b>Parecido com um colaborador conhecido:</b>'+nomesP.parecidos.map(function(x){return linhaAluno(x,'escrito como "'+esc(x.vendedorEscrito)+'" — devia ser "'+esc(x.vendedorCorrecto)+'"');}).join("")+'</div>':'')
+    +(nomesP.desconhecidos.length?'<div style="margin-top:6px"><b>Não bate com nenhum colaborador conhecido:</b>'+nomesP.desconhecidos.map(function(x){return linhaAluno(x,'escrito como "'+esc(x.vendedorEscrito)+'"');}).join("")+'</div>':'')
+    +'<div class="muted" style="margin-top:6px">Corrige na Ficha (Responsável pela venda) — exige o código da Gestão e fica registado.</div></div>';
+  }
+
   var corpo='<div class="flex" style="gap:8px;flex-wrap:wrap;margin:10px 0">'+chips+'<div class="spacer"></div>'+botaoExport+'</div>'
+   +nomesParecidosHTML
    +'<div class="muted" style="margin-bottom:8px">'+linhas.length+' linha(s)'+(comMesSel.length?' · meses: '+comMesSel.join(", "):' · todos os meses com pagamento')+(comColabSel?' · colaborador: '+esc(comColabSel):'')+' · comissão total: '+kz(totQuota)+' · já atribuída: '+kz(totAtrib)+' · <b>a pagar (nesta vista): '+kz(totPend)+'</b>'+(totDeve>0?' · aluno(s) ainda devem: '+kz(totDeve):'')+'</div>'
    +'<div class="sec" style="background:#f7f9fc;margin:0 0 14px;padding:10px 14px"><h3 style="margin:0 0 4px;font-size:13px;color:var(--azul);text-transform:uppercase">Atribuir por colaborador (só confirmadas)</h3>'+resumoColabHTML+'</div>'
    +'<table><thead><tr><th class="stickyhead">Aluno</th><th class="stickyhead">Edição</th><th class="stickyhead">Colaborador</th><th class="stickyhead">Pago</th><th class="stickyhead">Aluno ainda deve</th><th class="stickyhead">Comissão</th><th class="stickyhead">Já atribuída</th><th class="stickyhead">A pagar</th><th class="stickyhead">Confirmação</th><th class="stickyhead"></th></tr></thead><tbody>'+linhasHTML+'</tbody></table>';
@@ -8180,7 +8242,8 @@ function vRH(){const ppl=pessoasKA();const mes=rhMes||new Date().toISOString().s
  ${role==="admin"&&arquivados().length?`<div class="sec"><h2>Arquivados <span class="pill p-cinza">${arquivados().length}</span></h2><div class="muted">Pessoas que já não aparecem nas listas. Podes repor.</div><table><tbody>${arquivados().map(n=>`<tr><td>${esc(n)}</td><td style="text-align:right"><button class="btn-o" style="padding:3px 9px" onclick="desarquivarPessoa('${esc(n)}')">Repor</button></td></tr>`).join("")}</tbody></table></div>`:""}
  <div class="sec"><h2>Aniversários (próximos 30 dias)</h2>
   ${anivs.length?'<table><thead><tr><th class="stickyhead">Nome</th><th class="stickyhead">Tipo</th><th class="stickyhead">Quando</th><th class="stickyhead">Faltam</th></tr></thead><tbody>'+anivs.map(a=>`<tr><td>${esc(a.nome)}</td><td>${esc(a.tipo)}</td><td>${fmtDataCurta(a.quando)}</td><td>${a.dias===0?'<span class="pill p-dour">hoje 🎉</span>':a.dias+' dia(s)'}</td></tr>`).join("")+'</tbody></table>':'<div class="muted">Sem aniversários próximos (define a data de nascimento nos registos).</div>'}
- </div>`;}
+ </div>
+ ${presencaEquipaHTML()}`;}
 /* L156-5: o Salário só se escreve livremente uma vez (quando ainda está a zero/vazio); depois de
    definido, mudá-lo exige o código da Gestão (data.comp.codSalario, configurável em Definições) —
    mesmo padrão dos outros campos sensíveis (codCards, codTransfer, codFormador). */
