@@ -1131,7 +1131,7 @@ function syncPagOnline(o){const cod=ensureOnlineCod(o);const val=+o.valorPago||0
  if(cupomCod){p.total=total;p.cupom=cupomCod;}
  _ajustarPago(p,val,val);}
 let _rowEdit=null;
-const EDIT_LABELS={nome:"Nome",tel:"Telefone",contacto:"Contacto",email:"E-mail",curso:"Curso",area:"Área de formação/trabalho",canal:"Como chegou",estado:"Estado",resp:"Responsável",notas:"Notas",nivel:"Nível",fase:"Fase",formador:"Formador",inicio:"Data de início",valorPago:"Valor pago (Kz)",vendedor:"Responsável",turma:"Turma",data:"Data",tipo:"Tipo",resultado:"Resultado",seguimento:"Seguimento",horaPedida:"Hora pedida para contacto",msg:"Mensagem",usaPC:"Usa computador da academia?",cupom:"Código promocional",morada:"Morada",proximoCurso:"Próximo curso que pretende fazer",periodo:"Período"};
+const EDIT_LABELS={nome:"Nome",tel:"Telefone",contacto:"Contacto",email:"E-mail",curso:"Curso",area:"Área de formação/trabalho",canal:"Como chegou",estado:"Estado",resp:"Responsável",notas:"Notas",nivel:"Nível",fase:"Fase",formador:"Formador",inicio:"Data de início",valorPago:"Valor pago (Kz)",vendedor:"Responsável",vendedor2:"2º responsável pela venda",turma:"Turma",data:"Data",tipo:"Tipo",resultado:"Resultado",seguimento:"Seguimento",horaPedida:"Hora pedida para contacto",msg:"Mensagem",usaPC:"Usa computador da academia?",cupom:"Código promocional",morada:"Morada",proximoCurso:"Próximo curso que pretende fazer",periodo:"Período"};
 /* L153: estados válidos de um formando presencial — usados para o dropdown de Estado em "Editar registo".
    Transferido p/ Online normalmente resulta do fluxo próprio (Passar para turma online), mas fica aqui como
    opção porque o campo já era editável livremente antes (agora só passa a ser um valor fechado, mais seguro). */
@@ -1171,6 +1171,10 @@ function rowEditModalHTML(){if(!_rowEdit)return"";const o=(data[_rowEdit.arr]||[
     nunca a listava e o dropdown de "Responsável" desaparecia por completo, em vez de aparecer vazio
     a pedir para escolher — como aconteceu com a Neide Vieira. Força sempre a chave a entrar na lista. */
  if((isForm||_rowEdit.arr==="online")&&keys.indexOf("vendedor")<0)keys.push("vendedor");
+ /* L157-3: "vendedor2" (2º responsável pela venda) é opcional e novo — como "vendedor" no L66-1,
+    força-se sempre a chave a entrar na lista mesmo quando o registo ainda não a tem, para poder
+    ser preenchida a qualquer momento (é o que activa a repartição de comissão 50/50). */
+ if((isForm||_rowEdit.arr==="online")&&keys.indexOf("vendedor2")<0)keys.push("vendedor2");
  /* L139-5: "morada" é um campo novo — formandos já registados antes desta versão não têm esta
     chave no objecto, e como a lista de campos editáveis vem de Object.keys(o), simplesmente não
     aparecia para eles. Mesmo truque já usado acima para "vendedor": força a chave a entrar na
@@ -1203,11 +1207,22 @@ function rowEditModalHTML(){if(!_rowEdit)return"";const o=(data[_rowEdit.arr]||[
     return '<div style="margin-bottom:8px"><label>'+esc(EDIT_LABELS[k]||k)+'</label><select class="re_f" data-k="vendedor">'+(!o.vendedor?'<option value="">— escolher —</option>':"")+_vopts.map(function(n){return '<option value="'+esc(n)+'" '+(n===o.vendedor?"selected":"")+'>'+esc(n)+'</option>';}).join("")+'<option value="Gestão" '+(o.vendedor==="Gestão"?"selected":"")+'>Gestão (sem comissão a ninguém)</option></select><div class="muted" style="margin-top:3px;font-size:11px">Alterar pede a password de gestão + motivo — fica registado no histórico.</div></div>';}
    return '<div style="margin-bottom:8px"><label>'+esc(EDIT_LABELS[k]||k)+'</label><div>'+esc(o.vendedor||"—")+'</div><div class="muted" style="margin-top:3px;font-size:11px">Só a gestão pode alterar o responsável pela venda.</div></div>';
   }
+  /* L157-3: 2º responsável pela venda — sempre opcional ("— nenhum —"). Sempre que estiver
+     preenchido, a comissão desse aluno divide-se 50/50 entre o Responsável e este 2º responsável
+     (ver _comissaoDivisao). Mesma protecção que o Responsável: só a gestão altera, com password+motivo,
+     fica no histórico. */
+  if((isForm||_rowEdit.arr==="online")&&k==="vendedor2"){
+   if(role==="admin"){var _v2opts=todosColaboradores();if(o.vendedor2&&_v2opts.indexOf(o.vendedor2)<0)_v2opts=[o.vendedor2].concat(_v2opts);
+    return '<div style="margin-bottom:8px"><label>'+esc(EDIT_LABELS[k]||k)+'</label><select class="re_f" data-k="vendedor2"><option value="">— nenhum —</option>'+_v2opts.map(function(n){return '<option value="'+esc(n)+'" '+(n===o.vendedor2?"selected":"")+'>'+esc(n)+'</option>';}).join("")+'</select><div class="muted" style="margin-top:3px;font-size:11px">Opcional. Sempre que preenchido, a comissão divide-se 50/50 entre os dois. Alterar pede a password de gestão + motivo — fica registado no histórico.</div></div>';}
+   return '<div style="margin-bottom:8px"><label>'+esc(EDIT_LABELS[k]||k)+'</label><div>'+esc(o.vendedor2||"—")+'</div><div class="muted" style="margin-top:3px;font-size:11px">Só a gestão pode alterar o 2º responsável pela venda.</div></div>';
+  }
   return `<div style="margin-bottom:8px"><label>${esc(EDIT_LABELS[k]||k)}</label><input class="re_f" data-k="${esc(k)}" data-num="${typeof o[k]==="number"?1:0}" value="${esc(String(o[k]==null?"":o[k]))}"></div>`;
  }).join("")||'<div class="muted">Sem campos editáveis.</div>';
  return `<div style="position:fixed;inset:0;background:rgba(20,30,60,.35);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharRowEdit()"><div class="card" style="padding:22px;width:460px;max-width:94vw;max-height:88vh;overflow:auto"><div class="flex"><h2 style="color:var(--azul)">Editar registo</h2><div class="spacer"></div><button class="btn-o" style="padding:4px 10px" onclick="fecharRowEdit()">Fechar ✕</button></div><div class="muted" style="margin:2px 0 12px">Edita os campos e grava. Fica guardado para toda a equipa.${isForm?' Ao mudar a turma/turno, período/gestora/formador actualizam-se sozinhos.':''}</div>${campos}<div class="row-actions"><button class="btn-p" onclick="saveRowEdit()">Guardar alterações</button></div></div></div>`;}
 /* L52 — alterar o "Responsável pela venda" de um aluno já registado (via Editar registo) exige gestão +
-   password + motivo, e fica gravado num histórico próprio — mesmo padrão usado para apagar uma venda. */
+   password + motivo, e fica gravado num histórico próprio — mesmo padrão usado para apagar uma venda.
+   L157-3: o mesmo histórico passa a servir também para o "2º responsável pela venda" — cada entrada
+   guarda "campo" para distinguir; entradas antigas (sem "campo") são sempre do Responsável principal. */
 function vendedorLog(){if(!Array.isArray(data.vendedorLog))data.vendedorLog=[];return data.vendedorLog;}
 function saveRowEdit(){if(!_rowEdit)return;const arrNome=_rowEdit.arr;const o=(data[_rowEdit.arr]||[])[_rowEdit.i];if(!o){_rowEdit=null;render();return;}
  if(arrNome==="formandos"||arrNome==="online"){
@@ -1219,7 +1234,17 @@ function saveRowEdit(){if(!_rowEdit)return;const arrNome=_rowEdit.arr;const o=(d
    if(pin!==(data.pass||DEFAULT_PASS)){toast("Password incorrecta — nada foi alterado");return;}
    var motivo=prompt("Motivo da alteração do responsável pela venda (fica registado):");
    if(motivo===null||!(motivo||"").trim()){toast("É preciso indicar um motivo");return;}
-   vendedorLog().unshift({quando:new Date().toISOString(),quem:(currentUser&&currentUser.nome)||role,cod:o.cod,aluno:o.nome||"",antes:o.vendedor||"—",depois:vendInp.value||"—",motivo:motivo.trim()});
+   vendedorLog().unshift({quando:new Date().toISOString(),quem:(currentUser&&currentUser.nome)||role,cod:o.cod,aluno:o.nome||"",campo:"Responsável",antes:o.vendedor||"—",depois:vendInp.value||"—",motivo:motivo.trim()});
+  }
+  var vend2Inp=document.querySelector('.re_f[data-k="vendedor2"]');
+  if(vend2Inp&&vend2Inp.value!==(o.vendedor2||"")){
+   if(role!=="admin"){toast("Só a gestão pode alterar o 2º responsável pela venda");return;}
+   var pin2=prompt("Password de Gestão para confirmar a alteração do 2º responsável pela venda de "+(o.nome||"")+":");
+   if(pin2===null)return;
+   if(pin2!==(data.pass||DEFAULT_PASS)){toast("Password incorrecta — nada foi alterado");return;}
+   var motivo2=prompt("Motivo da alteração do 2º responsável pela venda (fica registado):");
+   if(motivo2===null||!(motivo2||"").trim()){toast("É preciso indicar um motivo");return;}
+   vendedorLog().unshift({quando:new Date().toISOString(),quem:(currentUser&&currentUser.nome)||role,cod:o.cod,aluno:o.nome||"",campo:"2º responsável",antes:o.vendedor2||"—",depois:vend2Inp.value||"—",motivo:motivo2.trim()});
   }
  }
  document.querySelectorAll('.re_f').forEach(function(inp){const k=inp.getAttribute('data-k');const num=inp.getAttribute('data-num')==="1";o[k]=num?(+inp.value||0):inp.value;});
@@ -1423,7 +1448,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.87";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.89";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -4769,10 +4794,10 @@ function addChamada(inscreverJa){const nome=val("c_nome");if(!nome){toast("Escol
    }catch(e){}
   });
  }else render();}
-/* L68 — comissão de chamada dividida (setter+closer): quem fez a ÚLTIMA chamada a este contacto,
-   usada para saber quem "abriu" a venda quando é diferente de quem está como Responsável pela venda
-   (o "fecho"). data.chamadas é sempre inserido com unshift (mais recente à cabeça), por isso o primeiro
-   registo que bate com o telefone já é o mais recente — não é preciso ordenar por data. */
+/* Quem fez a ÚLTIMA chamada a este contacto. data.chamadas é sempre inserido com unshift (mais
+   recente à cabeça), por isso o primeiro registo que bate com o telefone já é o mais recente — não
+   é preciso ordenar por data. L157-2: deixou de alimentar a divisão de comissão (ver _comissaoDivisao);
+   fica disponível para outros usos informativos. */
 function chamadaRespDe(tel){var nt=normTel(tel);if(!nt)return"";var c=(data.chamadas||[]).find(function(x){return normTel(x.tel)===nt;});return c?(c.resp||""):"";}
 
 /* CERTIFICADOS */
@@ -7700,11 +7725,12 @@ function respInputHTML(id,valorAtual,placeholder){const v=(valorAtual!==undefine
     — ex.: pessoa entretanto arquivada/renomeada — mantém-se como opção para não apagar dados existentes. */
  var opts=pessoas.slice();if(v&&opts.indexOf(v)<0)opts.unshift(v);
  return `<select id="${id}">${!v?'<option value="">'+esc(placeholder||"— escolher —")+'</option>':''}${opts.map(n=>`<option value="${esc(n)}" ${n===v?"selected":""}>${esc(n)}</option>`).join("")}</select>`;}
-/* L68 — comissão de chamada dividida (setter/closer): quando a última chamada a um contacto foi feita
-   por alguém diferente de quem está como "Responsável pela venda" (o fecho), a comissão desse aluno
-   divide-se a meio entre os dois. Sem chamada registada, ou com o mesmo nome nos dois papéis, continua
-   100% para o Responsável pela venda — comportamento igual ao de sempre. */
-function _comissaoDivisao(f){var closer=(f&&f.vendedor||"").trim();var setter=(chamadaRespDe((f&&(f.tel||f.contacto))||"")||"").trim();var split=!!(closer&&closer!=="Gestão"&&setter&&setter!=="Gestão"&&setter!==closer);return{closer:closer,setter:setter,split:split};}
+/* L157-2 — a repartição automática por "quem fez a última chamada" (L68) foi retirada: gerava divisões
+   silenciosas que a equipa nem sempre esperava. A partir de agora a repartição só acontece quando a
+   Gestão preenche manualmente um "2º responsável pela venda" na ficha (f.vendedor2, protegido por
+   password+motivo, igual ao Responsável principal). Preenchido = 50/50; vazio = 100% para o Responsável
+   pela venda, como sempre foi. */
+function _comissaoDivisao(f){var closer=(f&&f.vendedor||"").trim();var setter=(f&&f.vendedor2||"").trim();var split=!!(closer&&closer!=="Gestão"&&setter&&setter!=="Gestão"&&setter!==closer);return{closer:closer,setter:setter,split:split};}
 function _comissaoQuotaPessoa(cod,nome){if(!nome||nome==="Gestão")return 0;var f=_vendavelPorCod(cod);if(!f)return 0;var div=_comissaoDivisao(f);var com=comissaoDe(cod);if(div.split)return(nome===div.closer||nome===div.setter)?Math.round(com/2):0;return nome===div.closer?com:0;}
 function comissaoPessoa(nome){if(!nome||nome==="Gestão")return 0;return _todosVendaveis().filter(function(f){var div=_comissaoDivisao(f);return div.split?(nome===div.closer||nome===div.setter):(nome===div.closer);}).reduce(function(s,f){return s+_comissaoQuotaPessoa(f.cod,nome);},0);}
 /* L20-2/L61: detalhe de quem justifica a comissão de cada pessoa — nome, telefone, modalidade e
@@ -7770,52 +7796,95 @@ function _comissaoPorEdicaoMes(nome,mesFolha){var grp={};comDetItensMes(nome,mes
 function _mesesEntre(de,ate){var a=de<ate?de:ate,b=de<ate?ate:de;var pa=a.split("-"),pb=b.split("-");var y=+pa[0],m=+pa[1];var yF=+pb[0],mF=+pb[1];var out=[];var guard=0;while((y<yF||(y===yF&&m<=mF))&&guard<240){out.push(y+"-"+("0"+m).slice(-2));m++;if(m>12){m=1;y++;}guard++;}return out;}
 function _comissaoTipoItem(x){var f=_vendavelPorCod(x.cod);return (f&&f.gratifVolume10)?"Gratificação de volume":"Normal";}
 /* L155 — "Comissões por Edição": ao lado da vista já existente (por pessoa + mês de folha), a Gestão
-   pode escolher uma Edição (turma presencial) e ver, aluno a aluno, quem vendeu, quanto foi pago,
-   quanto de comissão já foi atribuída/entregue e quanto ainda falta — e confirmar/atribuir essa parte,
-   aluno a aluno ou a edição inteira de uma vez. Usa exactamente o mesmo livro (comissoesPagasCods via
-   _comissaoAdicionarPessoa/_comissaoRevertPessoa) que a folha de pagamento já usa, por isso o que for
-   atribuído aqui não volta a aparecer como pendente na folha, e vice-versa — nunca paga a mesma fatia
-   duas vezes. Coexiste com a vista por pessoa+mês, não a substitui. */
-let comEdCod="";let comEdMes="";let comEdFiltro="apagar";let comVer="edicao";
+   pode escolher uma ou mais Edições e ver, aluno a aluno, quem vendeu, quanto foi pago, quanto de
+   comissão já foi atribuída/entregue e quanto ainda falta. Usa exactamente o mesmo livro
+   (comissoesPagasCods via _comissaoAdicionarPessoa/_comissaoRevertPessoa) que a folha de pagamento já
+   usa, por isso o que for atribuído aqui não volta a aparecer como pendente na folha, e vice-versa —
+   nunca paga a mesma fatia duas vezes. Coexiste com a vista por pessoa+mês, não a substitui.
+   L158 — reformulado: (a) os meses do filtro deixam de ser um campo livre e passam a listar só os
+   meses em que houve pagamento real dentro do âmbito escolhido; (b) cada aluno exige confirmação da
+   Gestão ("é mesmo aluno deste colaborador") antes de entrar na soma a pagar; (c) atribuir deixa de
+   ser aluno-a-aluno/por-edição e passa a ser por COLABORADOR — um botão só, com o total confirmado no
+   âmbito actual, que entra de uma vez na folha de remuneração. */
+let comEdSel=[];let comMesSel=[];let comColabSel="";let comEdFiltro="confirmar";
 function comissoesAtribuidasLog(){if(!Array.isArray(data.comissoesAtribuidasLog))data.comissoesAtribuidasLog=[];return data.comissoesAtribuidasLog;}
 function comEdAlunosDaEdicao(turmaCod){return (data.formandos||[]).filter(function(f){return f.turma===turmaCod;});}
-/* L156 — cada linha traz sempre os 4 números (pago, dívida do aluno, comissão pendente, comissão já
-   atribuída) para não obrigar a saltar entre ecrãs; os "chips" (apagar/japaga/deve) só escolhem QUAIS
-   linhas mostrar, não escondem informação da própria linha. Uma linha pode aparecer em mais do que um
-   chip ao mesmo tempo (ex.: aluno pagou uma parte — há comissão a pagar dessa parte — e ainda deve o
-   resto — por isso também aparece em "Aluno ainda deve"). turmaCod=null/"" percorre TODAS as edições
-   (usado na vista "por Mês", que cruza edições). */
-function comLinhasBase(turmaCod,mesFiltro){var scope=turmaCod?comEdAlunosDaEdicao(turmaCod):(data.formandos||[]);var out=[];
+/* Confirmação por aluno: guardada por cod+nome (uma venda dividida tem duas confirmações
+   independentes). Desfazer exige a password da Gestão + motivo, e fica registado — mesmo padrão já
+   usado para alterar o Responsável pela venda. */
+function comissaoConfirmacoes(){if(!data.comissaoConfirmacoes)data.comissaoConfirmacoes={};return data.comissaoConfirmacoes;}
+function comissaoConfirmacoesLog(){if(!Array.isArray(data.comissaoConfirmacoesLog))data.comissaoConfirmacoesLog=[];return data.comissaoConfirmacoesLog;}
+function _comConfKey(cod,nome){return cod+"|"+nome;}
+function comissaoConfirmada(cod,nome){var e=comissaoConfirmacoes()[_comConfKey(cod,nome)];return e?{ok:true,por:e.quem||"",em:e.quando||""}:{ok:false,por:"",em:""};}
+function confirmarComissaoAluno(cod,nome){if(role!=="admin"){toast("Só a gestão pode confirmar");return;}
+ var f=_vendavelPorCod(cod);var alunoNome=f?(f.nome||cod):cod;
+ comissaoConfirmacoes()[_comConfKey(cod,nome)]={quem:(currentUser&&currentUser.nome)||role,quando:new Date().toISOString()};
+ comissaoConfirmacoesLog().unshift({quando:new Date().toISOString(),quem:(currentUser&&currentUser.nome)||role,cod:cod,aluno:alunoNome,nome:nome,acao:"Confirmada"});
+ persist();toast("Confirmado: "+alunoNome+" é aluno de "+nome);render();}
+function desconfirmarComissaoAluno(cod,nome){if(role!=="admin"){toast("Só a gestão pode desfazer");return;}
+ var key=_comConfKey(cod,nome);if(!comissaoConfirmacoes()[key]){toast("Não está confirmado");return;}
+ var f=_vendavelPorCod(cod);var alunoNome=f?(f.nome||cod):cod;
+ var pin=prompt('Password de Gestão para desfazer a confirmação de "'+alunoNome+'" para '+nome+':');
+ if(pin===null)return;
+ if(pin!==(data.pass||DEFAULT_PASS)){toast("Password incorrecta — nada foi alterado");return;}
+ var motivo=prompt("Motivo para desfazer esta confirmação (fica registado):");
+ if(motivo===null||!(motivo||"").trim()){toast("É preciso indicar um motivo");return;}
+ delete comissaoConfirmacoes()[key];
+ comissaoConfirmacoesLog().unshift({quando:new Date().toISOString(),quem:(currentUser&&currentUser.nome)||role,cod:cod,aluno:alunoNome,nome:nome,acao:"Desfeita",motivo:motivo.trim()});
+ persist();toast("Confirmação desfeita");render();}
+/* Meses reais com pagamento, dentro do âmbito das edições escolhidas (todas, se nenhuma estiver
+   seleccionada) — substitui o antigo campo de mês livre. */
+function comMesesDisponiveis(turmaCods){var turmaSet=(turmaCods&&turmaCods.length)?{}:null;if(turmaSet)turmaCods.forEach(function(c){turmaSet[c]=true;});
+ var scope=turmaSet?(data.formandos||[]).filter(function(f){return turmaSet[f.turma];}):(data.formandos||[]);
+ var set={};
+ scope.forEach(function(f){var p=payOf(f.cod);if(!p||!((+p.pago||0)>0))return;var ds=(p.prestacoes||[]).map(function(x){return x.data;}).filter(Boolean);if(!ds.length&&p.criadoEm)ds=[p.criadoEm.slice(0,10)];ds.forEach(function(d){set[d.slice(0,7)]=true;});});
+ return Object.keys(set).sort();}
+/* L156 — cada linha traz sempre os números (pago, dívida do aluno, comissão pendente, comissão já
+   atribuída, confirmação) para não obrigar a saltar entre ecrãs; os "chips" só escolhem QUAIS linhas
+   mostrar, não escondem informação da própria linha. turmaCods/mesesArr vazios = todas as edições/meses. */
+function comLinhasBase(turmaCods,mesesArr){var turmaSet=(turmaCods&&turmaCods.length)?{}:null;if(turmaSet)turmaCods.forEach(function(c){turmaSet[c]=true;});
+ var mesSet=(mesesArr&&mesesArr.length)?{}:null;if(mesSet)mesesArr.forEach(function(m){mesSet[m]=true;});
+ var scope=turmaSet?(data.formandos||[]).filter(function(f){return turmaSet[f.turma];}):(data.formandos||[]);
+ var out=[];
  scope.forEach(function(f){var p=payOf(f.cod);var pago=p?(+p.pago||0):0;var dividaAluno=p?divida(p):0;if(pago<=0&&dividaAluno<=0)return;
   var div=_comissaoDivisao(f);var pessoas=div.split?[div.closer,div.setter]:[div.closer];
   var du=p?_dataUltimoPagamento(p):"";var mesUlt=du?du.slice(0,7):"";
-  if(mesFiltro&&mesUlt&&mesUlt!==mesFiltro)return;
+  if(mesSet&&!(mesUlt&&mesSet[mesUlt]))return;
   var t=turmaByCod(f.turma);var turmaLabel=t?(t.ed+"ª — "+(t.curso||"")):(f.turma||"—");
   pessoas.forEach(function(nome){if(!nome||nome==="Gestão")return;
    var quota=pago>0?_comissaoQuotaPessoa(f.cod,nome):0;var jaAtribuida=_comissaoJaPagaPessoa(f.cod,nome);var pendente=_comissaoPendentePessoa(f.cod,nome);
-   out.push({cod:f.cod,aluno:f.nome||f.cod,nome:nome,turmaCod:f.turma,turmaLabel:turmaLabel,pago:pago,dividaAluno:dividaAluno,quota:quota,atribuida:jaAtribuida,pendente:pendente,dividida:div.split,mesUltimoPagamento:mesUlt});
+   var conf=comissaoConfirmada(f.cod,nome);
+   out.push({cod:f.cod,aluno:f.nome||f.cod,nome:nome,turmaCod:f.turma,turmaLabel:turmaLabel,pago:pago,dividaAluno:dividaAluno,quota:quota,atribuida:jaAtribuida,pendente:pendente,dividida:div.split,mesUltimoPagamento:mesUlt,confirmada:conf.ok,confirmadoPor:conf.por,confirmadoEm:conf.em});
   });});
  return out.sort(function(a,b){return (a.turmaLabel||"").localeCompare(b.turmaLabel||"")||(a.aluno||"").localeCompare(b.aluno||"");});}
-function comLinhasFiltro(linhas,filtro){if(filtro==="apagar")return linhas.filter(function(x){return x.pendente>0;});if(filtro==="japaga")return linhas.filter(function(x){return x.pendente<=0&&x.atribuida>0;});if(filtro==="deve")return linhas.filter(function(x){return x.dividaAluno>0;});return linhas;}
-function comEdLinhas(turmaCod,mesFiltro,filtro){return comLinhasFiltro(comLinhasBase(turmaCod,mesFiltro),filtro||"apagar");}
-/* L156-2 — ao escolher uma edição, o mês salta sozinho para o mês em que os alunos COMEÇARAM a pagar
-   essa edição (1º pagamento visto no sistema) — não o mês mais recente. A Gestão pode depois mudar o
-   mês à mão para ver outro período da mesma edição. */
-function comEdMesInicial(turmaCod){var datas=[];comEdAlunosDaEdicao(turmaCod).forEach(function(f){var p=payOf(f.cod);if(!p||!((+p.pago||0)>0))return;var ds=(p.prestacoes||[]).map(function(x){return x.data;}).filter(Boolean);if(ds.length)datas=datas.concat(ds);else if(p.criadoEm)datas.push(p.criadoEm.slice(0,10));});datas.sort();return datas.length?datas[0].slice(0,7):"";}
-function escolherComEdicao(cod){comEdCod=cod;comEdMes=cod?comEdMesInicial(cod):"";render();}
+function comLinhasColab(linhas,nome){return nome?linhas.filter(function(x){return x.nome===nome;}):linhas;}
+function comLinhasFiltro(linhas,filtro){
+ if(filtro==="confirmar")return linhas.filter(function(x){return x.pendente>0&&!x.confirmada;});
+ if(filtro==="apagar")return linhas.filter(function(x){return x.pendente>0&&x.confirmada;});
+ if(filtro==="japaga")return linhas.filter(function(x){return x.pendente<=0&&x.atribuida>0;});
+ if(filtro==="deve")return linhas.filter(function(x){return x.dividaAluno>0;});
+ return linhas;}
+function comEdLinhas(turmaCods,mesesArr,colab,filtro){return comLinhasFiltro(comLinhasColab(comLinhasBase(turmaCods,mesesArr),colab),filtro||"apagar");}
+function toggleComEdicao(cod){var i=comEdSel.indexOf(cod);if(i>=0)comEdSel.splice(i,1);else comEdSel.push(cod);comMesSel=[];render();}
+function toggleComMes(mes){var i=comMesSel.indexOf(mes);if(i>=0)comMesSel.splice(i,1);else comMesSel.push(mes);render();}
+function setComColab(nome){comColabSel=nome;render();}
 function _horaAgoraCom(){return new Date().toTimeString().slice(0,5);}
-function atribuirComissaoEdicao(cod,nome,turmaCod){if(role!=="admin"){toast("Só a gestão pode atribuir comissão");return;}var pendente=_comissaoPendentePessoa(cod,nome);if(pendente<=0){toast("Não há comissão pendente para atribuir");return;}var f=_vendavelPorCod(cod);var t=turmaByCod(turmaCod);var alunoNome=f?(f.nome||cod):cod;var turmaLabel=t?(t.ed+"ª — "+(t.curso||"")):(turmaCod||"—");
- kaConfirm('Atribuir '+kz(pendente)+' de comissão a '+nome+', referente ao aluno '+alunoNome+' ('+turmaLabel+')? Fica registada como entregue.',function(){
-  var quem=(currentUser&&currentUser.nome)||role;var dataPag=_dISO(new Date());var horaPag=_horaAgoraCom();var mesRef=comEdMes||_mesAtual();
-  _comissaoAdicionarPessoa(cod,nome,pendente,mesRef,quem,dataPag);
-  comissoesAtribuidasLog().unshift({cod:cod,aluno:alunoNome,nome:nome,turmaCod:turmaCod,turmaLabel:turmaLabel,valor:pendente,quem:quem,data:dataPag,hora:horaPag,acao:"Atribuída"});
-  persist();toast("Comissão atribuída a "+nome);recCom=0;render();
- });}
-function atribuirComissaoEdicaoLote(turmaCod){if(role!=="admin"){toast("Só a gestão pode atribuir comissão");return;}var linhas=comEdLinhas(turmaCod,comEdMes,"apagar");if(!linhas.length){toast("Não há comissões pendentes para atribuir nesta selecção");return;}var total=linhas.reduce(function(s,x){return s+x.pendente;},0);var t=turmaByCod(turmaCod);var turmaLabel=t?(t.ed+"ª — "+(t.curso||"")):(turmaCod||"—");
- kaConfirm('Atribuir '+kz(total)+' de comissão, para '+linhas.length+' aluno(s)/colaborador(es) da '+turmaLabel+(comEdMes?' (pagamentos de '+comEdMes+')':'')+'? Fica tudo registado como entregue.',function(){
-  var quem=(currentUser&&currentUser.nome)||role;var dataPag=_dISO(new Date());var horaPag=_horaAgoraCom();var mesRef=comEdMes||_mesAtual();
-  linhas.forEach(function(x){_comissaoAdicionarPessoa(x.cod,x.nome,x.pendente,mesRef,quem,dataPag);comissoesAtribuidasLog().unshift({cod:x.cod,aluno:x.aluno,nome:x.nome,turmaCod:turmaCod,turmaLabel:turmaLabel,valor:x.pendente,quem:quem,data:dataPag,hora:horaPag,acao:"Atribuída"});});
-  persist();toast(linhas.length+" comissão(ões) atribuída(s)");render();
+/* L158-2 — atribuir deixa de existir aluno-a-aluno ou por edição: passa a ser SÓ por colaborador,
+   sobre tudo o que estiver CONFIRMADO no âmbito actual (edições/meses seleccionados nos filtros da
+   secção — comEdSel/comMesSel). Ao clicar, o valor entra na folha de remuneração através do mesmo
+   livro de sempre (nunca paga a mesma fatia duas vezes) — comEdLinhas(...,"apagar") já filtra só
+   pendente>0 && confirmada. Lê os filtros globais (comEdSel/comMesSel) em vez de os receber por
+   parâmetro — mesmo padrão usado no resto desta secção. */
+function atribuirComissaoColaborador(nome){
+ if(role!=="admin"){toast("Só a gestão pode atribuir comissão");return;}
+ if(!nome){toast("Escolhe o colaborador");return;}
+ var linhas=comEdLinhas(comEdSel,comMesSel,nome,"apagar");
+ if(!linhas.length){toast("Não há comissão confirmada a pagar a "+nome+" nesta selecção");return;}
+ var total=linhas.reduce(function(s,x){return s+x.pendente;},0);
+ kaConfirm('Atribuir '+kz(total)+' de comissão a '+nome+' ('+linhas.length+' aluno(s) confirmado(s))? Entra na folha de remuneração e fica registado como entregue.',function(){
+  var quem=(currentUser&&currentUser.nome)||role;var dataPag=_dISO(new Date());var horaPag=_horaAgoraCom();var mesRef=(comMesSel&&comMesSel.length)?comMesSel[comMesSel.length-1]:_mesAtual();
+  linhas.forEach(function(x){_comissaoAdicionarPessoa(x.cod,x.nome,x.pendente,mesRef,quem,dataPag);comissoesAtribuidasLog().unshift({cod:x.cod,aluno:x.aluno,nome:x.nome,turmaCod:x.turmaCod,turmaLabel:x.turmaLabel,valor:x.pendente,quem:quem,data:dataPag,hora:horaPag,acao:"Atribuída"});});
+  persist();toast(kz(total)+" atribuídos a "+nome);render();
  });}
 function reverterComissaoAtribuicao(idx){if(role!=="admin"){toast("Só a gestão pode reverter");return;}var LOG=comissoesAtribuidasLog();var x=LOG[idx];if(!x||x.acao!=="Atribuída"||x.revertido){toast("Este registo já não pode ser revertido");return;}
  kaConfirm('Reverter a atribuição de '+kz(x.valor)+' a '+x.nome+' (aluno '+x.aluno+')? Volta a ficar pendente.',function(){
@@ -7830,12 +7899,15 @@ function fecharReciboComissao(){recCom=null;render();}
 function printReciboComissao(){_printClone("reccomdoc");var _restored=false;var _restore=function(){if(_restored)return;_restored=true;_printCleanup();};window.addEventListener("afterprint",_restore,{once:true});window.print();setTimeout(_restore,15000);}
 function reciboComissaoModalHTML(){if(recCom===null||recCom===undefined)return"";var LOG=comissoesAtribuidasLog();var x=LOG[recCom];if(!x)return"";var cc=data.comp||{};var c=(data.colaboradores||[]).find(function(y){return y.nome===x.nome;})||{};
  return '<div style="position:fixed;inset:0;background:rgba(20,30,60,.45);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharReciboComissao()"><div class="card" style="padding:0;width:560px;max-width:94vw;max-height:90vh;overflow:auto"><div id="reccomdoc" style="padding:28px 34px;font-size:13.5px;line-height:1.6;color:#222"><div style="display:flex;justify-content:space-between;align-items:flex-start">'+(cc.logo?'<img src="'+cc.logo+'" style="height:40px">':'<b style="color:var(--azul);font-size:16px">Knowledge Angola</b>')+'<div style="text-align:right;font-size:11px;color:#555">'+esc(cc.morada||"")+'<br>'+esc(cc.tel||"")+'</div></div><h2 style="color:var(--azul);margin:14px 0 4px;font-size:16px">RECIBO DE COMISSÃO</h2><div class="muted" style="font-size:11.5px;margin-bottom:14px">Edição: <b>'+esc(x.turmaLabel||"—")+'</b> · Emitido em '+new Date().toLocaleDateString("pt-PT")+'</div><div>Colaborador: <b>'+esc(x.nome)+'</b>'+(c.categoria?' · '+esc(c.categoria):'')+'</div>'+(c.iban?'<div>IBAN: <b>'+esc(c.iban)+'</b></div>':'')+'<div style="border-top:1px solid var(--linha);margin-top:12px;padding-top:10px"><div>Aluno: <b>'+esc(x.aluno)+'</b></div><div style="margin-top:6px;font-size:15px">Valor da comissão: <b>'+kz(x.valor)+'</b></div></div><div style="margin-top:12px"><span class="pill '+(x.acao==="Revertida"?"p-verm":"p-verde")+'">'+(x.acao==="Revertida"?"Revertida em "+fmtDataCurta(x.data):"Atribuída em "+fmtDataCurta(x.data))+'</span></div><p style="margin-top:16px">Declara-se que o colaborador recebeu (ou teve revertido) o valor de comissão acima referente ao aluno indicado.</p><div style="margin-top:18px"><b>'+esc(cc.director||"")+'</b></div></div><div class="row-actions noprint" style="padding:0 34px 22px"><button class="btn-p" onclick="printReciboComissao()">Imprimir / PDF</button><button class="btn-o" onclick="fecharReciboComissao()">Fechar</button></div></div></div>';}
-function exportComissoesEdicaoXLSX(turmaCod){if(typeof XLSX==="undefined"){toast("Biblioteca Excel ainda a carregar — tenta daqui a instantes");return;}if(!turmaCod){toast("Escolhe uma edição primeiro");return;}
- var linhas=comEdLinhas(turmaCod,comEdMes,"apagar");var t=turmaByCod(turmaCod);var turmaLabel=t?(t.ed+"ª — "+(t.curso||"")):(turmaCod||"—");
- if(!linhas.length){toast("Sem comissões pendentes para exportar nesta edição");return;}
- var rows=linhas.map(function(x){return {Edicao:turmaLabel,Aluno:x.aluno,Colaborador:x.nome,Valor_Pago_Kz:x.pago,Divida_Aluno_Kz:x.dividaAluno,Comissao_Pendente_Kz:x.pendente,Comissao_Ja_Atribuida_Kz:x.atribuida,Mes_Ultimo_Pagamento:x.mesUltimoPagamento,Dividida:x.dividida?"Sim":"Não"};});
- var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),"Comissoes por atribuir");
- XLSX.writeFile(wb,"Comissoes-"+turmaLabel.replace(/[^a-zA-Z0-9]+/g,"_")+(comEdMes?"-"+comEdMes:"")+".xlsx");toast("Excel exportado");}
+/* L158-3 — exporta só o que está CONFIRMADO (comEdLinhas(...,"apagar") já filtra pendente>0 &&
+   confirmada), dentro do âmbito actual dos filtros da secção (comEdSel/comMesSel/comColabSel). */
+function exportComissoesEdicaoXLSX(){if(typeof XLSX==="undefined"){toast("Biblioteca Excel ainda a carregar — tenta daqui a instantes");return;}
+ var linhas=comEdLinhas(comEdSel,comMesSel,comColabSel,"apagar");
+ if(!linhas.length){toast("Sem comissões confirmadas para exportar nesta selecção");return;}
+ var rows=linhas.map(function(x){return {Edicao:x.turmaLabel,Aluno:x.aluno,Colaborador:x.nome,Valor_Pago_Kz:x.pago,Divida_Aluno_Kz:x.dividaAluno,Comissao_Pendente_Kz:x.pendente,Comissao_Ja_Atribuida_Kz:x.atribuida,Mes_Ultimo_Pagamento:x.mesUltimoPagamento,Dividida:x.dividida?"Sim":"Não",Confirmado_Por:x.confirmadoPor||""};});
+ var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),"Comissoes confirmadas");
+ var sufixo=(comColabSel?"-"+comColabSel:"")+((comMesSel&&comMesSel.length)?"-"+comMesSel.join("_"):"");
+ XLSX.writeFile(wb,"Comissoes"+sufixo.replace(/[^a-zA-Z0-9_-]+/g,"_")+".xlsx");toast("Excel exportado");}
 function comissoesHistoricoExport(nomes,de,ate){var meses=_mesesEntre(de,ate);var resumo=[],detalhe=[];nomes.forEach(function(nome){meses.forEach(function(mes){var tot=comissaoPessoaMes(nome,mes);if(tot>0)resumo.push({Colaborador:nome,Mes:mes,Gratificacao_Kz:tot});comDetItensMes(nome,mes).forEach(function(x){detalhe.push({Colaborador:nome,Mes:mes,Aluno:x.nome,Valor_Kz:x.com,Tipo:_comissaoTipoItem(x),Modalidade:x.modalidade,Turma:x.turmaLabel,Dividida:x.dividida?"Sim":"Não",Outra_pessoa:x.outraPessoa||""});});});});return{resumo:resumo,detalhe:detalhe};}
 function exportComissoesXLSX(){if(typeof XLSX==="undefined"){toast("Biblioteca Excel ainda a carregar — tenta daqui a instantes");return;}
  var mesFolha=rhMes||new Date().toISOString().slice(0,7);
@@ -7856,7 +7928,7 @@ function comDetModalHTML(){if(!comDet)return"";const nome=comDet;const mesFolha=
  if(mesFolha){const mref=comissaoMesRef(mesFolha);avisos+='<div class="note" style="margin-bottom:10px">Esta lista é a que entra na <b>folha de '+esc(mesFolha)+'</b>: alunos de '+esc(nome)+' com pagamento novo em <b>'+esc(mref)+'</b>'+(rhAutorizado(mesFolha)?' (mês actual — autorizado pela gestão)':' (mês anterior à folha, regra normal)')+', mostrando só a comissão que ainda não tinha entrado nalguma folha paga antes. Se o aluno ainda tiver dívida, o valor é sobre o que já pagou — quando pagar mais, a diferença entra numa folha futura. É diferente do total acumulado (todo o histórico) que aparece noutros relatórios.</div>';}
  if(parecidas.length){const somaParecidas=parecidas.reduce(function(a,x){return a+x.com;},0);const variantes=[...new Set(parecidas.map(function(x){return x.vendedorEscrito;}))];avisos+='<div class="note" style="background:#fff7e6;border-color:#f0d999;color:#8a6d00;margin-bottom:10px"><b>⚠ '+parecidas.length+' venda(s) com o nome do responsável escrito de forma diferente de "'+esc(nome)+'"</b> — por isso NÃO estão a contar nesta comissão'+(somaParecidas>0?' (ficariam '+kz(somaParecidas)+' de fora)':'')+'. Está escrito assim: '+variantes.map(function(v){return '"'+esc(v)+'"';}).join(', ')+'. Se for a mesma pessoa, corrige o campo "Responsável pela venda" na ficha do aluno, ou usa "unificar" em Marketing &amp; Vendas → Vendas por responsável.</div>';}
  if(pend.length){avisos+='<div class="note" style="margin-bottom:10px">ℹ '+pend.length+' venda(s) atribuída(s) a '+esc(nome)+' mas o aluno ainda não pagou nada — assim que houver o primeiro pagamento, já gera comissão (não é preciso esperar a dívida chegar a zero).</div>';}
- const rows=itens.map(function(x){return '<tr><td>'+esc(x.nome)+'</td><td>'+esc(x.tel)+'</td><td>'+esc(x.modalidade)+'</td><td>'+esc(x.turmaLabel)+'</td><td style="text-align:right">'+kz(x.com)+(x.dividida?' <span class="pill p-cinza" title="Comissão dividida a meio com quem fez a última chamada a este contacto">÷2 com '+esc(x.outraPessoa)+'</span>':'')+'</td><td><button class="btn-o" style="padding:3px 9px" onclick="fecharComDet();fFicha=\''+esc(x.cod)+'\';show(\'formandos\')">Ficha</button></td></tr>';}).join("")||'<tr><td colspan="6" class="muted">Sem alunos com comissão a mostrar.</td></tr>';
+ const rows=itens.map(function(x){return '<tr><td>'+esc(x.nome)+'</td><td>'+esc(x.tel)+'</td><td>'+esc(x.modalidade)+'</td><td>'+esc(x.turmaLabel)+'</td><td style="text-align:right">'+kz(x.com)+(x.dividida?' <span class="pill p-cinza" title="Comissão dividida a meio com o 2º responsável pela venda">÷2 com '+esc(x.outraPessoa)+'</span>':'')+'</td><td><button class="btn-o" style="padding:3px 9px" onclick="fecharComDet();fFicha=\''+esc(x.cod)+'\';show(\'formandos\')">Ficha</button></td></tr>';}).join("")||'<tr><td colspan="6" class="muted">Sem alunos com comissão a mostrar.</td></tr>';
  return '<div style="position:fixed;inset:0;background:rgba(20,30,60,.4);display:grid;place-items:center;z-index:100;padding:16px" onclick="if(event.target===this)fecharComDet()"><div class="card" style="padding:20px;width:680px;max-width:96vw;max-height:88vh;overflow:auto"><div class="flex"><h2 style="color:var(--azul)">Comissão de '+esc(nome)+(mesFolha?' — folha '+esc(mesFolha):'')+'</h2><div class="spacer"></div><button class="btn-o" style="padding:4px 10px" onclick="fecharComDet()">Fechar ✕</button></div><div class="muted" style="margin-bottom:8px">Comissão = 7,14% do que foi efectivamente pago, mesmo que o aluno ainda tenha dívida em aberto — quando pagar mais, a diferença entra numa folha futura.</div>'+avisos+'<table><thead><tr><th>Aluno</th><th>Telefone</th><th>Modalidade</th><th>Edição</th><th style="text-align:right">Comissão</th><th></th></tr></thead><tbody>'+rows+'</tbody><tfoot><tr style="font-weight:700;border-top:2px solid var(--linha)"><td colspan="4">Total</td><td style="text-align:right">'+kz(tot)+'</td><td></td></tr></tfoot></table></div></div>';}
 const CATEGORIAS=["Formador","Gestor(a) de Formação","Assistente","Marketing/Mídia","Vendas","Finanças/Administrativo","Direcção/Gestão"];
 function colabs(){if(!data.colaboradores)data.colaboradores=[];return data.colaboradores;}
@@ -7893,7 +7965,18 @@ function renomearColaboradorNome(i,el){if(role!=="admin"){toast("Só a gestão")
  _renomearEmTudo(antigo,novo);c.nome=novo;persist();toast("Colaborador renomeado");render();}
 function pagosMes(mes){const m=mes||(typeof rhMes!=="undefined"&&rhMes)||new Date().toISOString().slice(0,7);if(!data.salariosPagos)data.salariosPagos={};if(!data.salariosPagos[m])data.salariosPagos[m]={};return data.salariosPagos[m];}
 function subsidioDe(nome){if(!data.subsidios)data.subsidios={};return +(data.subsidios[nome])||0;}
-function setSubsidioPessoa(nome,el){if(role!=="admin")return;if(!data.subsidios)data.subsidios={};data.subsidios[nome]=+el.value||0;persist();render();}
+/* L157-1: "Ajuda de custo (Transporte)" passa a exigir o mesmo código do Salário (data.comp.codSalario)
+   para ser alterada depois da 1ª vez — mesmo padrão de setSalarioPessoa, para não ser editável em livre
+   texto uma vez definida. */
+function setSubsidioPessoa(nome,el){if(role!=="admin")return;if(!data.subsidios)data.subsidios={};var actual=+(data.subsidios[nome]||0);var novo=+el.value||0;
+ if(actual>0&&novo!==actual){
+  var c=codSalarioValor();
+  if(!c){toast('Já há uma ajuda de custo definida para '+nome+'. Define primeiro o código em Definições → "Código p/ alterar um Salário já definido"');el.value=actual;return;}
+  var e=prompt('Já existe uma ajuda de custo definida para '+nome+'. Código da Gestão para alterar:');
+  if(e===null){el.value=actual;return;}
+  if((e||"").trim()!==String(c)){toast("Código errado — a ajuda de custo não foi alterada");el.value=actual;return;}
+ }
+ data.subsidios[nome]=novo;persist();toast("Ajuda de custo actualizada");render();}
 /* L51-2 — Desconto na folha de pagamento (adiantamento, falta, etc.), por pessoa/mês. Exige código da gestão
    (mesmo padrão de reautenticação usado em editar gasto/ajustar orçamento) + motivo obrigatório, e fica gravado
    num histórico próprio para auditoria. */
@@ -8029,36 +8112,55 @@ function vRH(){const ppl=pessoasKA();const mes=rhMes||new Date().toISOString().s
   <tr style="background:#eaf0fb"><td><b>Total</b></td><td></td><td><b>${kz(tSal)}</b></td><td><b>${kz(tCom)}</b></td><td><b>${kz(tSub)}</b></td><td><b>${tDesc>0?'−'+kz(tDesc):kz(0)}</b></td><td><b>${kz(tSal+tCom+tSub-tDesc)}</b></td><td colspan="${role==="admin"?3:2}"></td></tr>
   </tbody></table></div>${presencaEquipaHTML()}
  ${(function(){
-  var optsEd=turmasVisiveis().slice().sort(function(a,b){return (+b.ed||0)-(+a.ed||0);}).map(function(t){return '<option value="'+esc(t.cod)+'" '+(comEdCod===t.cod?"selected":"")+'>'+esc(t.ed)+'ª — '+esc(t.curso)+'</option>';}).join("");
-  var verBtns=["edicao","mes"].map(function(k){var lab=k==="edicao"?"Por Edição":"Por Mês";return '<button class="btn-'+(comVer===k?"p":"o")+'" style="padding:5px 12px" onclick="comVer=\''+k+'\';render()">'+lab+'</button>';}).join(" ");
-  var seletor=comVer==="edicao"
-   ?'<div class="formgrid" style="margin-top:8px"><div><label>Edição</label><select onchange="escolherComEdicao(this.value)"><option value="">— escolher —</option>'+optsEd+'</select></div><div><label>Mês do pagamento</label><input type="month" value="'+esc(comEdMes||"")+'" onchange="comEdMes=this.value;render()" style="width:auto"></div></div>'
-   :'<div class="formgrid" style="margin-top:8px"><div><label>Mês do pagamento</label><input type="month" value="'+esc(comEdMes||_mesAtual())+'" onchange="comEdMes=this.value;render()" style="width:auto"></div></div>';
-  var corpo="";
-  var turmaScope=comVer==="edicao"?comEdCod:"";
-  var mesScope=comVer==="edicao"?comEdMes:(comEdMes||_mesAtual());
-  var podeVer=comVer==="edicao"?!!comEdCod:true;
-  if(podeVer){
-   var linhas=comEdLinhas(turmaScope,mesScope,comEdFiltro);
-   var totQuota=linhas.reduce(function(s,x){return s+x.quota;},0),totAtrib=linhas.reduce(function(s,x){return s+x.atribuida;},0),totPend=linhas.reduce(function(s,x){return s+x.pendente;},0),totDeve=linhas.reduce(function(s,x){return s+x.dividaAluno;},0);
-   var chips=[["apagar","A pagar"],["japaga","Já paga"],["deve","Aluno ainda deve"]].map(function(kv){return '<button class="btn-'+(comEdFiltro===kv[0]?"p":"o")+'" style="padding:5px 12px" onclick="comEdFiltro=\''+kv[0]+'\';render()">'+kv[1]+'</button>';}).join(" ");
-   var mostraEdicaoCol=(comVer==="mes");
-   var linhasHTML=linhas.map(function(x){return '<tr><td>'+esc(x.aluno)+'</td>'+(mostraEdicaoCol?'<td>'+esc(x.turmaLabel)+'</td>':'')+'<td>'+esc(x.nome)+(x.dividida?' <span class="pill p-cinza" title="Comissão dividida a meio">÷2</span>':'')+'</td><td>'+kz(x.pago)+'</td><td>'+(x.dividaAluno>0?'<span style="color:#a3311f">'+kz(x.dividaAluno)+'</span>':kz(0))+'</td><td>'+kz(x.quota)+'</td><td>'+kz(x.atribuida)+'</td><td>'+(x.pendente>0?'<b>'+kz(x.pendente)+'</b>':kz(0))+'</td><td>'+((x.pendente>0&&role==="admin")?'<button class="btn-p" style="padding:3px 9px" onclick="atribuirComissaoEdicao(\''+esc(x.cod)+'\',\''+esc(x.nome).replace(/'/g,"\\'")+'\',\''+esc(x.turmaCod)+'\')">Atribuir</button>':(x.pendente<=0&&x.atribuida>0?'<span class="pill p-verde">tudo atribuído</span>':'<span class="muted">—</span>'))+'</td></tr>';}).join("")||'<tr><td colspan="'+(mostraEdicaoCol?9:8)+'" class="muted">Sem linhas nesta selecção.</td></tr>';
-   var botaoLote=(role==="admin"&&comVer==="edicao"&&comEdFiltro==="apagar"&&linhas.length)?'<button class="btn-p" style="padding:5px 12px" onclick="atribuirComissaoEdicaoLote(\''+esc(comEdCod)+'\')">Atribuir tudo ('+kz(totPend)+')</button>':'';
-   var botaoExport=(role==="admin"&&comVer==="edicao"&&comEdCod)?'<button class="btn-o" style="padding:5px 12px" onclick="exportComissoesEdicaoXLSX(\''+esc(comEdCod)+'\')">Exportar Excel</button>':'';
-   corpo='<div class="flex" style="gap:8px;flex-wrap:wrap;margin:10px 0">'+chips+'<div class="spacer"></div>'+botaoExport+botaoLote+'</div>'
-    +'<div class="muted" style="margin-bottom:8px">'+linhas.length+' linha(s)'+(mesScope?' · '+(comVer==="mes"?"mês: ":"pagamentos de ")+mesScope:'')+' · comissão total: '+kz(totQuota)+' · já atribuída: '+kz(totAtrib)+' · <b>a pagar: '+kz(totPend)+'</b>'+(totDeve>0?' · aluno(s) ainda devem: '+kz(totDeve):'')+'</div>'
-    +'<table><thead><tr><th class="stickyhead">Aluno</th>'+(mostraEdicaoCol?'<th class="stickyhead">Edição</th>':'')+'<th class="stickyhead">Colaborador</th><th class="stickyhead">Pago</th><th class="stickyhead">Aluno ainda deve</th><th class="stickyhead">Comissão</th><th class="stickyhead">Já atribuída</th><th class="stickyhead">A pagar</th><th class="stickyhead"></th></tr></thead><tbody>'+linhasHTML+'</tbody></table>';
-  } else corpo='<div class="muted">Escolhe uma edição acima para ver a comissão.</div>';
-  return '<div class="sec"><h2>Comissões por Edição</h2><div class="muted">Vê o que há a pagar de comissão — por Edição (o mês abre sozinho no mês em que os alunos começaram a pagar essa edição) ou por Mês (junta todas as edições que têm comissão nesse mês). Atribuir aqui usa o mesmo registo da folha de pagamento, por isso nunca paga a mesma fatia duas vezes.</div>'
-   +'<div class="flex" style="gap:8px;margin-top:8px">'+verBtns+'</div>'
-   +seletor+corpo+'</div>';
+  var optsEd=turmasVisiveis().slice().sort(function(a,b){return (+b.ed||0)-(+a.ed||0);});
+  comEdSel=comEdSel.filter(function(c){return optsEd.some(function(t){return t.cod===c;});});
+  var edChips=optsEd.map(function(t){return '<label style="display:inline-flex;align-items:center;gap:4px;margin:2px 12px 2px 0;font-weight:400"><input type="checkbox" '+(comEdSel.indexOf(t.cod)>=0?"checked":"")+' onchange="toggleComEdicao(\''+esc(t.cod)+'\')"> '+esc(t.ed)+'ª — '+esc(t.curso)+'</label>';}).join("")||'<span class="muted">Sem edições.</span>';
+  var mesesDisp=comMesesDisponiveis(comEdSel);
+  comMesSel=comMesSel.filter(function(m){return mesesDisp.indexOf(m)>=0;});
+  var mesChips=mesesDisp.length?mesesDisp.map(function(m){return '<label style="display:inline-flex;align-items:center;gap:4px;margin:2px 12px 2px 0;font-weight:400"><input type="checkbox" '+(comMesSel.indexOf(m)>=0?"checked":"")+' onchange="toggleComMes(\''+m+'\')"> '+m+'</label>';}).join(""):'<span class="muted">Sem pagamentos nesta selecção.</span>';
+  var optsColab=todosColaboradores();
+  var colabHTML='<select onchange="setComColab(this.value)"><option value="">— Todos —</option>'+optsColab.map(function(n){return '<option value="'+esc(n)+'" '+(n===comColabSel?"selected":"")+'>'+esc(n)+'</option>';}).join("")+'</select>';
+
+  var linhasBase=comLinhasColab(comLinhasBase(comEdSel,comMesSel),comColabSel);
+  var linhas=comLinhasFiltro(linhasBase,comEdFiltro);
+  var totQuota=linhas.reduce(function(s,x){return s+x.quota;},0),totAtrib=linhas.reduce(function(s,x){return s+x.atribuida;},0),totPend=linhas.reduce(function(s,x){return s+x.pendente;},0),totDeve=linhas.reduce(function(s,x){return s+x.dividaAluno;},0);
+  var chips=[["confirmar","Por confirmar"],["apagar","Confirmado — a pagar"],["japaga","Já paga"],["deve","Aluno ainda deve"]].map(function(kv){return '<button class="btn-'+(comEdFiltro===kv[0]?"p":"o")+'" style="padding:5px 12px" onclick="comEdFiltro=\''+kv[0]+'\';render()">'+kv[1]+'</button>';}).join(" ");
+
+  var confirmadasPagar=comLinhasFiltro(linhasBase,"apagar");
+  var porColab={};confirmadasPagar.forEach(function(x){porColab[x.nome]=(porColab[x.nome]||0)+x.pendente;});
+  var nomesColab=Object.keys(porColab).sort(function(a,b){return porColab[b]-porColab[a];});
+  var resumoColabHTML=nomesColab.length?nomesColab.map(function(nome){return '<div class="flex" style="gap:10px;align-items:center;padding:4px 0;border-bottom:1px solid var(--linha)"><b>'+esc(nome)+'</b><div class="spacer"></div><span>'+kz(porColab[nome])+'</span>'+(role==="admin"?'<button class="btn-p" style="padding:4px 12px" onclick="atribuirComissaoColaborador(\''+esc(nome).replace(/'/g,"\\'")+'\')">Atribuir</button>':'')+'</div>';}).join(""):'<div class="muted">Sem comissão confirmada a pagar nesta selecção.</div>';
+
+  var linhasHTML=linhas.map(function(x){
+   var confCell=x.confirmada
+    ?'<span class="pill p-verde" title="Confirmado por '+esc(x.confirmadoPor||"—")+'">✓ Confirmado</span>'+(role==="admin"?' <button class="btn-o" style="padding:2px 7px" onclick="desconfirmarComissaoAluno(\''+esc(x.cod)+'\',\''+esc(x.nome).replace(/'/g,"\\'")+'\')">Desfazer</button>':'')
+    :(role==="admin"&&x.pendente>0?'<button class="btn-p" style="padding:3px 9px" onclick="confirmarComissaoAluno(\''+esc(x.cod)+'\',\''+esc(x.nome).replace(/'/g,"\\'")+'\')">Confirmar</button>':'<span class="pill p-cinza">por confirmar</span>');
+   var fichaBtn='<button class="btn-o" style="padding:2px 7px" title="Ver ficha / editar Responsável pela venda" onclick="fFicha=\''+esc(x.cod)+'\';show(\'formandos\')">Ficha</button>';
+   return '<tr><td>'+esc(x.aluno)+'</td><td>'+esc(x.turmaLabel)+'</td><td>'+esc(x.nome)+(x.dividida?' <span class="pill p-cinza" title="Comissão dividida a meio com o 2º responsável pela venda">÷2</span>':'')+'</td><td>'+kz(x.pago)+'</td><td>'+(x.dividaAluno>0?'<span style="color:#a3311f">'+kz(x.dividaAluno)+'</span>':kz(0))+'</td><td>'+kz(x.quota)+'</td><td>'+kz(x.atribuida)+'</td><td>'+(x.pendente>0?'<b>'+kz(x.pendente)+'</b>':kz(0))+'</td><td>'+confCell+'</td><td>'+fichaBtn+'</td></tr>';
+  }).join("")||'<tr><td colspan="10" class="muted">Sem linhas nesta selecção.</td></tr>';
+
+  var botaoExport=(role==="admin"&&confirmadasPagar.length)?'<button class="btn-o" style="padding:5px 12px" onclick="exportComissoesEdicaoXLSX()">Exportar Excel (confirmadas)</button>':'';
+
+  var corpo='<div class="flex" style="gap:8px;flex-wrap:wrap;margin:10px 0">'+chips+'<div class="spacer"></div>'+botaoExport+'</div>'
+   +'<div class="muted" style="margin-bottom:8px">'+linhas.length+' linha(s)'+(comMesSel.length?' · meses: '+comMesSel.join(", "):' · todos os meses com pagamento')+(comColabSel?' · colaborador: '+esc(comColabSel):'')+' · comissão total: '+kz(totQuota)+' · já atribuída: '+kz(totAtrib)+' · <b>a pagar (nesta vista): '+kz(totPend)+'</b>'+(totDeve>0?' · aluno(s) ainda devem: '+kz(totDeve):'')+'</div>'
+   +'<div class="sec" style="background:#f7f9fc;margin:0 0 14px;padding:10px 14px"><h3 style="margin:0 0 4px;font-size:13px;color:var(--azul);text-transform:uppercase">Atribuir por colaborador (só confirmadas)</h3>'+resumoColabHTML+'</div>'
+   +'<table><thead><tr><th class="stickyhead">Aluno</th><th class="stickyhead">Edição</th><th class="stickyhead">Colaborador</th><th class="stickyhead">Pago</th><th class="stickyhead">Aluno ainda deve</th><th class="stickyhead">Comissão</th><th class="stickyhead">Já atribuída</th><th class="stickyhead">A pagar</th><th class="stickyhead">Confirmação</th><th class="stickyhead"></th></tr></thead><tbody>'+linhasHTML+'</tbody></table>';
+
+  return '<div class="sec"><h2>Comissões por Edição</h2><div class="muted">Escolhe edições e/ou meses (só aparecem os meses em que houve pagamento real) e/ou um colaborador. Cada aluno exige confirmação da Gestão antes de entrar na soma a pagar — atribuir passa a ser sempre por colaborador, sobre o total confirmado.</div>'
+   +'<div class="formgrid" style="margin-top:8px"><div><label>Edições (nenhuma seleccionada = todas)</label><div>'+edChips+'</div></div></div>'
+   +'<div class="formgrid" style="margin-top:8px"><div><label>Meses com pagamento real (nenhum seleccionado = todos)</label><div>'+mesChips+'</div></div><div><label>Colaborador</label>'+colabHTML+'</div></div>'
+   +corpo+'</div>';
  })()}
- ${(function(){var LOG=comissoesAtribuidasLog();var q=(comEdCod||"");var base=q?LOG.filter(function(x){return x.turmaCod===q;}):LOG;var mostrar=base.slice(0,200);
-  return '<details class="sec accdet"><summary>🧾 Histórico de comissões atribuídas por edição</summary><div class="muted">Cada atribuição (e reversão) fica registada com edição, aluno, colaborador, valor, data e quem processou.'+(q?' A mostrar só a edição escolhida acima — limpa a selecção de Edição para ver tudo.':'')+'</div>'
+ ${(function(){var LOG=comissoesAtribuidasLog();var base=(comEdSel&&comEdSel.length)?LOG.filter(function(x){return comEdSel.indexOf(x.turmaCod)>=0;}):LOG;var mostrar=base.slice(0,200);
+  return '<details class="sec accdet"><summary>🧾 Histórico de comissões atribuídas por edição</summary><div class="muted">Cada atribuição (e reversão) fica registada com edição, aluno, colaborador, valor, data e quem processou.'+((comEdSel&&comEdSel.length)?' A mostrar só as edições escolhidas acima — limpa a selecção de Edições para ver tudo.':'')+'</div>'
    +'<table style="margin-top:8px"><thead><tr><th class="stickyhead">Data</th><th class="stickyhead">Edição</th><th class="stickyhead">Aluno</th><th class="stickyhead">Colaborador</th><th class="stickyhead">Valor</th><th class="stickyhead">Acção</th><th class="stickyhead">Quem</th><th class="stickyhead"></th></tr></thead><tbody>'
    +(mostrar.length?mostrar.map(function(x,i){var idxReal=LOG.indexOf(x);return '<tr><td>'+fmtDataCurta(x.data)+'</td><td>'+esc(x.turmaLabel||"—")+'</td><td>'+esc(x.aluno||"")+'</td><td>'+esc(x.nome||"")+'</td><td>'+kz(x.valor||0)+'</td><td><span class="pill '+(x.acao==="Revertida"?"p-verm":"p-verde")+'">'+esc(x.acao||"")+(x.revertido?" (revertida)":"")+'</span></td><td>'+esc(x.quem||"—")+'</td><td class="flex" style="gap:4px"><button class="btn-o" style="padding:3px 8px" onclick="reciboComissao('+idxReal+')">Recibo</button>'+((role==="admin"&&x.acao==="Atribuída"&&!x.revertido)?'<button class="btn-o" style="padding:3px 8px" onclick="reverterComissaoAtribuicao('+idxReal+')">Reverter</button>':'')+'</td></tr>';}).join(""):'<tr><td colspan="8" class="muted">Sem atribuições registadas ainda.</td></tr>')
    +'</tbody></table></details>';})()}
+ ${role==="admin"?(function(){var LOG=comissaoConfirmacoesLog().slice(0,200);
+  return '<details class="sec accdet"><summary>✅ Histórico de confirmações de comissão</summary><div class="muted">Cada confirmação (e a sua reversão, com motivo) fica registada.</div>'
+   +'<table style="margin-top:8px"><thead><tr><th class="stickyhead">Quando</th><th class="stickyhead">Aluno</th><th class="stickyhead">Colaborador</th><th class="stickyhead">Acção</th><th class="stickyhead">Motivo</th><th class="stickyhead">Quem</th></tr></thead><tbody>'
+   +(LOG.length?LOG.map(function(x){return '<tr><td>'+esc((x.quando||"").slice(0,16).replace("T"," "))+'</td><td>'+esc(x.aluno||"")+'</td><td>'+esc(x.nome||"")+'</td><td><span class="pill '+(x.acao==="Desfeita"?"p-verm":"p-verde")+'">'+esc(x.acao||"")+'</span></td><td>'+esc(x.motivo||"—")+'</td><td>'+esc(x.quem||"—")+'</td></tr>';}).join(""):'<tr><td colspan="6" class="muted">Sem confirmações registadas ainda.</td></tr>')
+   +'</tbody></table></details>';})():""}
  ${(function(){var LOG=salariosPagosLog();var q=(rhLogQ||"").toLowerCase();var meNome=(currentUser&&currentUser.nome)||"";var base=role==="admin"?LOG:LOG.filter(function(x){return x.nome===meNome;});var filtrado=q?base.filter(function(x){return (x.nome||"").toLowerCase().indexOf(q)>=0;}):base;var mostrar=filtrado.slice(0,200);
   return '<details class="sec accdet"><summary>🧾 Histórico de pagamentos de salário</summary><div class="muted">Cada pagamento (e reversão) fica registado com data, hora e quem processou.</div>'
    +(role==="admin"?'<div class="formgrid" style="margin-top:8px;margin-bottom:2px"><div><label>Pesquisar pessoa</label><input value="'+esc(rhLogQ||"")+'" placeholder="nome…" oninput="setRhLogQ(this.value)"></div></div>':'')
@@ -8066,7 +8168,7 @@ function vRH(){const ppl=pessoasKA();const mes=rhMes||new Date().toISOString().s
    +(mostrar.length?mostrar.map(function(x){return '<tr><td>'+fmtDataCurta(x.data)+'</td><td>'+esc(x.hora||"—")+'</td><td>'+esc(x.nome||"")+'</td><td>'+kz(x.valor||0)+'</td><td><span class="pill '+(x.acao==="Pago"?"p-verde":"p-verm")+'">'+esc(x.acao||"")+'</span></td><td>'+esc(x.quem||"—")+'</td></tr>';}).join(""):'<tr><td colspan="6" class="muted">Sem registos ainda.</td></tr>')
    +'</tbody></table></details>';})()}
  ${role==="admin"?(function(){var LOG=descontosLog().slice(0,100);return '<details class="sec accdet"><summary>➖ Histórico de descontos</summary><div class="muted">Cada desconto (e remoção) fica registado com motivo, quem aplicou e quando.</div><table style="margin-top:8px"><thead><tr><th class="stickyhead">Mês</th><th class="stickyhead">Pessoa</th><th class="stickyhead">Valor</th><th class="stickyhead">Motivo</th><th class="stickyhead">Quem</th></tr></thead><tbody>'+(LOG.length?LOG.map(function(x){return '<tr><td>'+esc(x.mes||"")+'</td><td>'+esc(x.nome||"")+'</td><td>'+(x.valor>0?'−'+kz(x.valor):'<span class="muted">removido</span>')+'</td><td>'+esc(x.motivo||"—")+'</td><td>'+esc(x.quem||"—")+'</td></tr>';}).join(""):'<tr><td colspan="5" class="muted">Sem descontos registados.</td></tr>')+'</tbody></table></details>';})():""}
- ${role==="admin"?(function(){var LOG=vendedorLog().slice(0,100);return '<details class="sec accdet"><summary>🔁 Histórico de alterações do Responsável pela venda</summary><div class="muted">Cada alteração feita em "Editar registo" fica aqui, com quem alterou, quando e o motivo indicado.</div><table style="margin-top:8px"><thead><tr><th class="stickyhead">Quando</th><th class="stickyhead">Aluno</th><th class="stickyhead">Antes</th><th class="stickyhead">Depois</th><th class="stickyhead">Motivo</th><th class="stickyhead">Quem</th></tr></thead><tbody>'+(LOG.length?LOG.map(function(x){return '<tr><td>'+esc((x.quando||"").slice(0,16).replace("T"," "))+'</td><td>'+esc(x.aluno||"")+'</td><td>'+esc(x.antes||"—")+'</td><td>'+esc(x.depois||"—")+'</td><td>'+esc(x.motivo||"—")+'</td><td>'+esc(x.quem||"—")+'</td></tr>';}).join(""):'<tr><td colspan="6" class="muted">Sem alterações registadas.</td></tr>')+'</tbody></table></details>';})():""}
+ ${role==="admin"?(function(){var LOG=vendedorLog().slice(0,100);return '<details class="sec accdet"><summary>🔁 Histórico de alterações do Responsável pela venda</summary><div class="muted">Cada alteração feita em "Editar registo" (Responsável ou 2º responsável) fica aqui, com quem alterou, quando e o motivo indicado.</div><table style="margin-top:8px"><thead><tr><th class="stickyhead">Quando</th><th class="stickyhead">Aluno</th><th class="stickyhead">Campo</th><th class="stickyhead">Antes</th><th class="stickyhead">Depois</th><th class="stickyhead">Motivo</th><th class="stickyhead">Quem</th></tr></thead><tbody>'+(LOG.length?LOG.map(function(x){return '<tr><td>'+esc((x.quando||"").slice(0,16).replace("T"," "))+'</td><td>'+esc(x.aluno||"")+'</td><td>'+esc(x.campo||"Responsável")+'</td><td>'+esc(x.antes||"—")+'</td><td>'+esc(x.depois||"—")+'</td><td>'+esc(x.motivo||"—")+'</td><td>'+esc(x.quem||"—")+'</td></tr>';}).join(""):'<tr><td colspan="7" class="muted">Sem alterações registadas.</td></tr>')+'</tbody></table></details>';})():""}
  ${role==="admin"&&arquivados().length?`<div class="sec"><h2>Arquivados <span class="pill p-cinza">${arquivados().length}</span></h2><div class="muted">Pessoas que já não aparecem nas listas. Podes repor.</div><table><tbody>${arquivados().map(n=>`<tr><td>${esc(n)}</td><td style="text-align:right"><button class="btn-o" style="padding:3px 9px" onclick="desarquivarPessoa('${esc(n)}')">Repor</button></td></tr>`).join("")}</tbody></table></div>`:""}
  <div class="sec"><h2>Aniversários (próximos 30 dias)</h2>
   ${anivs.length?'<table><thead><tr><th class="stickyhead">Nome</th><th class="stickyhead">Tipo</th><th class="stickyhead">Quando</th><th class="stickyhead">Faltam</th></tr></thead><tbody>'+anivs.map(a=>`<tr><td>${esc(a.nome)}</td><td>${esc(a.tipo)}</td><td>${fmtDataCurta(a.quando)}</td><td>${a.dias===0?'<span class="pill p-dour">hoje 🎉</span>':a.dias+' dia(s)'}</td></tr>`).join("")+'</tbody></table>':'<div class="muted">Sem aniversários próximos (define a data de nascimento nos registos).</div>'}
