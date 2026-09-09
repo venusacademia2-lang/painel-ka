@@ -1448,7 +1448,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.99";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.100";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -8317,8 +8317,21 @@ function vRH(){const ppl=pessoasKA();const mes=rhMes||new Date().toISOString().s
    +'<div class="formgrid" style="margin-top:8px"><div><label>Meses com pagamento real (nenhum seleccionado = todos)</label><div>'+mesChips+'</div></div><div><label>Colaborador</label>'+colabHTML+'</div></div>'
    +corpo+'</div>';
  })()}
- ${(function(){var LOG=comissoesAtribuidasLog();var base=(comEdSel&&comEdSel.length)?LOG.filter(function(x){return comEdSel.indexOf(x.turmaCod)>=0;}):LOG;var mostrar=base.slice(0,200);
-  return '<details class="sec accdet"><summary>🧾 Histórico de comissões atribuídas por edição</summary><div class="muted">Cada atribuição (e reversão) fica registada com edição, aluno, colaborador, valor, data e quem processou — inclui também o que entrou automaticamente ao marcar salário como pago (etiqueta "via Folha"). Reverter uma linha "via Folha" não desfaz o pagamento do salário em si; se quiseres desfazer tudo em conjunto, usa o botão "Pago ✓" na Folha de pagamento.'+((comEdSel&&comEdSel.length)?' A mostrar só as edições escolhidas acima — limpa a selecção de Edições para ver tudo.':'')+'</div>'
+ ${(function(){var LOG=comissoesAtribuidasLog();
+  /* L168 — o histórico só filtrava por edição; o Ventura pediu para também respeitar o colaborador
+     já escolhido acima (em "Comissões por Edição"), e ver logo o total líquido já atribuído a essa
+     pessoa (soma de "Atribuída" ainda não revertida — o que efectivamente já lhe foi pago/entregue),
+     para não ter de somar linha a linha depois de clicar "Atribuir". */
+  var base=LOG;
+  if(comEdSel&&comEdSel.length)base=base.filter(function(x){return comEdSel.indexOf(x.turmaCod)>=0;});
+  if(comColabSel)base=base.filter(function(x){return x.nome===comColabSel;});
+  var mostrar=base.slice(0,200);
+  var porColabAtrib={};
+  base.forEach(function(x){if(x.acao!=="Atribuída"||x.revertido)return;porColabAtrib[x.nome]=(porColabAtrib[x.nome]||0)+(+x.valor||0);});
+  var totalAtribOrdenado=Object.keys(porColabAtrib).map(function(n){return{nome:n,total:porColabAtrib[n]};}).sort(function(a,b){return b.total-a.total;});
+  var totaisAtribHTML=totalAtribOrdenado.length?('<div style="margin:6px 0 4px">'+totalAtribOrdenado.map(function(t){return '<span class="pill p-verde" style="margin-right:6px">'+esc(t.nome)+' — já atribuído (líquido): <b>'+kz(t.total)+'</b></span>';}).join("")+'</div>'):'';
+  return '<details class="sec accdet"><summary>🧾 Histórico de comissões atribuídas por edição</summary><div class="muted">Cada atribuição (e reversão) fica registada com edição, aluno, colaborador, valor, data e quem processou — inclui também o que entrou automaticamente ao marcar salário como pago (etiqueta "via Folha"). Reverter uma linha "via Folha" não desfaz o pagamento do salário em si; se quiseres desfazer tudo em conjunto, usa o botão "Pago ✓" na Folha de pagamento.'+((comEdSel&&comEdSel.length)?' A mostrar só as edições escolhidas acima.':'')+(comColabSel?' A mostrar só o colaborador escolhido acima ('+esc(comColabSel)+') — muda para "— Todos —" para ver tudo.':'')+'</div>'
+   +totaisAtribHTML
    +'<table style="margin-top:8px"><thead><tr><th class="stickyhead">Data</th><th class="stickyhead">Edição</th><th class="stickyhead">Aluno</th><th class="stickyhead">Colaborador</th><th class="stickyhead">Valor</th><th class="stickyhead">Acção</th><th class="stickyhead">Quem</th><th class="stickyhead"></th></tr></thead><tbody>'
    +(mostrar.length?mostrar.map(function(x,i){var idxReal=LOG.indexOf(x);return '<tr><td>'+fmtDataCurta(x.data)+'</td><td>'+esc(x.turmaLabel||"—")+'</td><td>'+esc(x.aluno||"")+'</td><td>'+esc(x.nome||"")+'</td><td>'+kz(x.valor||0)+'</td><td><span class="pill '+(x.acao==="Revertida"?"p-verm":"p-verde")+'">'+esc(x.acao||"")+(x.revertido?" (revertida)":"")+'</span>'+(x.viaSalario?' <span class="pill p-cinza" style="font-size:10px" title="Entrou automaticamente ao marcar o salário como pago">via Folha</span>':'')+(x.motivo?'<div class="muted" style="font-size:11px;margin-top:2px">Motivo: '+esc(x.motivo)+'</div>':'')+'</td><td>'+esc(x.quem||"—")+'</td><td class="flex" style="gap:4px"><button class="btn-o" style="padding:3px 8px" onclick="reciboComissao('+idxReal+')">Recibo</button>'+((role==="admin"&&x.acao==="Atribuída"&&!x.revertido)?'<button class="btn-o" style="padding:3px 8px" onclick="reverterComissaoAtribuicao('+idxReal+')">Reverter</button>':'')+'</td></tr>';}).join(""):'<tr><td colspan="8" class="muted">Sem atribuições registadas ainda.</td></tr>')
    +'</tbody></table></details>';})()}
