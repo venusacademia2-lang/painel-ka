@@ -1448,7 +1448,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.96";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.97";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -7943,10 +7943,15 @@ function atribuirComissaoColaborador(nome){
   persist();toast(kz(total)+" atribuídos a "+nome);render();
  });}
 function reverterComissaoAtribuicao(idx){if(role!=="admin"){toast("Só a gestão pode reverter");return;}var LOG=comissoesAtribuidasLog();var x=LOG[idx];if(!x||x.acao!=="Atribuída"||x.revertido){toast("Este registo já não pode ser revertido");return;}
+ if(!_reauthGestor()){toast("Código incorrecto — nada foi alterado");return;}
+ var motivo=prompt('Motivo para reverter '+kz(x.valor)+' atribuídos a '+x.nome+' (aluno '+x.aluno+') — obrigatório, fica registado no histórico:');
+ if(motivo===null)return;
+ motivo=(motivo||"").trim();
+ if(!motivo){toast("O motivo é obrigatório para reverter");return;}
  kaConfirm('Reverter a atribuição de '+kz(x.valor)+' a '+x.nome+' (aluno '+x.aluno+')? Volta a ficar pendente.',function(){
   _comissaoRevertPessoa(x.cod,x.nome,x.valor);var quem=(currentUser&&currentUser.nome)||role;
   x.revertido=true;
-  comissoesAtribuidasLog().unshift({cod:x.cod,aluno:x.aluno,nome:x.nome,turmaCod:x.turmaCod,turmaLabel:x.turmaLabel,valor:x.valor,quem:quem,data:_dISO(new Date()),hora:_horaAgoraCom(),acao:"Revertida"});
+  comissoesAtribuidasLog().unshift({cod:x.cod,aluno:x.aluno,nome:x.nome,turmaCod:x.turmaCod,turmaLabel:x.turmaLabel,valor:x.valor,quem:quem,data:_dISO(new Date()),hora:_horaAgoraCom(),acao:"Revertida",motivo:motivo});
   persist();toast("Atribuição revertida");render();
  });}
 /* L165 — "Reverter atribuição" a partir da própria linha do aluno em Comissões por Edição, para o
@@ -7957,6 +7962,7 @@ function reverterComissaoAtribuicao(idx){if(role!=="admin"){toast("Só a gestão
    resto do sistema — nunca mexe directamente nos números, só através dele. */
 function reverterAtribuicaoAluno(cod,nome){
  if(role!=="admin"){toast("Só a gestão pode reverter");return;}
+ if(!_reauthGestor()){toast("Código incorrecto — nada foi alterado");return;}
  var LOG=comissoesAtribuidasLog();
  var alvos=LOG.filter(function(x){return x.cod===cod&&x.nome===nome&&x.acao==="Atribuída"&&!x.revertido;});
  if(!alvos.length){toast("Não há atribuição por reverter para este aluno/colaborador");return;}
