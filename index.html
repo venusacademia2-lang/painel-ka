@@ -1448,7 +1448,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.98";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.99";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -7867,6 +7867,22 @@ function desconfirmarComissaoAluno(cod,nome){if(role!=="admin"){toast("Só a ges
  delete comissaoConfirmacoes()[key];
  comissaoConfirmacoesLog().unshift({quando:new Date().toISOString(),quem:(currentUser&&currentUser.nome)||role,cod:cod,aluno:alunoNome,nome:nome,acao:"Desfeita",motivo:motivo.trim()});
  persist();toast("Confirmação desfeita");render();}
+/* L167 — atalho tipo "Ctrl+Z" para a confirmação que acabaste de fazer: ao contrário de
+   desconfirmarComissaoAluno() (pede password + motivo, pensado para desfazer algo já antigo/em
+   folha), esta encontra a confirmação mais recente que ainda está activa (o topo do histórico cuja
+   chave ainda existe em comissaoConfirmacoes() — se já tiver sido desfeita por outra via, passa à
+   seguinte) e desfaz-a de imediato, só com uma confirmação simples. Pensada para o erro imediato
+   de clicar "Confirmar" na linha errada. */
+function scrollComEdicaoSec(){var el=document.getElementById("comEdicaoSec");if(el)el.scrollIntoView({behavior:"smooth",block:"start"});}
+function desfazerUltimaConfirmacao(){if(role!=="admin"){toast("Só a gestão pode desfazer");return;}
+ var LOG=comissaoConfirmacoesLog();
+ var alvo=LOG.find(function(x){return x.acao==="Confirmada"&&comissaoConfirmacoes()[_comConfKey(x.cod,x.nome)];});
+ if(!alvo){toast("Não há nenhuma confirmação recente por desfazer");return;}
+ kaConfirm('Desfazer a confirmação mais recente — "'+alvo.aluno+'" para '+alvo.nome+'? Fica disponível para confirmar de novo.',function(){
+  delete comissaoConfirmacoes()[_comConfKey(alvo.cod,alvo.nome)];
+  comissaoConfirmacoesLog().unshift({quando:new Date().toISOString(),quem:(currentUser&&currentUser.nome)||role,cod:alvo.cod,aluno:alvo.aluno,nome:alvo.nome,acao:"Desfeita",motivo:"Desfazer rápido da última acção"});
+  persist();toast("Última confirmação desfeita");render();
+ });}
 /* Meses reais com pagamento, dentro do âmbito das edições escolhidas (todas, se nenhuma estiver
    seleccionada) — substitui o antigo campo de mês livre. */
 function comMesesDisponiveis(turmaCods){var turmaSet=(turmaCods&&turmaCods.length)?{}:null;if(turmaSet)turmaCods.forEach(function(c){turmaSet[c]=true;});
@@ -8296,7 +8312,7 @@ function vRH(){const ppl=pessoasKA();const mes=rhMes||new Date().toISOString().s
    +'<div class="sec" style="background:#f7f9fc;margin:0 0 14px;padding:10px 14px"><h3 style="margin:0 0 4px;font-size:13px;color:var(--azul);text-transform:uppercase">Atribuir por colaborador (só confirmadas)</h3>'+resumoColabHTML+'</div>'
    +'<table><thead><tr><th class="stickyhead">Aluno</th><th class="stickyhead">Edição</th><th class="stickyhead">Colaborador</th><th class="stickyhead">Pago</th><th class="stickyhead">Aluno ainda deve</th><th class="stickyhead">Comissão</th><th class="stickyhead">Já atribuída</th><th class="stickyhead">A pagar</th><th class="stickyhead">Confirmação</th><th class="stickyhead"></th></tr></thead><tbody>'+linhasHTML+'</tbody></table>';
 
-  return '<div class="sec"><h2>Comissões por Edição</h2><div class="muted">Escolhe edições e/ou meses (só aparecem os meses em que houve pagamento real) e/ou um colaborador. Cada aluno exige confirmação da Gestão antes de entrar na soma a pagar — atribuir passa a ser sempre por colaborador, sobre o total confirmado.</div>'
+  return '<div class="sec" id="comEdicaoSec"><h2>Comissões por Edição</h2><div class="muted">Escolhe edições e/ou meses (só aparecem os meses em que houve pagamento real) e/ou um colaborador. Cada aluno exige confirmação da Gestão antes de entrar na soma a pagar — atribuir passa a ser sempre por colaborador, sobre o total confirmado.</div>'
    +'<div class="formgrid" style="margin-top:8px"><div><label>Edições (nenhuma seleccionada = todas)</label><div>'+edChips+'</div></div></div>'
    +'<div class="formgrid" style="margin-top:8px"><div><label>Meses com pagamento real (nenhum seleccionado = todos)</label><div>'+mesChips+'</div></div><div><label>Colaborador</label>'+colabHTML+'</div></div>'
    +corpo+'</div>';
@@ -8307,7 +8323,23 @@ function vRH(){const ppl=pessoasKA();const mes=rhMes||new Date().toISOString().s
    +(mostrar.length?mostrar.map(function(x,i){var idxReal=LOG.indexOf(x);return '<tr><td>'+fmtDataCurta(x.data)+'</td><td>'+esc(x.turmaLabel||"—")+'</td><td>'+esc(x.aluno||"")+'</td><td>'+esc(x.nome||"")+'</td><td>'+kz(x.valor||0)+'</td><td><span class="pill '+(x.acao==="Revertida"?"p-verm":"p-verde")+'">'+esc(x.acao||"")+(x.revertido?" (revertida)":"")+'</span>'+(x.viaSalario?' <span class="pill p-cinza" style="font-size:10px" title="Entrou automaticamente ao marcar o salário como pago">via Folha</span>':'')+(x.motivo?'<div class="muted" style="font-size:11px;margin-top:2px">Motivo: '+esc(x.motivo)+'</div>':'')+'</td><td>'+esc(x.quem||"—")+'</td><td class="flex" style="gap:4px"><button class="btn-o" style="padding:3px 8px" onclick="reciboComissao('+idxReal+')">Recibo</button>'+((role==="admin"&&x.acao==="Atribuída"&&!x.revertido)?'<button class="btn-o" style="padding:3px 8px" onclick="reverterComissaoAtribuicao('+idxReal+')">Reverter</button>':'')+'</td></tr>';}).join(""):'<tr><td colspan="8" class="muted">Sem atribuições registadas ainda.</td></tr>')
    +'</tbody></table></details>';})()}
  ${role==="admin"?(function(){var LOG=comissaoConfirmacoesLog().slice(0,200);
-  return '<details class="sec accdet"><summary>✅ Histórico de confirmações de comissão</summary><div class="muted">Cada confirmação (e a sua reversão, com motivo) fica registada.</div>'
+  /* L167 — resumo por colaborador (desde sempre, só confirmações ainda activas — a mesma fonte
+     que "já atribuída"/"a pagar" em Comissões por Edição, para os números baterem sempre certo)
+     + atalho para voltar lá + desfazer rápido da última confirmação. */
+  var confMap=comissaoConfirmacoes();var porColab={};
+  Object.keys(confMap).forEach(function(k){var p=k.indexOf("|");if(p<0)return;var cod=k.slice(0,p),nome=k.slice(p+1);porColab[nome]=(porColab[nome]||0)+_comissaoQuotaPessoa(cod,nome);});
+  var totalOrdenado=Object.keys(porColab).map(function(n){return{nome:n,total:porColab[n]};}).sort(function(a,b){return b.total-a.total;});
+  var totaisHTML=totalOrdenado.length?('<div style="margin:6px 0 4px">'+totalOrdenado.map(function(t){return '<span class="pill p-verde" style="margin-right:6px">'+esc(t.nome)+': <b>'+kz(t.total)+'</b></span>';}).join("")+'</div>'):'';
+  /* Pedido do Ventura: ver também o que já foi desfeito, para acompanhar o que mudou — soma por
+     colaborador de todas as entradas "Desfeita" do log (o valor de cada uma é sempre o mesmo, seja
+     a comissão activa ou já revertida — vem da venda, não do estado da confirmação). */
+  var porColabRev={};
+  LOG.forEach(function(x){if(x.acao!=="Desfeita")return;porColabRev[x.nome]=(porColabRev[x.nome]||0)+_comissaoQuotaPessoa(x.cod,x.nome);});
+  var totalRevOrdenado=Object.keys(porColabRev).map(function(n){return{nome:n,total:porColabRev[n]};}).sort(function(a,b){return b.total-a.total;});
+  var totaisRevHTML=totalRevOrdenado.length?('<div style="margin:0 0 10px">'+totalRevOrdenado.map(function(t){return '<span class="pill p-verm" style="margin-right:6px">'+esc(t.nome)+' (desfeitas): <b>'+kz(t.total)+'</b></span>';}).join("")+'</div>'):'';
+  return '<details class="sec accdet"><summary>✅ Histórico de confirmações de comissão</summary><div class="muted">Cada confirmação (e a sua reversão, com motivo) fica registada. Total confirmado por colaborador, desde sempre (verde = activo, vermelho = já desfeito):</div>'
+   +totaisHTML+totaisRevHTML
+   +'<div class="flex" style="gap:6px;margin-bottom:8px"><button class="btn-o" style="padding:3px 9px" onclick="scrollComEdicaoSec()">↑ Voltar a Comissões por Edição</button><button class="btn-o" style="padding:3px 9px" onclick="desfazerUltimaConfirmacao()">↶ Desfazer última confirmação</button></div>'
    +'<table style="margin-top:8px"><thead><tr><th class="stickyhead">Quando</th><th class="stickyhead">Aluno</th><th class="stickyhead">Colaborador</th><th class="stickyhead">Acção</th><th class="stickyhead">Motivo</th><th class="stickyhead">Quem</th></tr></thead><tbody>'
    +(LOG.length?LOG.map(function(x){return '<tr><td>'+esc((x.quando||"").slice(0,16).replace("T"," "))+'</td><td>'+esc(x.aluno||"")+'</td><td>'+esc(x.nome||"")+'</td><td><span class="pill '+(x.acao==="Desfeita"?"p-verm":"p-verde")+'">'+esc(x.acao||"")+'</span></td><td>'+esc(x.motivo||"—")+'</td><td>'+esc(x.quem||"—")+'</td></tr>';}).join(""):'<tr><td colspan="6" class="muted">Sem confirmações registadas ainda.</td></tr>')
    +'</tbody></table></details>';})():""}
