@@ -1448,7 +1448,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.92";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.93";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -7879,6 +7879,11 @@ function comMesesDisponiveis(turmaCods){var turmaSet=(turmaCods&&turmaCods.lengt
 /* L156 — cada linha traz sempre os números (pago, dívida do aluno, comissão pendente, comissão já
    atribuída, confirmação) para não obrigar a saltar entre ecrãs; os "chips" só escolhem QUAIS linhas
    mostrar, não escondem informação da própria linha. turmaCods/mesesArr vazios = todas as edições/meses. */
+/* L162 — extraído de comLinhasBase para ser reutilizado por togglePago() ao registar no histórico
+   de comissões atribuídas (comissoesAtribuidasLog) mesmo quando a atribuição vem do pagamento de
+   salário, não do botão "Atribuir". */
+function _turmaInfoDe(f){var isOnline=f._origem==="online";var t=isOnline?null:turmaByCod(f.turma);var turmaLabel=isOnline?("Turma Online"+(f.nivel?" — "+f.nivel:"")):(t?(t.ed+"ª — "+(t.curso||"")):(f.turma||"—"));var turmaCodOut=isOnline?TURMA_ONLINE_COD:f.turma;return{turmaLabel:turmaLabel,turmaCod:turmaCodOut};}
+function _achaVendavelPorCod(cod){return _todosVendaveis().find(function(f){return f.cod===cod;});}
 function comLinhasBase(turmaCods,mesesArr){var turmaSet=(turmaCods&&turmaCods.length)?{}:null;if(turmaSet)turmaCods.forEach(function(c){turmaSet[c]=true;});
  var mesSet=(mesesArr&&mesesArr.length)?{}:null;if(mesSet)mesesArr.forEach(function(m){mesSet[m]=true;});
  var scope;
@@ -7889,9 +7894,7 @@ function comLinhasBase(turmaCods,mesesArr){var turmaSet=(turmaCods&&turmaCods.le
   var div=_comissaoDivisao(f);var pessoas=div.split?[div.closer,div.setter]:[div.closer];
   var du=p?_dataUltimoPagamento(p):"";var mesUlt=du?du.slice(0,7):"";
   if(mesSet&&!(mesUlt&&mesSet[mesUlt]))return;
-  var isOnline=f._origem==="online";
-  var t=isOnline?null:turmaByCod(f.turma);var turmaLabel=isOnline?("Turma Online"+(f.nivel?" — "+f.nivel:"")):(t?(t.ed+"ª — "+(t.curso||"")):(f.turma||"—"));
-  var turmaCodOut=isOnline?TURMA_ONLINE_COD:f.turma;
+  var _ti=_turmaInfoDe(f);var turmaLabel=_ti.turmaLabel,turmaCodOut=_ti.turmaCod;
   pessoas.forEach(function(nome){if(!nome||nome==="Gestão")return;
    var quota=pago>0?_comissaoQuotaPessoa(f.cod,nome):0;var jaAtribuida=_comissaoJaPagaPessoa(f.cod,nome);var pendente=_comissaoPendentePessoa(f.cod,nome);
    var conf=comissaoConfirmada(f.cod,nome);
@@ -8065,13 +8068,22 @@ function enviarAvisoSalarioPago(nome,mes,valor,dataPag){var c=(data.colaboradore
    "Salários"), para o custo entrar nas Finanças e reduzir a Margem/Proveito — antes, pagar salário não
    tinha nenhum efeito nos Custos/Margem mostrados no Painel e nos relatórios. */
 function togglePago(nome){const mes=(typeof rhMes!=="undefined"&&rhMes)||new Date().toISOString().slice(0,7);const P=pagosMes(mes);const quem=(currentUser&&currentUser.nome)||role;
- if(P[nome]){var comPorCod=P[nome].comPorCod||{};(P[nome].cods||[]).forEach(function(cod){_comissaoRevertPessoa(cod,nome,+comPorCod[cod]||0);});
+ if(P[nome]){var comPorCod=P[nome].comPorCod||{};var dataRev=_dISO(new Date());var horaRev=_horaAgora();
+  (P[nome].cods||[]).forEach(function(cod){var delta=+comPorCod[cod]||0;_comissaoRevertPessoa(cod,nome,delta);
+   if(delta>0){var f0=_achaVendavelPorCod(cod);var ti0=f0?_turmaInfoDe(f0):{turmaLabel:"—",turmaCod:""};
+    comissoesAtribuidasLog().unshift({cod:cod,aluno:f0?(f0.nome||cod):cod,nome:nome,turmaCod:ti0.turmaCod,turmaLabel:ti0.turmaLabel,valor:delta,quem:quem,data:dataRev,hora:horaRev,acao:"Revertida",viaSalario:true});}});
   var F0=fin();if(Array.isArray(F0.gastos))F0.gastos=F0.gastos.filter(function(g){return !(g.folhaSalarioRef&&g.folhaSalarioRef.nome===nome&&g.folhaSalarioRef.mes===mes);});
-  salariosPagosLog().unshift({nome:nome,mes:mes,valor:P[nome].valor||0,acao:"Revertido",data:_dISO(new Date()),hora:_horaAgora(),quem:quem});delete P[nome];persist();render();return;}
+  salariosPagosLog().unshift({nome:nome,mes:mes,valor:P[nome].valor||0,acao:"Revertido",data:dataRev,hora:horaRev,quem:quem});delete P[nome];persist();render();return;}
  var cods=_codsComissaoMes(nome,mes);var comPorCod={};var com=0;
  cods.forEach(function(cod){var delta=_comissaoPendentePessoa(cod,nome);comPorCod[cod]=delta;com+=delta;});
  var valor=(+(data.salarios[nome]||0)+com+subsidioDe(nome)-descontoDe(nome,mes));var dataPag=_dISO(new Date());var horaPag=_horaAgora();
- cods.forEach(function(cod){_comissaoAdicionarPessoa(cod,nome,comPorCod[cod],mes,quem,dataPag);});
+ /* L162 — cada fatia de comissão que entra aqui (via pagamento de salário) fica registada no mesmo
+    histórico do botão "Atribuir" (comissoesAtribuidasLog), com a etiqueta "via Folha" a assinalar a
+    origem — antes ficava só a soma agregada em salariosPagosLog, sem explicar aluno a aluno, e não
+    dava para reverter uma fatia isolada. */
+ cods.forEach(function(cod){var delta=comPorCod[cod];_comissaoAdicionarPessoa(cod,nome,delta,mes,quem,dataPag);
+  if(delta>0){var f=_achaVendavelPorCod(cod);var ti=f?_turmaInfoDe(f):{turmaLabel:"—",turmaCod:""};
+   comissoesAtribuidasLog().unshift({cod:cod,aluno:f?(f.nome||cod):cod,nome:nome,turmaCod:ti.turmaCod,turmaLabel:ti.turmaLabel,valor:delta,quem:quem,data:dataPag,hora:horaPag,acao:"Atribuída",viaSalario:true});}});
  P[nome]={data:dataPag,hora:horaPag,valor:valor,pagoPor:quem,cods:cods,comPorCod:comPorCod};
  if(valor>0){var F1=fin();if(!Array.isArray(F1.gastos))F1.gastos=[];F1.gastos.push({valor:valor,categoria:"Salários",motivo:"Salário de "+nome+" — "+mes,data:dataPag,dataCompra:dataPag,criadoEm:new Date().toISOString(),criadoPor:quem,folhaSalarioRef:{nome:nome,mes:mes}});}
  salariosPagosLog().unshift({nome:nome,mes:mes,valor:valor,acao:"Pago",data:dataPag,hora:horaPag,quem:quem});
@@ -8222,9 +8234,9 @@ function vRH(){const ppl=pessoasKA();const mes=rhMes||new Date().toISOString().s
    +corpo+'</div>';
  })()}
  ${(function(){var LOG=comissoesAtribuidasLog();var base=(comEdSel&&comEdSel.length)?LOG.filter(function(x){return comEdSel.indexOf(x.turmaCod)>=0;}):LOG;var mostrar=base.slice(0,200);
-  return '<details class="sec accdet"><summary>🧾 Histórico de comissões atribuídas por edição</summary><div class="muted">Cada atribuição (e reversão) fica registada com edição, aluno, colaborador, valor, data e quem processou.'+((comEdSel&&comEdSel.length)?' A mostrar só as edições escolhidas acima — limpa a selecção de Edições para ver tudo.':'')+'</div>'
+  return '<details class="sec accdet"><summary>🧾 Histórico de comissões atribuídas por edição</summary><div class="muted">Cada atribuição (e reversão) fica registada com edição, aluno, colaborador, valor, data e quem processou — inclui também o que entrou automaticamente ao marcar salário como pago (etiqueta "via Folha"). Reverter uma linha "via Folha" não desfaz o pagamento do salário em si; se quiseres desfazer tudo em conjunto, usa o botão "Pago ✓" na Folha de pagamento.'+((comEdSel&&comEdSel.length)?' A mostrar só as edições escolhidas acima — limpa a selecção de Edições para ver tudo.':'')+'</div>'
    +'<table style="margin-top:8px"><thead><tr><th class="stickyhead">Data</th><th class="stickyhead">Edição</th><th class="stickyhead">Aluno</th><th class="stickyhead">Colaborador</th><th class="stickyhead">Valor</th><th class="stickyhead">Acção</th><th class="stickyhead">Quem</th><th class="stickyhead"></th></tr></thead><tbody>'
-   +(mostrar.length?mostrar.map(function(x,i){var idxReal=LOG.indexOf(x);return '<tr><td>'+fmtDataCurta(x.data)+'</td><td>'+esc(x.turmaLabel||"—")+'</td><td>'+esc(x.aluno||"")+'</td><td>'+esc(x.nome||"")+'</td><td>'+kz(x.valor||0)+'</td><td><span class="pill '+(x.acao==="Revertida"?"p-verm":"p-verde")+'">'+esc(x.acao||"")+(x.revertido?" (revertida)":"")+'</span></td><td>'+esc(x.quem||"—")+'</td><td class="flex" style="gap:4px"><button class="btn-o" style="padding:3px 8px" onclick="reciboComissao('+idxReal+')">Recibo</button>'+((role==="admin"&&x.acao==="Atribuída"&&!x.revertido)?'<button class="btn-o" style="padding:3px 8px" onclick="reverterComissaoAtribuicao('+idxReal+')">Reverter</button>':'')+'</td></tr>';}).join(""):'<tr><td colspan="8" class="muted">Sem atribuições registadas ainda.</td></tr>')
+   +(mostrar.length?mostrar.map(function(x,i){var idxReal=LOG.indexOf(x);return '<tr><td>'+fmtDataCurta(x.data)+'</td><td>'+esc(x.turmaLabel||"—")+'</td><td>'+esc(x.aluno||"")+'</td><td>'+esc(x.nome||"")+'</td><td>'+kz(x.valor||0)+'</td><td><span class="pill '+(x.acao==="Revertida"?"p-verm":"p-verde")+'">'+esc(x.acao||"")+(x.revertido?" (revertida)":"")+'</span>'+(x.viaSalario?' <span class="pill p-cinza" style="font-size:10px" title="Entrou automaticamente ao marcar o salário como pago">via Folha</span>':'')+'</td><td>'+esc(x.quem||"—")+'</td><td class="flex" style="gap:4px"><button class="btn-o" style="padding:3px 8px" onclick="reciboComissao('+idxReal+')">Recibo</button>'+((role==="admin"&&x.acao==="Atribuída"&&!x.revertido)?'<button class="btn-o" style="padding:3px 8px" onclick="reverterComissaoAtribuicao('+idxReal+')">Reverter</button>':'')+'</td></tr>';}).join(""):'<tr><td colspan="8" class="muted">Sem atribuições registadas ainda.</td></tr>')
    +'</tbody></table></details>';})()}
  ${role==="admin"?(function(){var LOG=comissaoConfirmacoesLog().slice(0,200);
   return '<details class="sec accdet"><summary>✅ Histórico de confirmações de comissão</summary><div class="muted">Cada confirmação (e a sua reversão, com motivo) fica registada.</div>'
