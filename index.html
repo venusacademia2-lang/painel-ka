@@ -1448,7 +1448,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.95";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.96";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -7949,6 +7949,32 @@ function reverterComissaoAtribuicao(idx){if(role!=="admin"){toast("Só a gestão
   comissoesAtribuidasLog().unshift({cod:x.cod,aluno:x.aluno,nome:x.nome,turmaCod:x.turmaCod,turmaLabel:x.turmaLabel,valor:x.valor,quem:quem,data:_dISO(new Date()),hora:_horaAgoraCom(),acao:"Revertida"});
   persist();toast("Atribuição revertida");render();
  });}
+/* L165 — "Reverter atribuição" a partir da própria linha do aluno em Comissões por Edição, para o
+   caso de uma comissão ter sido atribuída e depois a confirmação ter sido desfeita (fica um estado
+   "atribuída sem confirmação" — ver confCell em vRH). Reverte TODAS as entradas "Atribuída" ainda por
+   reverter desse aluno+colaborador (pode haver mais que uma, ex.: pagamentos em prestações), exige
+   motivo obrigatório (fica registado no histórico), e usa o mesmo livro (_comissaoRevertPessoa) que o
+   resto do sistema — nunca mexe directamente nos números, só através dele. */
+function reverterAtribuicaoAluno(cod,nome){
+ if(role!=="admin"){toast("Só a gestão pode reverter");return;}
+ var LOG=comissoesAtribuidasLog();
+ var alvos=LOG.filter(function(x){return x.cod===cod&&x.nome===nome&&x.acao==="Atribuída"&&!x.revertido;});
+ if(!alvos.length){toast("Não há atribuição por reverter para este aluno/colaborador");return;}
+ var total=alvos.reduce(function(s,x){return s+(+x.valor||0);},0);
+ var aluno=alvos[0].aluno||cod;
+ var motivo=prompt('Motivo para reverter '+kz(total)+' atribuídos a '+nome+' (aluno '+aluno+') — obrigatório, fica registado no histórico:');
+ if(motivo===null)return;
+ motivo=(motivo||"").trim();
+ if(!motivo){toast("O motivo é obrigatório para reverter");return;}
+ kaConfirm('Reverter '+kz(total)+' de comissão atribuída a '+nome+' (aluno '+aluno+')? Fica disponível para atribuir ao colaborador certo depois de confirmares de novo.',function(){
+  var quem=(currentUser&&currentUser.nome)||role;var dataRev=_dISO(new Date());var horaRev=_horaAgoraCom();
+  alvos.forEach(function(x){
+   _comissaoRevertPessoa(x.cod,x.nome,x.valor);
+   x.revertido=true;
+   comissoesAtribuidasLog().unshift({cod:x.cod,aluno:x.aluno,nome:x.nome,turmaCod:x.turmaCod,turmaLabel:x.turmaLabel,valor:x.valor,quem:quem,data:dataRev,hora:horaRev,acao:"Revertida",motivo:motivo});
+  });
+  persist();toast(kz(total)+" revertidos — disponível para atribuir de novo");render();
+ });}
 let recCom=null;
 function reciboComissao(idx){recCom=idx;render();}
 function fecharReciboComissao(){recCom=null;render();}
@@ -8216,9 +8242,15 @@ function vRH(){const ppl=pessoasKA();const mes=rhMes||new Date().toISOString().s
   var resumoColabHTML=nomesColab.length?nomesColab.map(function(nome){return '<div class="flex" style="gap:10px;align-items:center;padding:4px 0;border-bottom:1px solid var(--linha)"><b>'+esc(nome)+'</b><div class="spacer"></div><span>'+kz(porColab[nome])+'</span>'+(role==="admin"?'<button class="btn-p" style="padding:4px 12px" onclick="atribuirComissaoColaborador(\''+esc(nome).replace(/'/g,"\\'")+'\')">Atribuir</button>':'')+'</div>';}).join(""):'<div class="muted">Sem comissão confirmada a pagar nesta selecção.</div>';
 
   var linhasHTML=linhas.map(function(x){
+   /* L165 — "atribuída sem confirmação" é um estado à parte: a comissão já foi dada (atribuida>0) mas
+      a confirmação foi desfeita depois — não é o mesmo que um "por confirmar" normal (que nunca teve
+      dinheiro atribuído). Fica com aviso próprio + botão para reverter a atribuição e libertar a
+      comissão para ser atribuída ao colaborador certo. */
    var confCell=x.confirmada
     ?'<span class="pill p-verde" title="Confirmado por '+esc(x.confirmadoPor||"—")+'">✓ Confirmado</span>'+(role==="admin"?' <button class="btn-o" style="padding:2px 7px" onclick="desconfirmarComissaoAluno(\''+esc(x.cod)+'\',\''+esc(x.nome).replace(/'/g,"\\'")+'\')">Desfazer</button>':'')
-    :(role==="admin"&&x.pendente>0?'<button class="btn-p" style="padding:3px 9px" onclick="confirmarComissaoAluno(\''+esc(x.cod)+'\',\''+esc(x.nome).replace(/'/g,"\\'")+'\')">Confirmar</button>':'<span class="pill p-cinza">por confirmar</span>');
+    :(x.atribuida>0
+      ?'<span class="pill p-verm" title="Já foi atribuída, mas a confirmação foi desfeita depois — reverte para poder atribuir ao colaborador certo">⚠ Atribuída sem confirmação</span>'+(role==="admin"?' <button class="btn-o" style="padding:2px 7px" onclick="reverterAtribuicaoAluno(\''+esc(x.cod)+'\',\''+esc(x.nome).replace(/'/g,"\\'")+'\')">Reverter atribuição</button>':'')
+      :(role==="admin"&&x.pendente>0?'<button class="btn-p" style="padding:3px 9px" onclick="confirmarComissaoAluno(\''+esc(x.cod)+'\',\''+esc(x.nome).replace(/'/g,"\\'")+'\')">Confirmar</button>':'<span class="pill p-cinza">por confirmar</span>'));
    var fichaBtn='<button class="btn-o" style="padding:2px 7px" title="Ver ficha / editar Responsável pela venda" onclick="finDetVerFicha(\''+esc(x.cod)+'\')">Ficha</button>';
    return '<tr><td>'+esc(x.aluno)+'</td><td>'+esc(x.turmaLabel)+'</td><td>'+esc(x.nome)+(x.dividida?' <span class="pill p-cinza" title="Comissão dividida a meio com o 2º responsável pela venda">÷2</span>':'')+'</td><td>'+kz(x.pago)+'</td><td>'+(x.dividaAluno>0?'<span style="color:#a3311f">'+kz(x.dividaAluno)+'</span>':kz(0))+'</td><td>'+kz(x.quota)+'</td><td>'+kz(x.atribuida)+'</td><td>'+(x.pendente>0?'<b>'+kz(x.pendente)+'</b>':kz(0))+'</td><td>'+confCell+'</td><td>'+fichaBtn+'</td></tr>';
   }).join("")||'<tr><td colspan="10" class="muted">Sem linhas nesta selecção.</td></tr>';
@@ -8250,7 +8282,7 @@ function vRH(){const ppl=pessoasKA();const mes=rhMes||new Date().toISOString().s
  ${(function(){var LOG=comissoesAtribuidasLog();var base=(comEdSel&&comEdSel.length)?LOG.filter(function(x){return comEdSel.indexOf(x.turmaCod)>=0;}):LOG;var mostrar=base.slice(0,200);
   return '<details class="sec accdet"><summary>🧾 Histórico de comissões atribuídas por edição</summary><div class="muted">Cada atribuição (e reversão) fica registada com edição, aluno, colaborador, valor, data e quem processou — inclui também o que entrou automaticamente ao marcar salário como pago (etiqueta "via Folha"). Reverter uma linha "via Folha" não desfaz o pagamento do salário em si; se quiseres desfazer tudo em conjunto, usa o botão "Pago ✓" na Folha de pagamento.'+((comEdSel&&comEdSel.length)?' A mostrar só as edições escolhidas acima — limpa a selecção de Edições para ver tudo.':'')+'</div>'
    +'<table style="margin-top:8px"><thead><tr><th class="stickyhead">Data</th><th class="stickyhead">Edição</th><th class="stickyhead">Aluno</th><th class="stickyhead">Colaborador</th><th class="stickyhead">Valor</th><th class="stickyhead">Acção</th><th class="stickyhead">Quem</th><th class="stickyhead"></th></tr></thead><tbody>'
-   +(mostrar.length?mostrar.map(function(x,i){var idxReal=LOG.indexOf(x);return '<tr><td>'+fmtDataCurta(x.data)+'</td><td>'+esc(x.turmaLabel||"—")+'</td><td>'+esc(x.aluno||"")+'</td><td>'+esc(x.nome||"")+'</td><td>'+kz(x.valor||0)+'</td><td><span class="pill '+(x.acao==="Revertida"?"p-verm":"p-verde")+'">'+esc(x.acao||"")+(x.revertido?" (revertida)":"")+'</span>'+(x.viaSalario?' <span class="pill p-cinza" style="font-size:10px" title="Entrou automaticamente ao marcar o salário como pago">via Folha</span>':'')+'</td><td>'+esc(x.quem||"—")+'</td><td class="flex" style="gap:4px"><button class="btn-o" style="padding:3px 8px" onclick="reciboComissao('+idxReal+')">Recibo</button>'+((role==="admin"&&x.acao==="Atribuída"&&!x.revertido)?'<button class="btn-o" style="padding:3px 8px" onclick="reverterComissaoAtribuicao('+idxReal+')">Reverter</button>':'')+'</td></tr>';}).join(""):'<tr><td colspan="8" class="muted">Sem atribuições registadas ainda.</td></tr>')
+   +(mostrar.length?mostrar.map(function(x,i){var idxReal=LOG.indexOf(x);return '<tr><td>'+fmtDataCurta(x.data)+'</td><td>'+esc(x.turmaLabel||"—")+'</td><td>'+esc(x.aluno||"")+'</td><td>'+esc(x.nome||"")+'</td><td>'+kz(x.valor||0)+'</td><td><span class="pill '+(x.acao==="Revertida"?"p-verm":"p-verde")+'">'+esc(x.acao||"")+(x.revertido?" (revertida)":"")+'</span>'+(x.viaSalario?' <span class="pill p-cinza" style="font-size:10px" title="Entrou automaticamente ao marcar o salário como pago">via Folha</span>':'')+(x.motivo?'<div class="muted" style="font-size:11px;margin-top:2px">Motivo: '+esc(x.motivo)+'</div>':'')+'</td><td>'+esc(x.quem||"—")+'</td><td class="flex" style="gap:4px"><button class="btn-o" style="padding:3px 8px" onclick="reciboComissao('+idxReal+')">Recibo</button>'+((role==="admin"&&x.acao==="Atribuída"&&!x.revertido)?'<button class="btn-o" style="padding:3px 8px" onclick="reverterComissaoAtribuicao('+idxReal+')">Reverter</button>':'')+'</td></tr>';}).join(""):'<tr><td colspan="8" class="muted">Sem atribuições registadas ainda.</td></tr>')
    +'</tbody></table></details>';})()}
  ${role==="admin"?(function(){var LOG=comissaoConfirmacoesLog().slice(0,200);
   return '<details class="sec accdet"><summary>✅ Histórico de confirmações de comissão</summary><div class="muted">Cada confirmação (e a sua reversão, com motivo) fica registada.</div>'
