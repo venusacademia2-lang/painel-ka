@@ -1448,7 +1448,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.97";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.98";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -7965,20 +7965,36 @@ function reverterAtribuicaoAluno(cod,nome){
  if(!_reauthGestor()){toast("Código incorrecto — nada foi alterado");return;}
  var LOG=comissoesAtribuidasLog();
  var alvos=LOG.filter(function(x){return x.cod===cod&&x.nome===nome&&x.acao==="Atribuída"&&!x.revertido;});
- if(!alvos.length){toast("Não há atribuição por reverter para este aluno/colaborador");return;}
  var total=alvos.reduce(function(s,x){return s+(+x.valor||0);},0);
- var aluno=alvos[0].aluno||cod;
+ var f=_achaVendavelPorCod(cod);
+ var aluno=(alvos[0]&&alvos[0].aluno)||(f&&f.nome)||cod;
+ var info=f?_turmaInfoDe(f):{turmaLabel:"—",turmaCod:cod};
+ /* L166 — o botão recusava-se a reverter sempre que a atribuição era antiga (anterior ao histórico
+    L155/L162, ou por alguma outra via que não passou pelo log). O ecrã mostrava "Já atribuída" com
+    valor > 0 (vindo directo do livro _comissaoJaPagaPessoa), mas sem entrada correspondente no log
+    não havia nada para reverter — ficava preso. Agora, sem entradas no log, cai para o valor real do
+    livro (fonte de verdade) e reverte-o na mesma, deixando isso registado no motivo. */
+ if(!alvos.length){
+  var jaPaga=_comissaoJaPagaPessoa(cod,nome);
+  if(jaPaga<=0){toast("Não há comissão atribuída a reverter para este aluno/colaborador");return;}
+  total=jaPaga;
+ }
  var motivo=prompt('Motivo para reverter '+kz(total)+' atribuídos a '+nome+' (aluno '+aluno+') — obrigatório, fica registado no histórico:');
  if(motivo===null)return;
  motivo=(motivo||"").trim();
  if(!motivo){toast("O motivo é obrigatório para reverter");return;}
  kaConfirm('Reverter '+kz(total)+' de comissão atribuída a '+nome+' (aluno '+aluno+')? Fica disponível para atribuir ao colaborador certo depois de confirmares de novo.',function(){
   var quem=(currentUser&&currentUser.nome)||role;var dataRev=_dISO(new Date());var horaRev=_horaAgoraCom();
-  alvos.forEach(function(x){
-   _comissaoRevertPessoa(x.cod,x.nome,x.valor);
-   x.revertido=true;
-   comissoesAtribuidasLog().unshift({cod:x.cod,aluno:x.aluno,nome:x.nome,turmaCod:x.turmaCod,turmaLabel:x.turmaLabel,valor:x.valor,quem:quem,data:dataRev,hora:horaRev,acao:"Revertida",motivo:motivo});
-  });
+  if(alvos.length){
+   alvos.forEach(function(x){
+    _comissaoRevertPessoa(x.cod,x.nome,x.valor);
+    x.revertido=true;
+    comissoesAtribuidasLog().unshift({cod:x.cod,aluno:x.aluno,nome:x.nome,turmaCod:x.turmaCod,turmaLabel:x.turmaLabel,valor:x.valor,quem:quem,data:dataRev,hora:horaRev,acao:"Revertida",motivo:motivo});
+   });
+  }else{
+   _comissaoRevertPessoa(cod,nome,total);
+   comissoesAtribuidasLog().unshift({cod:cod,aluno:aluno,nome:nome,turmaCod:info.turmaCod,turmaLabel:info.turmaLabel,valor:total,quem:quem,data:dataRev,hora:horaRev,acao:"Revertida",motivo:motivo+" (sem histórico da atribuição original — revertido directamente do livro de comissões)"});
+  }
   persist();toast(kz(total)+" revertidos — disponível para atribuir de novo");render();
  });}
 let recCom=null;
