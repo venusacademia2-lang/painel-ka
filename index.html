@@ -1448,7 +1448,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.101";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.102";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -4119,6 +4119,54 @@ function gerarCardsTodos(cod,turno){var c=(data.comp&&data.comp.codCards)||"";
  var e=prompt("Código da Gestão para incluir quem ainda não pagou nos cards:");if(e===null)return;
  if((e||"").trim()!==String(c)){toast("Código errado — cards não gerados com quem ainda não pagou");return;}
  gerarCards(cod,true,turno);}
+/* L166: "Todos os alunos" (Formandos → Turmas presenciais) junta alunos de várias edições numa só
+   lista — os Cards/Exportar por edição (acima) trabalham por turma única, por isso precisam de uma
+   variante que aceite uma LISTA de códigos de aluno (cada um pode ser de uma turma diferente) em vez
+   de um único código de turma. */
+function gerarCardsListaMulti(cods,incluirTodos){
+ var base=(cods||[]).map(function(cod){return data.formandos.find(function(f){return f.cod===cod;});}).filter(Boolean);
+ var alunos=incluirTodos?base:base.filter(fezPagamento);
+ if(!alunos.length){toast(incluirTodos?"Sem formandos nesta lista.":"Sem formandos que já tenham pago nesta lista (usa \"Cards (todos)\" para incluir quem ainda não pagou)");return;}
+ const c=data.comp||{};const logo=c.logo||"";
+ const cards=alunos.map(function(f){var t=turmaByCod(f.turma)||{};var _dt=datasDoFormando(f,t);var _pend=!fezPagamento(f);return '<div class="namecard"><div class="nc-top">'+(logo?'<img src="'+logo+'">':'<b style="color:#1F3864">Knowledge Angola</b>')+'<span class="nc-ed">Knowledge Angola · '+esc(t.ed||"")+'ª Ed. · '+esc(t.curso||f.curso||"")+'</span></div><div class="nc-name">'+esc(f.nome||"")+'</div><div class="nc-foot">'+esc(f.horario||f.turno||t.horario||"")+' · Início '+(fmtDataCurta(_dt.inicio)||"—")+' · Fim '+(fmtDataCurta(_dt.fim)||"—")+(_pend?' · <b style="color:#a3311f">POR PAGAR</b>':'')+'</div></div>';}).join("");
+ const w=window.open("","_blank");if(!w){toast("Permite pop-ups para gerar os cards");return;}
+ w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Cards de Nomes — Todos os alunos</title><style>@page{size:A4 landscape;margin:8mm}body{font-family:Segoe UI,Arial,sans-serif;margin:0}.grid{display:grid;grid-template-columns:1fr 1fr;row-gap:18mm;column-gap:8mm}.namecard{border:1.5px dashed #9aa4b8;border-radius:8px;height:60mm;padding:7mm 8mm;display:flex;flex-direction:column;justify-content:space-between;page-break-inside:avoid}.nc-top{display:flex;justify-content:space-between;align-items:center}.nc-top img{height:26px}.nc-ed{color:#666;font-size:11px}.nc-name{font-size:46px;font-weight:800;color:#1F3864;text-align:center;line-height:1.05;word-break:break-word}.nc-foot{text-align:center;color:#555;font-size:12px;border-top:1px solid #eee;padding-top:6px}</style></head><body><div class="grid">'+cards+'</div><scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},250);}</scr'+'ipt></body></html>');
+ w.document.close();toast("Cards gerados — usa Guardar como PDF");}
+function gerarCardsTodosListaMulti(cods){var c=(data.comp&&data.comp.codCards)||"";
+ if(!c){toast("Define primeiro o código em Definições → \"Código para incluir quem não pagou nos Cards\"");return;}
+ var e=prompt("Código da Gestão para incluir quem ainda não pagou nos cards:");if(e===null)return;
+ if((e||"").trim()!==String(c)){toast("Código errado — cards não gerados com quem ainda não pagou");return;}
+ gerarCardsListaMulti(cods,true);}
+function exportListaAlunos(cods,nomeFicheiro){
+ if(!(cods||[]).length){toast("Sem formandos nesta lista");return;}
+ if(typeof XLSX==="undefined"){toast("Biblioteca Excel ainda a carregar — tenta daqui a instantes");return;}
+ const admin=role==="admin";
+ const alunos=cods.map(function(cod){return data.formandos.find(function(f){return f.cod===cod;});}).filter(Boolean);
+ const linhas=alunos.map(function(f){var t=turmaByCod(f.turma)||{};const p=payOf(f.cod);const row={Nome:f.nome||"",Telefone:f.tel||"","E-mail":f.email||"",Edição:t.ed?(t.ed+"ª"):"",Curso:f.curso||t.curso||"",Turno:f.horario||f.turno||"","Valor pago (Kz)":p?(+p.pago||0):0};if(admin)row["Em dívida (Kz)"]=p?divida(p):0;return row;});
+ const wb=XLSX.utils.book_new();const ws=XLSX.utils.json_to_sheet(linhas);XLSX.utils.book_append_sheet(wb,ws,"Formandos");
+ XLSX.writeFile(wb,(nomeFicheiro||"formandos")+".xlsx");toast("Lista exportada");}
+/* Vista "Todos os alunos" (Turmas presenciais) — reaproveita EXACTAMENTE o mesmo filtro
+   (pesquisa/turno/edições escolhidas) que vPresencial() usa para montar a tabela, para os botões
+   Cards/Cards (todos)/Exportar dessa vista nunca divergirem do que está a ser mostrado no ecrã. */
+function _todosAlunosVisiveis(){
+ var q=(presQ||"").toLowerCase(),qd=q.replace(/\D/g,"");
+ var turmasP=turmasVisiveis().filter(function(t){return (t.modalidade||"Presencial")!=="Online"&&(!presEds||!presEds.length||presEds.indexOf(t.cod)>=0);});
+ var out=[];
+ turmasP.forEach(function(t){
+  var als=data.formandos.filter(function(f){return f.turma===t.cod&&f.estado!=="Transferido p/ Online";});
+  if(presTurno)als=als.filter(function(f){return (f.horario||f.turno||"")===presTurno;});
+  if(q)als=als.filter(function(f){return (f.nome||"").toLowerCase().includes(q)||(qd&&(f.tel||"").replace(/\D/g,"").includes(qd));});
+  als.forEach(function(f){out.push({f:f,t:t});});
+ });
+ return out;
+}
+function gerarCardsTodosAlunosVista(){gerarCardsListaMulti(_todosAlunosVisiveis().map(function(x){return x.f.cod;}),false);}
+function gerarCardsTodosAlunosVistaTodos(){gerarCardsTodosListaMulti(_todosAlunosVisiveis().map(function(x){return x.f.cod;}));}
+function exportTodosAlunosVista(){
+ var cods=_todosAlunosVisiveis().map(function(x){return x.f.cod;});
+ var nome=(presEds&&presEds.length)?("edicoes-"+presEds.join("_")):"todos-os-alunos";
+ exportListaAlunos(cods,nome);
+}
 
 /* PAGAMENTOS / CONTA DO FORMANDO */
 function vPagamentos(){
@@ -7237,7 +7285,10 @@ function vPresencial(){var q=presQ.toLowerCase(),qd=q.replace(/\D/g,"");
     pendentes) — só a tabela de alunos no fim de cada cartão é que sai daqui e passa a ser UMA SÓ,
     reunindo quem estiver em "als" (já filtrado) de todas as edições visíveis. Sem filtro nenhum,
     mostra toda a gente de todas as edições (each x.als===alsTotal nesse caso). */
- var todasLinhas=[];blocos.forEach(function(x){x.als.forEach(function(f){todasLinhas.push({f:f,t:x.t});});});
+ /* L166: reaproveita _todosAlunosVisiveis() (mesma lógica, agora partilhada com os botões
+    Cards/Cards (todos)/Exportar da vista "Todos os alunos") em vez de reconstruir aqui — para os
+    números baterem sempre certo entre a tabela e o que os botões exportam/imprimem. */
+ var todasLinhas=_todosAlunosVisiveis();
  var totalGeral=todasLinhas.length;
  var pagosGeral=todasLinhas.filter(function(x){var p=payOf(x.f.cod);return (+((p&&p.pago)||0))>0;}).length;
  var naoPagosGeral=totalGeral-pagosGeral;
@@ -7257,16 +7308,27 @@ function vPresencial(){var q=presQ.toLowerCase(),qd=q.replace(/\D/g,"");
     o mesmo padrão visual do friso já usado dentro de cada turma (acompanhamentoTurmaHTML). */
  var frisoTopo='<div class="flex" style="gap:0;border-bottom:2px solid var(--linha);margin:10px 0 0">'
   +[{id:"turmas",label:"Turmas"},{id:"acomp",label:"Acompanhamento das turmas"}].map(function(a){var ativo=a.id===presFriso;return '<button onclick="_setPresFriso(\''+a.id+'\')" style="border:none;background:'+(ativo?'#fff':'transparent')+';border-bottom:3px solid '+(ativo?'var(--azul)':'transparent')+';padding:9px 16px;font-size:13px;font-weight:'+(ativo?'700':'500')+';color:'+(ativo?'var(--azul)':'#666')+';cursor:pointer;border-radius:6px 6px 0 0">'+esc(a.label)+'</button>';}).join("")+'</div>';
+ /* L166-1/2: o Ventura já não quer a secção "Todos os alunos" a repetir-se por baixo quando já
+    escolheu edição(ões) pelos chips (turmasTabHTML já mostra o cartão combinado dessas edições) —
+    "ao filtrar, não preciso da parte onde vem todos os alunos". A tabela + os botões Cards/Cards
+    (todos)/Exportar (agora também nesta vista unificada, iguais aos que já existem por edição)
+    passam a viver dentro desse cartão combinado quando mostrarBlocos=true; só aparecem como secção
+    própria "Todos os alunos" quando NENHUMA edição está escolhida (pesquisa/turno sozinhos, ou nada). */
+ var alunosBotoesHTML='<div class="flex" style="gap:8px;flex-wrap:wrap;margin:6px 0"><button class="btn-o" onclick="gerarCardsTodosAlunosVista()" title="Só quem já pagou">🖨 Cards</button><button class="btn-o" onclick="gerarCardsTodosAlunosVistaTodos()" title="Inclui também quem ainda não pagou — pede código da Gestão">🖨 Cards (todos)</button>'+(podeExportar()?'<button class="btn-o" onclick="exportTodosAlunosVista()">Exportar</button>':'')+'</div>';
+ var alunosTabelaHTML=alunosBotoesHTML
+  +'<div class="flex" style="gap:8px;flex-wrap:wrap;margin:8px 0"><span class="pill p-azul">'+totalGeral+' aluno(s) no total</span><span class="pill p-verde">'+pagosGeral+' pago(s)</span><span class="pill p-verm">'+naoPagosGeral+' não pago(s)</span></div>'
+  +'<table style="margin-top:8px"><thead><tr><th class="stickyhead">Nome</th><th class="stickyhead">Telefone</th><th class="stickyhead">Edição</th><th class="stickyhead">Curso</th><th class="stickyhead">Turno</th><th class="stickyhead">Pagamento</th><th class="stickyhead"></th></tr></thead><tbody>'+(todasLinhas.map(function(x){var f=x.f,t=x.t;var p=payOf(f.cod);var d=p?divida(p):0;return '<tr><td>'+esc(f.nome)+'</td><td>'+esc(f.tel||"")+'</td><td>'+esc(t.ed||"")+'ª</td><td>'+esc(t.curso||"")+'</td><td>'+esc(f.horario||f.turno||"—")+'</td><td>'+(d>0?'<span class="pill p-verm">Deve '+kz(d)+'</span>':'<span class="pill p-verde">Pago</span>')+'</td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:3px 9px" onclick="fFicha=\''+esc(f.cod)+'\';show(\'formandos\')">Ficha</button>'+((role==="admin"||podeEditar())?'<button class="btn-o" style="padding:3px 9px" onclick="transferAluno(\''+esc(f.cod)+'\')">Transferir</button><button class="btn-o" style="padding:3px 9px" onclick="agendarPdsF(\''+esc(f.cod)+'\')">Marcar PDS</button><button class="btn-o" style="padding:3px 9px" onclick="abrirTransferParaOnline(\''+esc(f.cod)+'\')">→ Online</button>':'')+((d>0&&podeEditar())?'<button class="btn-o" style="padding:3px 9px" onclick="irPagar(\''+esc(f.cod)+'\')">Pagar</button>':'')+'<button class="btn-g" style="padding:3px 9px" onclick="setChamada(\''+esc(f.nome)+'\',\''+esc(f.tel||"")+'\',\'Formando\')">☎</button>'+rowActs('formandos',data.formandos.indexOf(f))+'</td></tr>';}).join("")||'<tr><td colspan="7" class="muted">Sem alunos'+(filtroActivo?' com este filtro.':'.')+'</td></tr>')+'</tbody></table>';
  var turmasTabHTML=mostrarBlocos?('<div class="sec"><h2 style="margin:0 0 10px">'+cabecalhoCombinado+'</h2>'
    +blocos.map(function(x){var t=x.t;return '<div style="border-top:1px solid var(--linha);padding-top:12px;margin-top:12px"><div class="flex" style="flex-wrap:wrap;gap:8px">'+(turmasP.length>1?'<div class="muted" style="font-weight:700">'+esc(t.ed)+'ª Edição — '+esc(t.curso||"")+'</div><div class="spacer"></div>':'<div class="muted">Formador: '+esc(t.resp||"—")+' · '+x.totalReal+' aluno(s) no total'+(x.als.length!==x.totalReal?' <span class="pill p-cinza" title="Pesquisa ou filtro de turno activo — a lista única mais abaixo não mostra todos">(a mostrar '+x.als.length+')</span>':'')+'</div><div class="spacer"></div>')+'<button class="btn-o" onclick="gerarCards(\''+esc(t.cod)+'\')" title="Só quem já pagou">🖨 Cards</button><button class="btn-o" onclick="gerarCardsTodos(\''+esc(t.cod)+'\')" title="Inclui também quem ainda não pagou — pede código da Gestão">🖨 Cards (todos)</button>'+(podeExportar()?'<button class="btn-o" onclick="exportTurma(\''+esc(t.cod)+'\')">Exportar</button>':'')+'</div>'
     +(turmasP.length>1?'<div class="muted" style="margin-top:4px">Formador: '+esc(t.resp||"—")+' · '+x.totalReal+' aluno(s) no total'+(x.als.length!==x.totalReal?' <span class="pill p-cinza">(a mostrar '+x.als.length+')</span>':'')+'</div>':'')
     +'<div class="flex" style="gap:8px;flex-wrap:wrap;margin:8px 0"><span class="pill p-azul">'+x.totalReal+' aluno(s) no total</span><span class="pill p-verde">'+x.pagosReal+' pago(s)</span><span class="pill p-verm">'+x.naoPagosReal+' não pago(s)</span></div>'
     +(x.pendReal?('<div class="note" style="background:#fff4e5;border-color:#f0c987;color:#7a4b06;margin:0 0 8px">⚠ <b>'+x.pendReal+'</b> pessoa(s) já se inscreveu'+(x.pendReal===1?'':'ram')+' pela página de inscrição para esta edição e ainda não '+(x.pendReal===1?'foi confirmada':'foram confirmadas')+' numa turma. <button class="btn-o" style="padding:3px 9px;margin-left:6px" onclick="show(\'inscricoes\')">Ver inscrições</button></div>'):'')
-    +'</div>';}).join("")+'</div>'):'';
+    +'</div>';}).join("")
+   +'<div style="border-top:1px solid var(--linha);padding-top:12px;margin-top:12px">'+alunosTabelaHTML+'</div>'
+   +'</div>'):'';
  var acompTabHTML=mostrarBlocos?(blocos.map(function(x){var t=x.t;return '<div class="sec"><div class="muted" style="font-weight:700;margin-bottom:6px">'+esc(t.ed)+'ª Edição — '+esc(t.curso||"")+'</div>'+acompanhamentoTurmaHTML(t)+turnoOcupacaoHTML(t)+'</div>';}).join("")):'<div class="sec"><div class="muted">Escolhe uma ou mais edições acima (chips) para ver o Checklist, Presenças, Avaliações e ocupação por turno.</div></div>';
- var todosAlunosHTML='<div class="sec"><h2>Todos os alunos'+(filtroActivo?' <span class="pill p-cinza" style="font-size:11px;vertical-align:middle">filtrado</span>':'')+'</h2><div class="muted">Uma só lista, com todas as edições — usa a pesquisa, o turno ou os chips de edição acima para reduzir.</div>'
-  +'<div class="flex" style="gap:8px;flex-wrap:wrap;margin:8px 0"><span class="pill p-azul">'+totalGeral+' aluno(s) no total</span><span class="pill p-verde">'+pagosGeral+' pago(s)</span><span class="pill p-verm">'+naoPagosGeral+' não pago(s)</span></div>'
-  +'<table style="margin-top:8px"><thead><tr><th class="stickyhead">Nome</th><th class="stickyhead">Telefone</th><th class="stickyhead">Edição</th><th class="stickyhead">Curso</th><th class="stickyhead">Turno</th><th class="stickyhead">Pagamento</th><th class="stickyhead"></th></tr></thead><tbody>'+(todasLinhas.map(function(x){var f=x.f,t=x.t;var p=payOf(f.cod);var d=p?divida(p):0;return '<tr><td>'+esc(f.nome)+'</td><td>'+esc(f.tel||"")+'</td><td>'+esc(t.ed||"")+'ª</td><td>'+esc(t.curso||"")+'</td><td>'+esc(f.horario||f.turno||"—")+'</td><td>'+(d>0?'<span class="pill p-verm">Deve '+kz(d)+'</span>':'<span class="pill p-verde">Pago</span>')+'</td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:3px 9px" onclick="fFicha=\''+esc(f.cod)+'\';show(\'formandos\')">Ficha</button>'+((role==="admin"||podeEditar())?'<button class="btn-o" style="padding:3px 9px" onclick="transferAluno(\''+esc(f.cod)+'\')">Transferir</button><button class="btn-o" style="padding:3px 9px" onclick="agendarPdsF(\''+esc(f.cod)+'\')">Marcar PDS</button><button class="btn-o" style="padding:3px 9px" onclick="abrirTransferParaOnline(\''+esc(f.cod)+'\')">→ Online</button>':'')+((d>0&&podeEditar())?'<button class="btn-o" style="padding:3px 9px" onclick="irPagar(\''+esc(f.cod)+'\')">Pagar</button>':'')+'<button class="btn-g" style="padding:3px 9px" onclick="setChamada(\''+esc(f.nome)+'\',\''+esc(f.tel||"")+'\',\'Formando\')">☎</button>'+rowActs('formandos',data.formandos.indexOf(f))+'</td></tr>';}).join("")||'<tr><td colspan="7" class="muted">Sem alunos'+(filtroActivo?' com este filtro.':'.')+'</td></tr>')+'</tbody></table></div>';
+ var todosAlunosHTML=mostrarBlocos?'':('<div class="sec"><h2>Todos os alunos'+(filtroActivo?' <span class="pill p-cinza" style="font-size:11px;vertical-align:middle">filtrado</span>':'')+'</h2><div class="muted">Uma só lista, com todas as edições — usa a pesquisa, o turno ou os chips de edição acima para reduzir.</div>'
+  +alunosTabelaHTML+'</div>');
  return `${pdsPickerFHTML()}${transferParaOnlineModalHTML()}${transferAlunoModalHTML()}${divergModalHTML()}<div class="sec"><h2>Turmas presenciais</h2><div class="muted">Pesquisa por nome ou número e gera os cards da turma.</div>
   <div class="flex" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><input id="q_pres" class="search" style="margin:0" placeholder="Procurar por nome ou nº…" value="${esc(presQ)}" oninput="presQ=this.value;refocusSearch('q_pres');renderDebounced()"><select onchange="presTurno=this.value;render()" style="width:auto">${turnoOptsHTML(presTurno,presEds.length===1?presEds[0]:null)}</select></div>
   ${presSeletorHTML()}
