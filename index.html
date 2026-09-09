@@ -1448,7 +1448,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.102";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.104";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -3445,7 +3445,7 @@ function getPres(turmaCod,sessao,cod){return data.presencas.find(p=>p.turma===tu
 function faltasDe(cod){return data.presencas.filter(p=>p.cod===cod&&p.estado==="Falta").length}
 const DIAS_NOME=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
 function turnosTodos(){var s=new Set();(data.turmas||[]).forEach(function(t){if(Array.isArray(t.turnos))t.turnos.forEach(function(tn){if(tn.horario)s.add(tn.horario);});});return Array.from(s);}
-function turnoOptsHTML(sel,cod){var arr;if(cod){var t=turmaByCod(cod);arr=(t&&Array.isArray(t.turnos))?t.turnos.map(function(tn){return tn.horario;}).filter(Boolean):[];}else{arr=turnosTodos();}return '<option value="">Todos os turnos</option>'+arr.map(function(h){return '<option '+(sel===h?"selected":"")+'>'+esc(h)+'</option>';}).join("");}
+function turnoOptsHTML(sel,cod,resp){var arr;if(cod){var t=turmaByCod(cod);arr=(t&&Array.isArray(t.turnos))?t.turnos.map(function(tn){return tn.horario;}).filter(Boolean):[];}else if(resp){var s=new Set();(data.turmas||[]).forEach(function(t){if(t.resp===resp&&Array.isArray(t.turnos))t.turnos.forEach(function(tn){if(tn.horario)s.add(tn.horario);});});arr=Array.from(s);}else{arr=turnosTodos();}return '<option value="">Todos os turnos</option>'+arr.map(function(h){return '<option '+(sel===h?"selected":"")+'>'+esc(h)+'</option>';}).join("");}
 function turmasVisiveis(){if(currentUser&&currentUser.funcao==="Gestora de Formação")return data.turmas.filter(t=>t.gestora===currentUser.nome||(t.acessoExtra||[]).indexOf(currentUser.nome)>=0);return data.turmas;}
 function delTurma(i){if(!confirm("Remover esta edição?"))return;data.turmas.splice(i,1);persist();render()}
 const LANCAMENTO_PASSOS=["Definir a data da próxima formação","Preparar o panfleto","Registar a turma no sistema (criar edição se não existir)","Publicação + Tráfego pago","Panfleto publicado"];
@@ -7139,8 +7139,15 @@ function feedbackModalHTML(){if(!feedbackAlvo)return"";var t=turmaByCod(feedback
   </div></div>`;}
 
 /* TURMAS PRESENCIAIS */
-let presQ="",presEds=null,presTurno="",presFriso="turmas";
+let presQ="",presEds=null,presTurno="",presFriso="turmas",presResp="";
 function _setPresFriso(id){presFriso=id;render();}
+/* L168: filtro por Responsável (formador) — cada colaborador escolhe o seu nome e o dropdown de
+   turnos e o de "+ Adicionar turma…" ficam logo restritos às turmas de que é responsável, para
+   escolher a edição certa sem ter de percorrer a lista toda. "Simples de manusear": trocar de
+   responsável limpa o turno e as edições já escolhidas, para começar sempre com o filtro certo. */
+function _responsaveisPresenciais(){var s=new Set();turmasVisiveis().forEach(function(t){if((t.modalidade||"Presencial")!=="Online"&&t.resp)s.add(t.resp);});return Array.from(s).sort();}
+function respOptsHTML(sel){var arr=_responsaveisPresenciais();return '<option value="">Todos os responsáveis</option>'+arr.map(function(n){return '<option '+(sel===n?"selected":"")+'>'+esc(n)+'</option>';}).join("");}
+function setPresResp(v){presResp=v;presTurno="";presEds=[];render();}
 /* L71-1: presEds=null significa "por inicializar" — na primeira vez que a página é aberta
    calcula-se um valor por omissão (para Gestora de Formação: as turmas dela em andamento);
    depois disso fica sempre um array (mesmo vazio) e nunca mais se recalcula sozinho, para não
@@ -7149,7 +7156,7 @@ function presTurmaAdd(cod){if(!cod)return;if(!Array.isArray(presEds))presEds=[];
 function presTurmaDel(cod){presEds=(presEds||[]).filter(function(c){return c!==cod;});render();}
 function presTurmasLimpar(){presEds=[];render();}
 function presSeletorHTML(){
- var todas=turmasVisiveis().filter(function(t){return (t.modalidade||"Presencial")!=="Online";}).slice().sort(function(a,b){return (+b.ed||0)-(+a.ed||0);});
+ var todas=turmasVisiveis().filter(function(t){return (t.modalidade||"Presencial")!=="Online"&&(!presResp||t.resp===presResp);}).slice().sort(function(a,b){return (+b.ed||0)-(+a.ed||0);});
  var sel=presEds||[];
  var chips=sel.map(function(cod){var t=turmaByCod(cod);if(!t)return"";return '<span class="pill p-azul" style="padding:5px 10px;display:inline-flex;align-items:center;gap:6px">'+esc(t.ed)+'ª — '+esc(t.curso||"")+' <a href="#" onclick="presTurmaDel(\''+esc(cod)+'\');return false" style="color:inherit;text-decoration:none;font-weight:700" title="Remover">×</a></span>';}).join("");
  var addSel='<select onchange="presTurmaAdd(this.value);this.value=\'\'" style="width:auto"><option value="">+ Adicionar turma…</option>'+todas.filter(function(t){return sel.indexOf(t.cod)<0;}).map(function(t){return '<option value="'+esc(t.cod)+'">'+esc(t.ed)+'ª — '+esc(t.curso||"")+'</option>';}).join("")+'</select>';
@@ -7326,11 +7333,23 @@ function vPresencial(){var q=presQ.toLowerCase(),qd=q.replace(/\D/g,"");
     +'</div>';}).join("")
    +'<div style="border-top:1px solid var(--linha);padding-top:12px;margin-top:12px">'+alunosTabelaHTML+'</div>'
    +'</div>'):'';
- var acompTabHTML=mostrarBlocos?(blocos.map(function(x){var t=x.t;return '<div class="sec"><div class="muted" style="font-weight:700;margin-bottom:6px">'+esc(t.ed)+'ª Edição — '+esc(t.curso||"")+'</div>'+acompanhamentoTurmaHTML(t)+turnoOcupacaoHTML(t)+'</div>';}).join("")):'<div class="sec"><div class="muted">Escolhe uma ou mais edições acima (chips) para ver o Checklist, Presenças, Avaliações e ocupação por turno.</div></div>';
+ /* L167: o Ventura pediu o mesmo cabeçalho/design de "Turmas" (título da edição, formador+total,
+    pills de totais, aviso de inscrições por confirmar) também em "Acompanhamento das turmas" — só
+    trocando a fila de botões Cards/Cards (todos)/Exportar pelas abas Checklist/Presenças/Avaliações
+    que já existem dentro de acompanhamentoTurmaHTML() (confirmado por ele: são "os botões que
+    permitem fazer acompanhamento"). Reaproveita exactamente os mesmos "blocos"/x usados em
+    turmasTabHTML, para os números baterem sempre certo entre os dois separadores. */
+ var acompTabHTML=mostrarBlocos?('<div class="sec"><h2 style="margin:0 0 10px">'+cabecalhoCombinado+'</h2>'
+   +blocos.map(function(x){var t=x.t;return '<div style="border-top:1px solid var(--linha);padding-top:12px;margin-top:12px"><div class="flex" style="flex-wrap:wrap;gap:8px">'+(turmasP.length>1?'<div class="muted" style="font-weight:700">'+esc(t.ed)+'ª Edição — '+esc(t.curso||"")+'</div>':'<div class="muted">Formador: '+esc(t.resp||"—")+' · '+x.totalReal+' aluno(s) no total'+(x.als.length!==x.totalReal?' <span class="pill p-cinza" title="Pesquisa ou filtro de turno activo — a lista única mais abaixo não mostra todos">(a mostrar '+x.als.length+')</span>':'')+'</div>')+'</div>'
+    +(turmasP.length>1?'<div class="muted" style="margin-top:4px">Formador: '+esc(t.resp||"—")+' · '+x.totalReal+' aluno(s) no total'+(x.als.length!==x.totalReal?' <span class="pill p-cinza">(a mostrar '+x.als.length+')</span>':'')+'</div>':'')
+    +'<div class="flex" style="gap:8px;flex-wrap:wrap;margin:8px 0"><span class="pill p-azul">'+x.totalReal+' aluno(s) no total</span><span class="pill p-verde">'+x.pagosReal+' pago(s)</span><span class="pill p-verm">'+x.naoPagosReal+' não pago(s)</span></div>'
+    +(x.pendReal?('<div class="note" style="background:#fff4e5;border-color:#f0c987;color:#7a4b06;margin:0 0 8px">⚠ <b>'+x.pendReal+'</b> pessoa(s) já se inscreveu'+(x.pendReal===1?'':'ram')+' pela página de inscrição para esta edição e ainda não '+(x.pendReal===1?'foi confirmada':'foram confirmadas')+' numa turma. <button class="btn-o" style="padding:3px 9px;margin-left:6px" onclick="show(\'inscricoes\')">Ver inscrições</button></div>'):'')
+    +acompanhamentoTurmaHTML(t)+turnoOcupacaoHTML(t)
+    +'</div>';}).join("")+'</div>'):'<div class="sec"><div class="muted">Escolhe uma ou mais edições acima (chips) para ver o Checklist, Presenças, Avaliações e ocupação por turno.</div></div>';
  var todosAlunosHTML=mostrarBlocos?'':('<div class="sec"><h2>Todos os alunos'+(filtroActivo?' <span class="pill p-cinza" style="font-size:11px;vertical-align:middle">filtrado</span>':'')+'</h2><div class="muted">Uma só lista, com todas as edições — usa a pesquisa, o turno ou os chips de edição acima para reduzir.</div>'
   +alunosTabelaHTML+'</div>');
  return `${pdsPickerFHTML()}${transferParaOnlineModalHTML()}${transferAlunoModalHTML()}${divergModalHTML()}<div class="sec"><h2>Turmas presenciais</h2><div class="muted">Pesquisa por nome ou número e gera os cards da turma.</div>
-  <div class="flex" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><input id="q_pres" class="search" style="margin:0" placeholder="Procurar por nome ou nº…" value="${esc(presQ)}" oninput="presQ=this.value;refocusSearch('q_pres');renderDebounced()"><select onchange="presTurno=this.value;render()" style="width:auto">${turnoOptsHTML(presTurno,presEds.length===1?presEds[0]:null)}</select></div>
+  <div class="flex" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><input id="q_pres" class="search" style="margin:0" placeholder="Procurar por nome ou nº…" value="${esc(presQ)}" oninput="presQ=this.value;refocusSearch('q_pres');renderDebounced()"><select onchange="setPresResp(this.value)" style="width:auto" title="Filtrar pelo responsável — restringe o turno e as edições abaixo às turmas dele/dela">${respOptsHTML(presResp)}</select><select onchange="presTurno=this.value;render()" style="width:auto">${turnoOptsHTML(presTurno,presEds.length===1?presEds[0]:null,presResp)}</select></div>
   ${presSeletorHTML()}
   ${divergNotaHTML()}
   ${frisoTopo}</div>
