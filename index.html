@@ -1448,7 +1448,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.100";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.101";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -7958,6 +7958,33 @@ function atribuirComissaoColaborador(nome){
   linhas.forEach(function(x){_comissaoAdicionarPessoa(x.cod,x.nome,x.pendente,mesRef,quem,dataPag);comissoesAtribuidasLog().unshift({cod:x.cod,aluno:x.aluno,nome:x.nome,turmaCod:x.turmaCod,turmaLabel:x.turmaLabel,valor:x.pendente,quem:quem,data:dataPag,hora:horaPag,acao:"Atribuída"});});
   persist();toast(kz(total)+" atribuídos a "+nome);render();
  });}
+/* L169 — reverte TUDO o que está atribuído (ledger, fonte de verdade) a um colaborador de uma vez,
+   independentemente de teres passado por "Atribuir" há muito tempo (sem log) ou agora mesmo. Pensada
+   para quando "Atribuir" já correu mas o salário ainda não foi de facto pago — o valor volta a contar
+   como pendente e reaparece na Folha de pagamento (comissaoPessoaMes lê o pendente). */
+function reverterTudoColaborador(nome){
+ if(role!=="admin"){toast("Só a gestão pode reverter");return;}
+ if(!nome){toast("Escolhe o colaborador");return;}
+ var pagas=comissoesPagas();
+ var cods=Object.keys(pagas).filter(function(cod){return _comissaoJaPagaPessoa(cod,nome)>0;});
+ if(!cods.length){toast("Não há nada atribuído a "+nome+" por reverter");return;}
+ var total=cods.reduce(function(s,cod){return s+_comissaoJaPagaPessoa(cod,nome);},0);
+ if(!_reauthGestor()){toast("Código incorrecto — nada foi alterado");return;}
+ var motivo=prompt('Motivo para reverter TODA a comissão atribuída a '+nome+' ('+kz(total)+', '+cods.length+' aluno(s)) — obrigatório, fica registado no histórico:');
+ if(motivo===null)return;
+ motivo=(motivo||"").trim();
+ if(!motivo){toast("O motivo é obrigatório para reverter");return;}
+ kaConfirm('Reverter '+kz(total)+' atribuídos a '+nome+' ('+cods.length+' aluno(s))? Volta a ficar pendente e reaparece na Folha de pagamento.',function(){
+  var quem=(currentUser&&currentUser.nome)||role;var dataRev=_dISO(new Date());var horaRev=_horaAgoraCom();var LOG=comissoesAtribuidasLog();
+  cods.forEach(function(cod){
+   var valor=_comissaoJaPagaPessoa(cod,nome);
+   _comissaoRevertPessoa(cod,nome,valor);
+   LOG.forEach(function(x){if(x.cod===cod&&x.nome===nome&&x.acao==="Atribuída"&&!x.revertido)x.revertido=true;});
+   var f=_achaVendavelPorCod(cod);var aluno=f?(f.nome||cod):cod;var info=f?_turmaInfoDe(f):{turmaLabel:"—",turmaCod:cod};
+   comissoesAtribuidasLog().unshift({cod:cod,aluno:aluno,nome:nome,turmaCod:info.turmaCod,turmaLabel:info.turmaLabel,valor:valor,quem:quem,data:dataRev,hora:horaRev,acao:"Revertida",motivo:motivo});
+  });
+  persist();toast(kz(total)+" revertidos — de volta à Folha de "+nome);render();
+ });}
 function reverterComissaoAtribuicao(idx){if(role!=="admin"){toast("Só a gestão pode reverter");return;}var LOG=comissoesAtribuidasLog();var x=LOG[idx];if(!x||x.acao!=="Atribuída"||x.revertido){toast("Este registo já não pode ser revertido");return;}
  if(!_reauthGestor()){toast("Código incorrecto — nada foi alterado");return;}
  var motivo=prompt('Motivo para reverter '+kz(x.valor)+' atribuídos a '+x.nome+' (aluno '+x.aluno+') — obrigatório, fica registado no histórico:');
@@ -8278,6 +8305,13 @@ function vRH(){const ppl=pessoasKA();const mes=rhMes||new Date().toISOString().s
   var porColab={};confirmadasPagar.forEach(function(x){porColab[x.nome]=(porColab[x.nome]||0)+x.pendente;});
   var nomesColab=Object.keys(porColab).sort(function(a,b){return porColab[b]-porColab[a];});
   var resumoColabHTML=nomesColab.length?nomesColab.map(function(nome){return '<div class="flex" style="gap:10px;align-items:center;padding:4px 0;border-bottom:1px solid var(--linha)"><b>'+esc(nome)+'</b><div class="spacer"></div><span>'+kz(porColab[nome])+'</span>'+(role==="admin"?'<button class="btn-p" style="padding:4px 12px" onclick="atribuirComissaoColaborador(\''+esc(nome).replace(/'/g,"\\'")+'\')">Atribuir</button>':'')+'</div>';}).join(""):'<div class="muted">Sem comissão confirmada a pagar nesta selecção.</div>';
+  /* L169 — depois de "Atribuir", a pessoa some desta lista (deixa de ter pendente>0) e o valor sai
+     também da Folha de pagamento (comissaoPessoaMes lê o pendente, não o atribuído) — como se já
+     tivesse sido paga, mesmo que o Ventura ainda não tenha marcado o salário como pago de facto.
+     "Reverter tudo" traz de volta TUDO o que está atribuído (activo) ao colaborador escolhido no
+     filtro acima, de uma só vez, para reaparecer na Folha como comissão por pagar. */
+  var jaAtribColabSel=comColabSel?(function(){var pagas=comissoesPagas();return Object.keys(pagas).reduce(function(s,cod){return s+_comissaoJaPagaPessoa(cod,comColabSel);},0);})():0;
+  var reverterTudoHTML=(role==="admin"&&comColabSel&&jaAtribColabSel>0)?('<div class="flex" style="gap:10px;align-items:center;padding:8px 0 0;margin-top:6px;border-top:1px dashed var(--linha)"><span>Já atribuído a <b>'+esc(comColabSel)+'</b> mas ainda não reflectido na Folha: <b>'+kz(jaAtribColabSel)+'</b></span><div class="spacer"></div><button class="btn-o" style="padding:4px 12px" onclick="reverterTudoColaborador(\''+esc(comColabSel).replace(/'/g,"\\'")+'\')">↶ Reverter tudo</button></div>'):"";
 
   var linhasHTML=linhas.map(function(x){
    /* L165 — "atribuída sem confirmação" é um estado à parte: a comissão já foi dada (atribuida>0) mas
@@ -8309,7 +8343,7 @@ function vRH(){const ppl=pessoasKA();const mes=rhMes||new Date().toISOString().s
   var corpo='<div class="flex" style="gap:8px;flex-wrap:wrap;margin:10px 0">'+chips+'<div class="spacer"></div>'+botaoExport+'</div>'
    +nomesParecidosHTML
    +'<div class="muted" style="margin-bottom:8px">'+linhas.length+' linha(s)'+(comMesSel.length?' · meses: '+comMesSel.join(", "):' · todos os meses com pagamento')+(comColabSel?' · colaborador: '+esc(comColabSel):'')+' · comissão total: '+kz(totQuota)+' · já atribuída: '+kz(totAtrib)+' · <b>a pagar (nesta vista): '+kz(totPend)+'</b>'+(totDeve>0?' · aluno(s) ainda devem: '+kz(totDeve):'')+'</div>'
-   +'<div class="sec" style="background:#f7f9fc;margin:0 0 14px;padding:10px 14px"><h3 style="margin:0 0 4px;font-size:13px;color:var(--azul);text-transform:uppercase">Atribuir por colaborador (só confirmadas)</h3>'+resumoColabHTML+'</div>'
+   +'<div class="sec" style="background:#f7f9fc;margin:0 0 14px;padding:10px 14px"><h3 style="margin:0 0 4px;font-size:13px;color:var(--azul);text-transform:uppercase">Atribuir por colaborador (só confirmadas)</h3>'+resumoColabHTML+reverterTudoHTML+'</div>'
    +'<table><thead><tr><th class="stickyhead">Aluno</th><th class="stickyhead">Edição</th><th class="stickyhead">Colaborador</th><th class="stickyhead">Pago</th><th class="stickyhead">Aluno ainda deve</th><th class="stickyhead">Comissão</th><th class="stickyhead">Já atribuída</th><th class="stickyhead">A pagar</th><th class="stickyhead">Confirmação</th><th class="stickyhead"></th></tr></thead><tbody>'+linhasHTML+'</tbody></table>';
 
   return '<div class="sec" id="comEdicaoSec"><h2>Comissões por Edição</h2><div class="muted">Escolhe edições e/ou meses (só aparecem os meses em que houve pagamento real) e/ou um colaborador. Cada aluno exige confirmação da Gestão antes de entrar na soma a pagar — atribuir passa a ser sempre por colaborador, sobre o total confirmado.</div>'
