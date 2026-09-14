@@ -1448,7 +1448,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.105";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.106";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -8134,10 +8134,14 @@ function reciboComissaoModalHTML(){if(recCom===null||recCom===undefined)return""
 /* L158-3 — exporta só o que está CONFIRMADO (comEdLinhas(...,"apagar") já filtra pendente>0 &&
    confirmada), dentro do âmbito actual dos filtros da secção (comEdSel/comMesSel/comColabSel). */
 function exportComissoesEdicaoXLSX(){if(typeof XLSX==="undefined"){toast("Biblioteca Excel ainda a carregar — tenta daqui a instantes");return;}
- var linhas=comEdLinhas(comEdSel,comMesSel,comColabSel,"apagar");
- if(!linhas.length){toast("Sem comissões confirmadas para exportar nesta selecção");return;}
- var rows=linhas.map(function(x){return {Edicao:x.turmaLabel,Aluno:x.aluno,Colaborador:x.nome,Valor_Pago_Kz:x.pago,Divida_Aluno_Kz:x.dividaAluno,Comissao_Pendente_Kz:x.pendente,Comissao_Ja_Atribuida_Kz:x.atribuida,Mes_Ultimo_Pagamento:x.mesUltimoPagamento,Dividida:x.dividida?"Sim":"Não",Confirmado_Por:x.confirmadoPor||""};});
- var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),"Comissoes confirmadas");
+ /* L170 — o Ventura pediu para poder exportar mesmo antes de confirmar a comissão, tanto ao filtrar
+    por colaborador como na vista geral (sem colaborador escolhido): passa a sair tudo o que está na
+    selecção de edições/meses/colaborador (confirmado ou não), com uma coluna "Confirmada" para não
+    perder a distinção ao abrir a folha. */
+ var linhas=comEdLinhas(comEdSel,comMesSel,comColabSel,"todos");
+ if(!linhas.length){toast("Sem comissões nesta selecção");return;}
+ var rows=linhas.map(function(x){return {Edicao:x.turmaLabel,Aluno:x.aluno,Colaborador:x.nome,Valor_Pago_Kz:x.pago,Divida_Aluno_Kz:x.dividaAluno,Comissao_Pendente_Kz:x.pendente,Comissao_Ja_Atribuida_Kz:x.atribuida,Mes_Ultimo_Pagamento:x.mesUltimoPagamento,Dividida:x.dividida?"Sim":"Não",Confirmada:x.confirmada?"Sim":"Não",Confirmado_Por:x.confirmadoPor||""};});
+ var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),"Comissoes");
  var sufixo=(comColabSel?"-"+comColabSel:"")+((comMesSel&&comMesSel.length)?"-"+comMesSel.join("_"):"");
  XLSX.writeFile(wb,"Comissoes"+sufixo.replace(/[^a-zA-Z0-9_-]+/g,"_")+".xlsx");toast("Excel exportado");}
 function comissoesHistoricoExport(nomes,de,ate){var meses=_mesesEntre(de,ate);var resumo=[],detalhe=[];nomes.forEach(function(nome){meses.forEach(function(mes){var tot=comissaoPessoaMes(nome,mes);if(tot>0)resumo.push({Colaborador:nome,Mes:mes,Gratificacao_Kz:tot});comDetItensMes(nome,mes).forEach(function(x){detalhe.push({Colaborador:nome,Mes:mes,Aluno:x.nome,Valor_Kz:x.com,Tipo:_comissaoTipoItem(x),Modalidade:x.modalidade,Turma:x.turmaLabel,Dividida:x.dividida?"Sim":"Não",Outra_pessoa:x.outraPessoa||""});});});});return{resumo:resumo,detalhe:detalhe};}
@@ -8412,7 +8416,7 @@ function vRH(){const ppl=pessoasKA();const mes=rhMes||new Date().toISOString().s
    return '<tr><td>'+esc(x.aluno)+'</td><td>'+esc(x.turmaLabel)+'</td><td>'+esc(x.nome)+(x.dividida?' <span class="pill p-cinza" title="Comissão dividida a meio com o 2º responsável pela venda">÷2</span>':'')+'</td><td>'+kz(x.pago)+'</td><td>'+(x.dividaAluno>0?'<span style="color:#a3311f">'+kz(x.dividaAluno)+'</span>':kz(0))+'</td><td>'+kz(x.quota)+'</td><td>'+kz(x.atribuida)+'</td><td>'+(x.pendente>0?'<b>'+kz(x.pendente)+'</b>':kz(0))+'</td><td>'+confCell+'</td><td>'+fichaBtn+'</td></tr>';
   }).join("")||'<tr><td colspan="10" class="muted">Sem linhas nesta selecção.</td></tr>';
 
-  var botaoExport=(role==="admin"&&confirmadasPagar.length)?'<button class="btn-o" style="padding:5px 12px" onclick="exportComissoesEdicaoXLSX()">Exportar Excel (confirmadas)</button>':'';
+  var botaoExport=(role==="admin"&&linhasBase.length)?'<button class="btn-o" style="padding:5px 12px" onclick="exportComissoesEdicaoXLSX()" title="Inclui confirmadas e por confirmar, com coluna de estado">Exportar Excel</button>':'';
 
   var nomesP=comNomesParecidosGeral(comEdSel);
   var nomesParecidosHTML="";
