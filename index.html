@@ -541,7 +541,7 @@ function persistFB(){if(_saveT)clearTimeout(_saveT);_estadoGravacao("A gravar…
     dados locais apenas, apagava-o da nuvem (ver nota grande junto a _remotePendente). */
  if(_remotePendente!=null){
   try{var baseD=_remotePendenteBase?JSON.parse(_remotePendenteBase):null;var remD=JSON.parse(_remotePendente);_aplicarAdicoesRemotas(baseD,remD);}catch(e){}
-  _lastRemote=_remotePendente;_remotePendente=null;_remotePendenteBase=null;
+  _lastRemote=_remotePendente;_remotePendente=null;_remotePendenteBase=null;_remotePendenteDesde=null;
  }
  var str=JSON.stringify(data);_lastRemote=str;_fbRef.set(str).then(function(){_estadoGravacao("Gravado ✓","#1e7d34",false);try{_aplicarRemotoPendente();}catch(e){}}).catch(function(){_estadoGravacao("⚠ NÃO gravou — sem internet. Tenta de novo.","#b3261e",true);sysAlerta("Falha ao gravar na nuvem — verifica a internet e tenta de novo.");});}catch(e){_estadoGravacao("⚠ NÃO gravou — erro no sistema.","#b3261e",true);sysAlerta("Falha ao preparar a gravação dos dados.");}},600);}
 /* Leads captados no catálogo público (clique em "falar no WhatsApp"). O catálogo grava em publico/leadsCatalogo;
@@ -594,7 +594,7 @@ function _dedupTodosPds(){var mudou=false;(data.online||[]).forEach(function(o){
    agora, a versão fica em espera (_remotePendente) e é aplicada assim que for seguro — quando o
    utilizador larga o campo e não há gravação a caminho. Nada se perde.
 ------------------------------------------------------------------------------------------ */
-var _remotePendente=null;var _remoteTimer=null;var _remotePendenteBase=null;
+var _remotePendente=null;var _remoteTimer=null;var _remotePendenteBase=null;var _remotePendenteDesde=null;
 /* ------------------------------------------------------------------------------------------
    L148-1 — CAUSA RAIZ ainda por resolver de "fiz um registo e depois não o encontro": duas
    pessoas a gravar quase ao mesmo tempo, uma delas com um campo aberto (a escrever) durante mais
@@ -655,8 +655,19 @@ function _podeAplicarRemoto(){
    para a nuvem no persist() seguinte, sem precisar deste snapshot velho. */
 function _aplicarRemotoPendente(){
  if(_remotePendente==null)return;
- if(!_podeAplicarRemoto())return;
- var str=_remotePendente,base=_remotePendenteBase;_remotePendente=null;_remotePendenteBase=null;
+ if(!_podeAplicarRemoto()){
+  /* L170 — 2ª rede de segurança: além de arrumar as caixas de pesquisa (ver nota em
+     _ligarVigiaCampos), se por qualquer outro motivo isto ficar bloqueado (ex.: alguém deixou mesmo
+     um campo de dados a meio de preencher, sem gravar nem sair) há mais de 90s, não se fica à espera
+     para sempre — traz-se pelo menos o que foi ACRESCENTADO noutros dispositivos (novo formando,
+     pagamento, etc.), sem tocar em nada que esteja a meio de escrever aqui. A substituição completa
+     (que também reflecte eliminações) só acontece quando voltar a ser seguro. */
+  if(_remotePendenteDesde&&(Date.now()-_remotePendenteDesde)>90000){
+   try{var baseD0=_remotePendenteBase?JSON.parse(_remotePendenteBase):null,remD0=JSON.parse(_remotePendente);if(baseD0&&_aplicarAdicoesRemotas(baseD0,remD0))render();}catch(e){}
+  }
+  return;
+ }
+ var str=_remotePendente,base=_remotePendenteBase;_remotePendente=null;_remotePendenteBase=null;_remotePendenteDesde=null;
  _lastRemote=str;
  if(base!==null&&base!==JSON.stringify(data)){
   /* L148-1: os dados locais mudaram entretanto (ex.: um registo novo, feito enquanto isto estava
@@ -679,7 +690,7 @@ function _watchEstado(){if(!_fbRef)return;try{_fbRef.on("value",function(snap){v
   /* Fica em espera — NÃO se toca em _lastRemote, para esta versão não se perder. Guarda-se também
      uma cópia dos dados locais de agora (_remotePendenteBase), para _aplicarRemotoPendente() poder
      perceber mais tarde se entretanto houve uma alteração local a proteger (ver nota L131 acima). */
-  _remotePendente=str;_remotePendenteBase=JSON.stringify(data);
+  _remotePendente=str;_remotePendenteBase=JSON.stringify(data);if(!_remotePendenteDesde)_remotePendenteDesde=Date.now();
  }
 });
  /* Rede de segurança: de 2 em 2 segundos tenta aplicar o que ficou em espera. */
@@ -1448,7 +1459,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.106";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.107";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -1560,18 +1571,32 @@ let _refocus=null;function refocusSearch(id){_refocus=id;}
    formulário volta ao normal e não fica a repor texto velho por cima. */
 var _camposTocados={};
 function _limparCamposTocados(){_camposTocados={};}
+/* L170 — CAUSA RAIZ de "gravei/apaguei noutro dispositivo e não aparece nos outros, só às vezes":
+   esta vigia marcava como "tocado" QUALQUER input/select/textarea com id em que a pessoa mexesse —
+   incluindo as caixas de pesquisa/filtro (class="search", ids "q_*"), que nunca chamam persist()
+   porque só filtram o que já está à vista (o texto delas já sobrevive ao render() por vir embutido
+   no HTML, via value="${esc(...)}" — não precisam desta vigia para nada). _camposTocados só é limpo
+   dentro de persist(); por isso, mal alguém deixasse texto numa pesquisa sem gravar mais nada a
+   seguir, _podeAplicarRemoto() ficava a devolver false PARA SEMPRE nessa sessão — as actualizações
+   de outros dispositivos ficavam sempre em espera (_remotePendente), nunca aplicadas, sem aviso
+   nenhum. Explica o "só às vezes" (só quem tinha uma pesquisa por gravar) e o F5 resolver na hora
+   (estado novo, _camposTocados vazio outra vez). Correcção: ignorar por completo os campos de
+   pesquisa/filtro (class="search") nesta vigia — continuam a proteger normalmente qualquer campo
+   de dados a meio de preenchimento. */
 function _ligarVigiaCampos(){
  var views=document.getElementById("views");if(!views||views._vigiaLigado)return;views._vigiaLigado=true;
  views.addEventListener("input",function(ev){
   var el=ev.target;if(!el||!el.id)return;
   if(!/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName||""))return;
   if(el.type==="file")return;
+  if(el.classList&&el.classList.contains("search"))return;
   _camposTocados[el.id]=(el.type==="checkbox"||el.type==="radio")?{c:!!el.checked}:{v:el.value};
  },true);
  views.addEventListener("change",function(ev){
   var el=ev.target;if(!el||!el.id)return;
   if(!/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName||""))return;
   if(el.type==="file")return;
+  if(el.classList&&el.classList.contains("search"))return;
   _camposTocados[el.id]=(el.type==="checkbox"||el.type==="radio")?{c:!!el.checked}:{v:el.value};
  },true);
 }
