@@ -1459,7 +1459,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.107";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.108";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -4173,7 +4173,7 @@ function exportListaAlunos(cods,nomeFicheiro){
 /* Vista "Todos os alunos" (Turmas presenciais) — reaproveita EXACTAMENTE o mesmo filtro
    (pesquisa/turno/edições escolhidas) que vPresencial() usa para montar a tabela, para os botões
    Cards/Cards (todos)/Exportar dessa vista nunca divergirem do que está a ser mostrado no ecrã. */
-function _todosAlunosVisiveis(){
+function _todosAlunosVisiveis(semFiltroPagamento){
  var q=(presQ||"").toLowerCase(),qd=q.replace(/\D/g,"");
  var turmasP=turmasVisiveis().filter(function(t){return (t.modalidade||"Presencial")!=="Online"&&(!presEds||!presEds.length||presEds.indexOf(t.cod)>=0);});
  var out=[];
@@ -4183,6 +4183,11 @@ function _todosAlunosVisiveis(){
   if(q)als=als.filter(function(f){return (f.nome||"").toLowerCase().includes(q)||(qd&&(f.tel||"").replace(/\D/g,"").includes(qd));});
   als.forEach(function(f){out.push({f:f,t:t});});
  });
+ /* L171 — filtro de estado de pagamento (não pagou/com dívida/pago na totalidade), reaproveitado por
+    esta MESMA função para a tabela e para os botões Cards/Cards (todos)/Exportar, para nunca
+    divergirem. semFiltroPagamento=true ignora-o de propósito (usado só para calcular os pills com a
+    contagem-base, sem filtro de pagamento aplicado). */
+ if(!semFiltroPagamento&&presPag)out=out.filter(function(x){return _estadoPagamentoAluno(x.f)===presPag;});
  return out;
 }
 function gerarCardsTodosAlunosVista(){gerarCardsListaMulti(_todosAlunosVisiveis().map(function(x){return x.f.cod;}),false);}
@@ -7164,7 +7169,12 @@ function feedbackModalHTML(){if(!feedbackAlvo)return"";var t=turmaByCod(feedback
   </div></div>`;}
 
 /* TURMAS PRESENCIAIS */
-let presQ="",presEds=null,presTurno="",presFriso="turmas",presResp="";
+let presQ="",presEds=null,presTurno="",presFriso="turmas",presResp="",presPag="";
+/* L171 — filtro por estado de pagamento em Turmas Presenciais: "" (todos), "nao" (não pagou nada),
+   "divida" (pagou algo mas ainda deve) ou "total" (já pagou tudo). setPresPag() liga/desliga ao
+   clicar de novo no mesmo pill (clicar outra vez tira o filtro). */
+function _estadoPagamentoAluno(f){var p=payOf(f.cod);var pago=p?(+p.pago||0):0;if(pago<=0)return"nao";var d=p?divida(p):0;return d>0?"divida":"total";}
+function setPresPag(v){presPag=(presPag===v)?"":v;render();}
 function _setPresFriso(id){presFriso=id;render();}
 /* L168: filtro por Responsável (formador) — cada colaborador escolhe o seu nome e o dropdown de
    turnos e o de "+ Adicionar turma…" ficam logo restritos às turmas de que é responsável, para
@@ -7319,12 +7329,19 @@ function vPresencial(){var q=presQ.toLowerCase(),qd=q.replace(/\D/g,"");
     mostra toda a gente de todas as edições (each x.als===alsTotal nesse caso). */
  /* L166: reaproveita _todosAlunosVisiveis() (mesma lógica, agora partilhada com os botões
     Cards/Cards (todos)/Exportar da vista "Todos os alunos") em vez de reconstruir aqui — para os
-    números baterem sempre certo entre a tabela e o que os botões exportam/imprimem. */
- var todasLinhas=_todosAlunosVisiveis();
- var totalGeral=todasLinhas.length;
- var pagosGeral=todasLinhas.filter(function(x){var p=payOf(x.f.cod);return (+((p&&p.pago)||0))>0;}).length;
+    números baterem sempre certo entre a tabela e o que os botões exportam/imprimem.
+    L171 — os pills de pagamento (total/não pagou/com dívida/pago na totalidade) mostram sempre a
+    contagem-BASE (sem o filtro de pagamento presPag aplicado, via semFiltroPagamento=true), para o
+    Ventura ver sempre a distribuição completa mesmo com um dos pills seleccionado; só "todasLinhas"
+    (a tabela e os botões Cards/Cards(todos)/Exportar) é que respeita presPag. */
+ var todasLinhasBase=_todosAlunosVisiveis(true);
+ var totalGeral=todasLinhasBase.length;
+ var pagosGeral=todasLinhasBase.filter(function(x){return _estadoPagamentoAluno(x.f)!=="nao";}).length;
  var naoPagosGeral=totalGeral-pagosGeral;
- var filtroActivo=!!(q||presTurno||presEds.length);
+ var dividaGeral=todasLinhasBase.filter(function(x){return _estadoPagamentoAluno(x.f)==="divida";}).length;
+ var totalidadeGeral=todasLinhasBase.filter(function(x){return _estadoPagamentoAluno(x.f)==="total";}).length;
+ var todasLinhas=_todosAlunosVisiveis();
+ var filtroActivo=!!(q||presTurno||presEds.length||presPag);
  /* L150-1/2: o Ventura já não quer cartão por edição visível por defeito — só a lista única. O
     cartão (Acompanhamento/Cards/Exportar/aviso de pendentes) só volta a aparecer quando ele
     escolhe a(s) edição(ões) pelos chips (presEds.length>0); filtrar só por turno ou só por
@@ -7347,8 +7364,14 @@ function vPresencial(){var q=presQ.toLowerCase(),qd=q.replace(/\D/g,"");
     passam a viver dentro desse cartão combinado quando mostrarBlocos=true; só aparecem como secção
     própria "Todos os alunos" quando NENHUMA edição está escolhida (pesquisa/turno sozinhos, ou nada). */
  var alunosBotoesHTML='<div class="flex" style="gap:8px;flex-wrap:wrap;margin:6px 0"><button class="btn-o" onclick="gerarCardsTodosAlunosVista()" title="Só quem já pagou">🖨 Cards</button><button class="btn-o" onclick="gerarCardsTodosAlunosVistaTodos()" title="Inclui também quem ainda não pagou — pede código da Gestão">🖨 Cards (todos)</button>'+(podeExportar()?'<button class="btn-o" onclick="exportTodosAlunosVista()">Exportar</button>':'')+'</div>';
+ /* L171 — pills clicáveis para filtrar por estado de pagamento: "aluno(s) no total" limpa o filtro,
+    os outros três ligam/desligam (clicar outra vez no mesmo tira o filtro). Os números vêm sempre da
+    contagem-base (todasLinhasBase, sem presPag aplicado) para nunca mudarem sozinhos ao filtrar; o
+    que muda é a tabela por baixo (via todasLinhas, que já respeita presPag através de
+    _todosAlunosVisiveis()). */
+ var _pagPill=function(v,label,cls){var on=v===""?!presPag:presPag===v;return '<button class="pill '+cls+'" style="border:none;cursor:pointer;font:inherit'+(on?';box-shadow:0 0 0 2px currentColor':'')+'" onclick="setPresPag(\''+v+'\')" title="'+(on&&v?"Clique para tirar o filtro":"Filtrar por este estado")+'">'+label+'</button>';};
  var alunosTabelaHTML=alunosBotoesHTML
-  +'<div class="flex" style="gap:8px;flex-wrap:wrap;margin:8px 0"><span class="pill p-azul">'+totalGeral+' aluno(s) no total</span><span class="pill p-verde">'+pagosGeral+' pago(s)</span><span class="pill p-verm">'+naoPagosGeral+' não pago(s)</span></div>'
+  +'<div class="flex" style="gap:8px;flex-wrap:wrap;margin:8px 0">'+_pagPill("",totalGeral+' aluno(s) no total',"p-azul")+_pagPill("nao",naoPagosGeral+' não pagou',"p-verm")+_pagPill("divida",dividaGeral+' com dívida',"p-cinza")+_pagPill("total",totalidadeGeral+' pago na totalidade',"p-verde")+'</div>'
   +'<table style="margin-top:8px"><thead><tr><th class="stickyhead">Nome</th><th class="stickyhead">Telefone</th><th class="stickyhead">Edição</th><th class="stickyhead">Curso</th><th class="stickyhead">Turno</th><th class="stickyhead">Pagamento</th><th class="stickyhead"></th></tr></thead><tbody>'+(todasLinhas.map(function(x){var f=x.f,t=x.t;var p=payOf(f.cod);var d=p?divida(p):0;return '<tr><td>'+esc(f.nome)+'</td><td>'+esc(f.tel||"")+'</td><td>'+esc(t.ed||"")+'ª</td><td>'+esc(t.curso||"")+'</td><td>'+esc(f.horario||f.turno||"—")+'</td><td>'+(d>0?'<span class="pill p-verm">Deve '+kz(d)+'</span>':'<span class="pill p-verde">Pago</span>')+'</td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:3px 9px" onclick="fFicha=\''+esc(f.cod)+'\';show(\'formandos\')">Ficha</button>'+((role==="admin"||podeEditar())?'<button class="btn-o" style="padding:3px 9px" onclick="transferAluno(\''+esc(f.cod)+'\')">Transferir</button><button class="btn-o" style="padding:3px 9px" onclick="agendarPdsF(\''+esc(f.cod)+'\')">Marcar PDS</button><button class="btn-o" style="padding:3px 9px" onclick="abrirTransferParaOnline(\''+esc(f.cod)+'\')">→ Online</button>':'')+((d>0&&podeEditar())?'<button class="btn-o" style="padding:3px 9px" onclick="irPagar(\''+esc(f.cod)+'\')">Pagar</button>':'')+'<button class="btn-g" style="padding:3px 9px" onclick="setChamada(\''+esc(f.nome)+'\',\''+esc(f.tel||"")+'\',\'Formando\')">☎</button>'+rowActs('formandos',data.formandos.indexOf(f))+'</td></tr>';}).join("")||'<tr><td colspan="7" class="muted">Sem alunos'+(filtroActivo?' com este filtro.':'.')+'</td></tr>')+'</tbody></table>';
  var turmasTabHTML=mostrarBlocos?('<div class="sec"><h2 style="margin:0 0 10px">'+cabecalhoCombinado+'</h2>'
    /* L169: o Ventura não queria os botões Cards/Cards (todos)/Exportar nem os totais a repetirem-se
