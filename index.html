@@ -1459,7 +1459,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.108";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.109";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -4133,11 +4133,31 @@ function exportOnlineExcel(){
 }
 /* L37-A1: as duas funções abaixo passaram a aceitar "turno" — quando o ecrã "Ver alunos" tem um turno seleccionado (edTurno),
    os cards/exportação respeitam-no, em vez de sair sempre com todos os turnos da edição misturados. */
-function gerarCards(cod,incluirTodos,turno){const t=turmaByCod(cod);if(!t)return;let base=data.formandos.filter(f=>f.turma===cod&&f.estado!=="Transferido p/ Online");if(turno)base=base.filter(f=>(f.horario||f.turno||"")===turno);const alunos=incluirTodos?base:base.filter(fezPagamento);if(!alunos.length){toast(incluirTodos?("Turma sem formandos inscritos"+(turno?" neste turno.":".")):"Turma sem formandos que já tenham pago (só quem pagou entra nos cards por defeito — usa \"Cards (todos)\" para incluir quem ainda não pagou)");return;}const c=data.comp||{};const logo=c.logo||"";
- const cards=alunos.map(function(f){var _dt=datasDoFormando(f,t);var _pend=!fezPagamento(f);return '<div class="namecard"><div class="nc-top">'+(logo?'<img src="'+logo+'">':'<b style="color:#1F3864">Knowledge Angola</b>')+'<span class="nc-ed">Knowledge Angola · '+esc(t.ed)+'ª Ed. · '+esc(t.curso||"")+'</span></div><div class="nc-name">'+esc(f.nome||"")+'</div><div class="nc-foot">'+esc(f.horario||f.turno||t.horario||"")+' · Início '+(fmtDataCurta(_dt.inicio)||"—")+' · Fim '+(fmtDataCurta(_dt.fim)||"—")+(_pend?' · <b style="color:#a3311f">POR PAGAR</b>':'')+'</div></div>';}).join("");
+/* L172 — o Ventura achou os cards "ligeiramente defeituoso, não bem organizados": (1) queria só o
+   primeiro e o último nome (não o nome completo, que por vezes desorganiza o card); (2) alguns cards
+   apareciam cortados a meio entre folhas — o "grid" original tinha as 2 colunas soltas no fluxo da
+   página, sem nada a impedir a impressora de cortar o papel a meio de uma linha de cards (um card
+   ficava numa folha e o par dele na seguinte). Correcção: agrupa-se cada dupla de cards num "nc-row"
+   próprio com page-break-inside:avoid — se a dupla não couber inteira na folha, o navegador passa-a
+   inteira para a folha seguinte, mantendo o espaçamento de corte (linha tracejada + 18mm entre
+   linhas, 8mm entre colunas) já definido antes. As duas funções que geravam os cards (uma por turma
+   única, outra por lista de alunos de turmas diferentes) tinham o HTML/CSS todo duplicado — passam
+   agora a partilhar as mesmas 3 funções auxiliares abaixo, para uma correcção destas não ter de ser
+   feita duas vezes. */
+function _nomeCurto(nome){var partes=(nome||"").trim().split(/\s+/).filter(Boolean);if(partes.length<=1)return nome||"";return partes[0]+" "+partes[partes.length-1];}
+function _cardsGridHTML(alunos,turmaOf){
+ var cardHTML=function(f){var t=turmaOf(f)||{};var _dt=datasDoFormando(f,t);var _pend=!fezPagamento(f);var logo=(data.comp&&data.comp.logo)||"";
+  return '<div class="namecard"><div class="nc-top">'+(logo?'<img src="'+logo+'">':'<b style="color:#1F3864">Knowledge Angola</b>')+'<span class="nc-ed">Knowledge Angola · '+esc(t.ed||"")+'ª Ed. · '+esc(t.curso||f.curso||"")+'</span></div><div class="nc-name">'+esc(_nomeCurto(f.nome))+'</div><div class="nc-foot">'+esc(f.horario||f.turno||t.horario||"")+' · Início '+(fmtDataCurta(_dt.inicio)||"—")+' · Fim '+(fmtDataCurta(_dt.fim)||"—")+(_pend?' · <b style="color:#a3311f">POR PAGAR</b>':'')+'</div></div>';};
+ var linhas=[];
+ for(var i=0;i<alunos.length;i+=2){linhas.push('<div class="nc-row">'+alunos.slice(i,i+2).map(cardHTML).join("")+'</div>');}
+ return linhas.join("");
+}
+function _abrirJanelaCards(tituloPagina,alunos,turmaOf){
  const w=window.open("","_blank");if(!w){toast("Permite pop-ups para gerar os cards");return;}
- w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Cards de Nomes — '+esc(t.ed)+'ª Edição</title><style>@page{size:A4 landscape;margin:8mm}body{font-family:Segoe UI,Arial,sans-serif;margin:0}.grid{display:grid;grid-template-columns:1fr 1fr;row-gap:18mm;column-gap:8mm}.namecard{border:1.5px dashed #9aa4b8;border-radius:8px;height:60mm;padding:7mm 8mm;display:flex;flex-direction:column;justify-content:space-between;page-break-inside:avoid}.nc-top{display:flex;justify-content:space-between;align-items:center}.nc-top img{height:26px}.nc-ed{color:#666;font-size:11px}.nc-name{font-size:46px;font-weight:800;color:#1F3864;text-align:center;line-height:1.05;word-break:break-word}.nc-foot{text-align:center;color:#555;font-size:12px;border-top:1px solid #eee;padding-top:6px}</style></head><body><div class="grid">'+cards+'</div><scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},250);}</scr'+'ipt></body></html>');
+ w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+esc(tituloPagina)+'</title><style>@page{size:A4 landscape;margin:8mm}body{font-family:Segoe UI,Arial,sans-serif;margin:0}.nc-row{display:grid;grid-template-columns:1fr 1fr;column-gap:8mm;margin-bottom:18mm;page-break-inside:avoid}.namecard{border:1.5px dashed #9aa4b8;border-radius:8px;height:60mm;padding:7mm 8mm;display:flex;flex-direction:column;justify-content:space-between;page-break-inside:avoid}.nc-top{display:flex;justify-content:space-between;align-items:center}.nc-top img{height:26px}.nc-ed{color:#666;font-size:11px}.nc-name{font-size:46px;font-weight:800;color:#1F3864;text-align:center;line-height:1.05;word-break:break-word}.nc-foot{text-align:center;color:#555;font-size:12px;border-top:1px solid #eee;padding-top:6px}</style></head><body>'+_cardsGridHTML(alunos,turmaOf)+'<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},250);}</scr'+'ipt></body></html>');
  w.document.close();toast("Cards gerados — usa Guardar como PDF");}
+function gerarCards(cod,incluirTodos,turno){const t=turmaByCod(cod);if(!t)return;let base=data.formandos.filter(f=>f.turma===cod&&f.estado!=="Transferido p/ Online");if(turno)base=base.filter(f=>(f.horario||f.turno||"")===turno);const alunos=incluirTodos?base:base.filter(fezPagamento);if(!alunos.length){toast(incluirTodos?("Turma sem formandos inscritos"+(turno?" neste turno.":".")):"Turma sem formandos que já tenham pago (só quem pagou entra nos cards por defeito — usa \"Cards (todos)\" para incluir quem ainda não pagou)");return;}
+ _abrirJanelaCards("Cards de Nomes — "+t.ed+"ª Edição",alunos,function(){return t;});}
 /* L21-2: incluir quem ainda não pagou nos cards exige o código da Gestão (definido em Definições). */
 function gerarCardsTodos(cod,turno){var c=(data.comp&&data.comp.codCards)||"";
  if(!c){toast("Define primeiro o código em Definições → \"Código para incluir quem não pagou nos Cards\"");return;}
@@ -4152,11 +4172,7 @@ function gerarCardsListaMulti(cods,incluirTodos){
  var base=(cods||[]).map(function(cod){return data.formandos.find(function(f){return f.cod===cod;});}).filter(Boolean);
  var alunos=incluirTodos?base:base.filter(fezPagamento);
  if(!alunos.length){toast(incluirTodos?"Sem formandos nesta lista.":"Sem formandos que já tenham pago nesta lista (usa \"Cards (todos)\" para incluir quem ainda não pagou)");return;}
- const c=data.comp||{};const logo=c.logo||"";
- const cards=alunos.map(function(f){var t=turmaByCod(f.turma)||{};var _dt=datasDoFormando(f,t);var _pend=!fezPagamento(f);return '<div class="namecard"><div class="nc-top">'+(logo?'<img src="'+logo+'">':'<b style="color:#1F3864">Knowledge Angola</b>')+'<span class="nc-ed">Knowledge Angola · '+esc(t.ed||"")+'ª Ed. · '+esc(t.curso||f.curso||"")+'</span></div><div class="nc-name">'+esc(f.nome||"")+'</div><div class="nc-foot">'+esc(f.horario||f.turno||t.horario||"")+' · Início '+(fmtDataCurta(_dt.inicio)||"—")+' · Fim '+(fmtDataCurta(_dt.fim)||"—")+(_pend?' · <b style="color:#a3311f">POR PAGAR</b>':'')+'</div></div>';}).join("");
- const w=window.open("","_blank");if(!w){toast("Permite pop-ups para gerar os cards");return;}
- w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Cards de Nomes — Todos os alunos</title><style>@page{size:A4 landscape;margin:8mm}body{font-family:Segoe UI,Arial,sans-serif;margin:0}.grid{display:grid;grid-template-columns:1fr 1fr;row-gap:18mm;column-gap:8mm}.namecard{border:1.5px dashed #9aa4b8;border-radius:8px;height:60mm;padding:7mm 8mm;display:flex;flex-direction:column;justify-content:space-between;page-break-inside:avoid}.nc-top{display:flex;justify-content:space-between;align-items:center}.nc-top img{height:26px}.nc-ed{color:#666;font-size:11px}.nc-name{font-size:46px;font-weight:800;color:#1F3864;text-align:center;line-height:1.05;word-break:break-word}.nc-foot{text-align:center;color:#555;font-size:12px;border-top:1px solid #eee;padding-top:6px}</style></head><body><div class="grid">'+cards+'</div><scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},250);}</scr'+'ipt></body></html>');
- w.document.close();toast("Cards gerados — usa Guardar como PDF");}
+ _abrirJanelaCards("Cards de Nomes — Todos os alunos",alunos,function(f){return turmaByCod(f.turma)||{};});}
 function gerarCardsTodosListaMulti(cods){var c=(data.comp&&data.comp.codCards)||"";
  if(!c){toast("Define primeiro o código em Definições → \"Código para incluir quem não pagou nos Cards\"");return;}
  var e=prompt("Código da Gestão para incluir quem ainda não pagou nos cards:");if(e===null)return;
@@ -4186,8 +4202,10 @@ function _todosAlunosVisiveis(semFiltroPagamento){
  /* L171 — filtro de estado de pagamento (não pagou/com dívida/pago na totalidade), reaproveitado por
     esta MESMA função para a tabela e para os botões Cards/Cards (todos)/Exportar, para nunca
     divergirem. semFiltroPagamento=true ignora-o de propósito (usado só para calcular os pills com a
-    contagem-base, sem filtro de pagamento aplicado). */
- if(!semFiltroPagamento&&presPag)out=out.filter(function(x){return _estadoPagamentoAluno(x.f)===presPag;});
+    contagem-base, sem filtro de pagamento aplicado).
+    L172 — "pagou" é um 4º valor de presPag que junta "divida"+"total" (quem já pagou alguma coisa,
+    total ou parcial), sem precisar de outro campo de estado novo. */
+ if(!semFiltroPagamento&&presPag)out=out.filter(function(x){var es=_estadoPagamentoAluno(x.f);return presPag==="pagou"?es!=="nao":es===presPag;});
  return out;
 }
 function gerarCardsTodosAlunosVista(){gerarCardsListaMulti(_todosAlunosVisiveis().map(function(x){return x.f.cod;}),false);}
@@ -7371,7 +7389,7 @@ function vPresencial(){var q=presQ.toLowerCase(),qd=q.replace(/\D/g,"");
     _todosAlunosVisiveis()). */
  var _pagPill=function(v,label,cls){var on=v===""?!presPag:presPag===v;return '<button class="pill '+cls+'" style="border:none;cursor:pointer;font:inherit'+(on?';box-shadow:0 0 0 2px currentColor':'')+'" onclick="setPresPag(\''+v+'\')" title="'+(on&&v?"Clique para tirar o filtro":"Filtrar por este estado")+'">'+label+'</button>';};
  var alunosTabelaHTML=alunosBotoesHTML
-  +'<div class="flex" style="gap:8px;flex-wrap:wrap;margin:8px 0">'+_pagPill("",totalGeral+' aluno(s) no total',"p-azul")+_pagPill("nao",naoPagosGeral+' não pagou',"p-verm")+_pagPill("divida",dividaGeral+' com dívida',"p-cinza")+_pagPill("total",totalidadeGeral+' pago na totalidade',"p-verde")+'</div>'
+  +'<div class="flex" style="gap:8px;flex-wrap:wrap;margin:8px 0">'+_pagPill("",totalGeral+' aluno(s) no total',"p-azul")+_pagPill("nao",naoPagosGeral+' não pagou',"p-verm")+_pagPill("pagou",pagosGeral+' pagos (total e parcial)',"p-verde")+_pagPill("divida",dividaGeral+' com dívida',"p-cinza")+_pagPill("total",totalidadeGeral+' pago na totalidade',"p-verde")+'</div>'
   +'<table style="margin-top:8px"><thead><tr><th class="stickyhead">Nome</th><th class="stickyhead">Telefone</th><th class="stickyhead">Edição</th><th class="stickyhead">Curso</th><th class="stickyhead">Turno</th><th class="stickyhead">Pagamento</th><th class="stickyhead"></th></tr></thead><tbody>'+(todasLinhas.map(function(x){var f=x.f,t=x.t;var p=payOf(f.cod);var d=p?divida(p):0;return '<tr><td>'+esc(f.nome)+'</td><td>'+esc(f.tel||"")+'</td><td>'+esc(t.ed||"")+'ª</td><td>'+esc(t.curso||"")+'</td><td>'+esc(f.horario||f.turno||"—")+'</td><td>'+(d>0?'<span class="pill p-verm">Deve '+kz(d)+'</span>':'<span class="pill p-verde">Pago</span>')+'</td><td class="flex" style="gap:5px"><button class="btn-o" style="padding:3px 9px" onclick="fFicha=\''+esc(f.cod)+'\';show(\'formandos\')">Ficha</button>'+((role==="admin"||podeEditar())?'<button class="btn-o" style="padding:3px 9px" onclick="transferAluno(\''+esc(f.cod)+'\')">Transferir</button><button class="btn-o" style="padding:3px 9px" onclick="agendarPdsF(\''+esc(f.cod)+'\')">Marcar PDS</button><button class="btn-o" style="padding:3px 9px" onclick="abrirTransferParaOnline(\''+esc(f.cod)+'\')">→ Online</button>':'')+((d>0&&podeEditar())?'<button class="btn-o" style="padding:3px 9px" onclick="irPagar(\''+esc(f.cod)+'\')">Pagar</button>':'')+'<button class="btn-g" style="padding:3px 9px" onclick="setChamada(\''+esc(f.nome)+'\',\''+esc(f.tel||"")+'\',\'Formando\')">☎</button>'+rowActs('formandos',data.formandos.indexOf(f))+'</td></tr>';}).join("")||'<tr><td colspan="7" class="muted">Sem alunos'+(filtroActivo?' com este filtro.':'.')+'</td></tr>')+'</tbody></table>';
  var turmasTabHTML=mostrarBlocos?('<div class="sec"><h2 style="margin:0 0 10px">'+cabecalhoCombinado+'</h2>'
    /* L169: o Ventura não queria os botões Cards/Cards (todos)/Exportar nem os totais a repetirem-se
