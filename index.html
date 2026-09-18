@@ -1459,7 +1459,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.109";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.110";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -4147,7 +4147,7 @@ function exportOnlineExcel(){
 function _nomeCurto(nome){var partes=(nome||"").trim().split(/\s+/).filter(Boolean);if(partes.length<=1)return nome||"";return partes[0]+" "+partes[partes.length-1];}
 function _cardsGridHTML(alunos,turmaOf){
  var cardHTML=function(f){var t=turmaOf(f)||{};var _dt=datasDoFormando(f,t);var _pend=!fezPagamento(f);var logo=(data.comp&&data.comp.logo)||"";
-  return '<div class="namecard"><div class="nc-top">'+(logo?'<img src="'+logo+'">':'<b style="color:#1F3864">Knowledge Angola</b>')+'<span class="nc-ed">Knowledge Angola · '+esc(t.ed||"")+'ª Ed. · '+esc(t.curso||f.curso||"")+'</span></div><div class="nc-name">'+esc(_nomeCurto(f.nome))+'</div><div class="nc-foot">'+esc(f.horario||f.turno||t.horario||"")+' · Início '+(fmtDataCurta(_dt.inicio)||"—")+' · Fim '+(fmtDataCurta(_dt.fim)||"—")+(_pend?' · <b style="color:#a3311f">POR PAGAR</b>':'')+'</div></div>';};
+  return '<div class="namecard"><div class="nc-top">'+(logo?'<img src="'+logo+'">':'<b style="color:#1F3864">Knowledge Angola</b>')+'<span class="nc-ed">Formação: '+esc(t.curso||f.curso||"")+' | '+esc(t.ed||"")+'ª Edição</span></div><div class="nc-name">'+esc(_nomeCurto(f.nome))+'</div><div class="nc-foot">'+esc(f.horario||f.turno||t.horario||"")+' · Início '+(fmtDataCurta(_dt.inicio)||"—")+' · Fim '+(fmtDataCurta(_dt.fim)||"—")+(_pend?' · <b style="color:#a3311f">POR PAGAR</b>':'')+'</div></div>';};
  var linhas=[];
  for(var i=0;i<alunos.length;i+=2){linhas.push('<div class="nc-row">'+alunos.slice(i,i+2).map(cardHTML).join("")+'</div>');}
  return linhas.join("");
