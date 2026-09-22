@@ -1459,7 +1459,7 @@ function startApp(){
  document.getElementById("app").classList.remove("hidden");
  document.getElementById("rolechip").textContent=currentUser?(currentUser.nome+(currentUser.funcao&&currentUser.funcao!=="Gestor"?" · "+currentUser.funcao:"")):(role==="admin"?"Gestão":"Equipa");
  buildNav();chatInit();presencaInit();updateOcultBtn();_idleInit();startClock();if(role==="admin"){try{syncAutorizados();}catch(e){}}
- var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.111";
+ var rp=document.getElementById("rodape");if(rp)rp.textContent="© "+new Date().getFullYear()+" knowledgeangola · "+new Date().toLocaleDateString("pt-PT")+" · Painel v36.112";
 }
 function toggleNav(){var a=document.getElementById("app");if(a)a.classList.toggle("navopen");}
 function closeNav(){var a=document.getElementById("app");if(a)a.classList.remove("navopen");}
@@ -4003,7 +4003,7 @@ function editTurmaModalHTML(){if(turmaEditIdx==null)return"";const t=data.turmas
   ${temTurnos?`<div class="sec" style="margin-top:12px;padding:14px;background:#f7f9fc"><label>Equipa e vagas por turno</label>
    <div class="muted" style="margin:4px 0 8px">Vagas (real) — tecto verdadeiro, nunca ultrapassado. Vagas (mostradas) — o que aparece no sistema e no catálogo, a descer com cada pagamento.</div>
    <table><thead><tr><th>Turno</th><th>Gestora de formação</th><th>Formador</th><th>Início</th><th>Fim</th><th>Vagas (real)</th><th>Vagas (mostradas)</th></tr></thead><tbody>
-   ${t.turnos.map(function(tn,ti){return `<tr><td>${esc(tn.horario||"")}</td><td><select onchange="setTurnoEditCampo(${ti},'gestora',this)">${gestorasOpts(tn.gestora||"")}</select></td><td><select onchange="setTurnoEditCampo(${ti},'formador',this)">${formadoresOpts(tn.formador||"")}</select></td><td><input type="date" value="${esc(tn.inicio||"")}" onchange="setTurnoEditCampo(${ti},'inicio',this)"></td><td><input type="date" value="${esc(tn.fim||"")}" onchange="setTurnoEditCampo(${ti},'fim',this)"></td><td><input type="number" style="width:70px" value="${esc(tn.vagasReal||"")}" onchange="setTurnoEditCampo(${ti},'vagasReal',this)"></td><td><input type="number" style="width:70px" value="${esc(tn.vagasMostradas||"")}" onchange="setTurnoEditCampo(${ti},'vagasMostradas',this)"></td></tr>`;}).join("")}
+   ${t.turnos.map(function(tn,ti){return `<tr><td><input value="${esc(tn.horario||"")}" style="width:170px" onchange="setTurnoEditCampo(${ti},'horario',this)" title="Muda o texto do turno — ex.: Dias de semana (14h–16h). Alunos já inscritos neste turno são ajustados automaticamente."></td><td><select onchange="setTurnoEditCampo(${ti},'gestora',this)">${gestorasOpts(tn.gestora||"")}</select></td><td><select onchange="setTurnoEditCampo(${ti},'formador',this)">${formadoresOpts(tn.formador||"")}</select></td><td><input type="date" value="${esc(tn.inicio||"")}" onchange="setTurnoEditCampo(${ti},'inicio',this)"></td><td><input type="date" value="${esc(tn.fim||"")}" onchange="setTurnoEditCampo(${ti},'fim',this)"></td><td><input type="number" style="width:70px" value="${esc(tn.vagasReal||"")}" onchange="setTurnoEditCampo(${ti},'vagasReal',this)"></td><td><input type="number" style="width:70px" value="${esc(tn.vagasMostradas||"")}" onchange="setTurnoEditCampo(${ti},'vagasMostradas',this)"></td></tr>`;}).join("")}
    </tbody></table></div>`:`<div class="formgrid" style="margin-top:6px">
    <div><label>Gestora de formação</label><select onchange="setTurmaEditCampo('gestora',this)">${gestorasOpts(t.gestora||"")}</select></div>
    <div><label>Formador responsável</label><select onchange="setTurmaEditCampo('resp',this)">${formadoresOpts(t.resp||"")}</select></div>
@@ -4016,11 +4016,26 @@ function setTurmaEditCampo(key,el){const t=data.turmas[turmaEditIdx];if(!t)retur
  if(key==="gestora"&&Array.isArray(t.turnos)&&t.turnos.length===1)t.turnos[0].gestora=v;
  if(key==="resp"&&Array.isArray(t.turnos)&&t.turnos.length===1)t.turnos[0].formador=v;
  persist();toast("Edição actualizada");render();}
+/* L174 — o Ventura pediu para conseguir mudar o horário de um turno já criado (ex.: "Dias de semana
+   9h–11h" passar a "14h–16h"). Antes o horário do turno era texto fixo, sem input nenhum — impossível
+   de mudar mesmo pela Gestão. Como o horário funciona como CHAVE de correspondência em vagas,
+   inscrições e filtros por todo o sistema (f.horario/f.turno comparados por igualdade de texto contra
+   tn.horario em dezenas de sítios), mudar só o texto do turno e deixar os alunos já inscritos com o
+   texto antigo tirava-os silenciosamente da contagem de vagas e das listas desse turno. Por isso,
+   quando o campo mudado é "horario", arrasta-se também quem já estava inscrito com o texto antigo para
+   o texto novo, e recalcula-se t.horario (o resumo usado noutros ecrãs) a partir dos turnos actuais. */
 function setTurnoEditCampo(ti,key,el){const t=data.turmas[turmaEditIdx];if(!t||!Array.isArray(t.turnos)||!t.turnos[ti])return;
  var v=el.value;if(key==="vagasReal"||key==="vagasMostradas")v=(String(v).trim()===""?"":(+v||0));
+ var _nAjust=0;
+ if(key==="horario"){var antigo=t.turnos[ti].horario;var novo=v.trim();
+  if(!novo){toast("O horário não pode ficar vazio");render();return;}
+  if(antigo&&antigo!==novo){data.formandos.forEach(function(f){if(f.turma===t.cod&&(f.horario===antigo||f.turno===antigo)){f.horario=novo;f.turno=novo;_nAjust++;}});}
+  v=novo;
+ }
  t.turnos[ti][key]=v;
  if(ti===0){if(key==="gestora")t.gestora=el.value;if(key==="formador")t.resp=el.value;}
- persist();toast("Equipa actualizada");render();}
+ if(key==="horario")t.horario=t.turnos.map(function(x){return x.horario;}).filter(Boolean).join(" / ");
+ persist();toast(key==="horario"?("Horário actualizado"+(_nAjust?" — "+_nAjust+" aluno(s) já inscrito(s) ajustado(s)":"")):"Equipa actualizada");render();}
 function procPadrao(){if(!Array.isArray(data.procTurma)||!data.procTurma.length)data.procTurma=["Criar grupo de WhatsApp da turma","Enviar mensagem de boas-vindas","Confirmar pagamentos e comprovativos","Adicionar alunos ao Google Classroom","Confirmar sala, computadores e material","Agendar e confirmar a 1ª aula","Enviar lembrete 24h antes do início"];return data.procTurma;}
 function setProcPadrao(el){if(role!=="admin")return;data.procTurma=el.value.split("\n").map(function(s){return s.trim();}).filter(Boolean);persist();toast("Manual de procedimentos guardado");render();}
 function procEstado(cod){if(!data.procFeito)data.procFeito={};if(!data.procFeito[cod])data.procFeito[cod]={};return data.procFeito[cod];}
