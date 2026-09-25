@@ -329,8 +329,8 @@ cor1:"#2E5496", cor2:"#4472B8" },
 cor1:"#BF9000", cor2:"#8a6d00" }
 ];
 var HORARIOS = {
-"Excel do Básico ao Avançado":"Dias de semana (9h às 11h) ou Sábados (manhã ou tarde)",
-"Excel do Zero ao Fundamental":"Apenas dias de semana (9h às 11h)",
+"Excel do Básico ao Avançado":"Dias de semana (16h às 18h) ou Sábados (manhã ou tarde)",
+"Excel do Zero ao Fundamental":"Apenas dias de semana (16h às 18h)",
 "Power BI":"Horário a confirmar na inscrição"
 };
 /* Turnos fixos por curso, para mostrar vagas discriminadas por turno no cartão do catálogo
@@ -339,12 +339,12 @@ var HORARIOS = {
    que vem do painel (data.vagasCurso[curso].turnos[].horario). */
 var TURNOS_PADRAO = {
 "Excel do Básico ao Avançado":[
- {chave:"semana", icone:"📅", label:"Dias de semana", horas:"9h00 às 11h00"},
+ {chave:"semana", icone:"📅", label:"Dias de semana", horas:"16h00 às 18h00"},
  {chave:"sabmanha", icone:"🌅", label:"Sábado de manhã", horas:"8h30 às 13h00"},
  {chave:"sabtarde", icone:"🌇", label:"Sábado à tarde", horas:"14h00 às 18h00"}
 ],
 "Excel do Zero ao Fundamental":[
- {chave:"semana", icone:"📅", label:"Dias de semana", horas:"9h00 às 11h00"}
+ {chave:"semana", icone:"📅", label:"Dias de semana", horas:"16h00 às 18h00"}
 ]
 };
 function normTxt(s){return String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");}
@@ -530,7 +530,7 @@ var box=document.getElementById("ondequandobox");if(!box)return;
 var local=cfg.local||"Morro Bento, Rua Galeria dos Pães, Luanda";
 box.innerHTML =
 '<div class="oq-it"><span>📍</span><div><b>Local</b>Turmas presenciais em '+local+'. Também temos turmas 100% online.</div></div>'+
-'<div class="oq-it"><span>🕐</span><div><b>Horários</b>Excel do Zero ao Fundamental: apenas dias de semana (9h às 11h). Excel do Básico ao Avançado: dias de semana (9h às 11h) ou sábados (manhã ou tarde).</div></div>'+
+'<div class="oq-it"><span>🕐</span><div><b>Horários</b>Excel do Zero ao Fundamental: apenas dias de semana (16h às 18h). Excel do Básico ao Avançado: dias de semana (16h às 18h) ou sábados (manhã ou tarde).</div></div>'+
 '<div class="oq-it"><span>📅</span><div><b>Sábados?</b>Sim — o Excel do Básico ao Avançado tem turma aos sábados (manhã ou tarde), pensada para quem trabalha em horário laboral.</div></div>'+
 '<div class="oq-it"><span>⏳</span><div><b>Duração</b>Dias de semana: 1 mês. Sábados: 5 sábados (cerca de 1 mês e uma semana).</div></div>';
 }
