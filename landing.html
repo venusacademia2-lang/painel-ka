@@ -91,7 +91,7 @@ footer b{color:#fff}
 <label>Modalidade</label><select id="i_mod" onchange="modChg()"><option>Presencial</option><option>Online</option></select>
 <div id="periodowrap">
 <label>Período</label><select id="i_periodo" onchange="periodoChg()"><option value="">Escolhe o período…</option><option>Dias de semana</option><option>Sábados</option></select>
-<div id="i_semwrap"><label>Horário</label><input id="i_semh" value="9h às 11h" readonly></div>
+<div id="i_semwrap"><label>Horário</label><input id="i_semh" value="16h às 18h" readonly></div>
 <div id="i_horariowrap"><label>Horário</label><select id="i_horario"><option>Manhã (8:30 às 13:00)</option><option>Tarde (14:00 às 18:00)</option></select></div>
 </div>
 <div id="onlinenota" class="wa-note" style="display:none">O dia e horário das aulas online são combinados directamente com o(a) formador(a) após a inscrição.</div>
@@ -451,7 +451,7 @@ if(!nome||!tel){alert("Falta o nome e o WhatsApp.");return;}
 if(!val("i_curso")){alert("Por favor selecciona a formação que pretendes.");document.getElementById("i_curso").focus();return;}
 const pcEl=document.querySelector('input[name="i_pc"]:checked');
 const online=val("i_mod").toLowerCase().indexOf("online")>=0;
-const rec={quando:new Date().toISOString(),tipo:(COMP_B64?"Pagamento":"Interesse"),nome:nome,tel:tel,email:val("i_email"),bi:val("i_bi"),nascimento:val("i_nasc"),temComputador:pcEl?pcEl.value:"",curso:val("i_curso"),modalidade:val("i_mod"),periodo:(online?"Combinado com o formador(a)":val("i_periodo")),horario:(online?"":(/s[áa]bado/i.test(val("i_periodo"))?val("i_horario"):(/semana/i.test(val("i_periodo"))?"9h às 11h":""))),turma:(TURMA&&TURMA.cod)||"",edicao:(TURMA&&TURMA.ed)||"",valorPago:numVal("i_valor"),expectativas:val("i_exp"),comprovativo:COMP_B64||"",viaWhatsapp:!COMP_B64,estado:"Nova",fonte:(typeof FONTE_TRAFEGO!=="undefined"?FONTE_TRAFEGO:""),origem:"Landing-v2"};
+const rec={quando:new Date().toISOString(),tipo:(COMP_B64?"Pagamento":"Interesse"),nome:nome,tel:tel,email:val("i_email"),bi:val("i_bi"),nascimento:val("i_nasc"),temComputador:pcEl?pcEl.value:"",curso:val("i_curso"),modalidade:val("i_mod"),periodo:(online?"Combinado com o formador(a)":val("i_periodo")),horario:(online?"":(/s[áa]bado/i.test(val("i_periodo"))?val("i_horario"):(/semana/i.test(val("i_periodo"))?"16h às 18h":""))),turma:(TURMA&&TURMA.cod)||"",edicao:(TURMA&&TURMA.ed)||"",valorPago:numVal("i_valor"),expectativas:val("i_exp"),comprovativo:COMP_B64||"",viaWhatsapp:!COMP_B64,estado:"Nova",fonte:(typeof FONTE_TRAFEGO!=="undefined"?FONTE_TRAFEGO:""),origem:"Landing-v2"};
 const btn=document.getElementById("i_btn");btn.textContent="A enviar…";btn.disabled=true;
 /* L60-1: sucesso e falha deixam de mostrar a mesma mensagem. Em falha, a mensagem de WhatsApp
    passa a levar TODOS os dados da inscrição (não só nome/curso), para a equipa poder registar
