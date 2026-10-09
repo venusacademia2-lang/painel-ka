@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Excel Profissional do Zero ao Intermédio — Knowledge Angola</title>
+<meta name="description" content="Aprende Excel do zero ao intermédio, ao teu ritmo. Começa hoje.">
+<style>
+:root{--azul:#1F3864;--azul2:#2E5496;--dour:#BF9000;--txt:#1a2233;--grey:#535353;--line:#e1e1e1;--soft:#F5F7F8}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;flex-direction:column;font-family:-apple-system,'Segoe UI',system-ui,Arial,sans-serif;color:var(--txt);background:var(--soft);line-height:1.6;position:relative;overflow-x:hidden}
+/* rosto em cinza, suave, no fundo */
+body:before{content:"";position:fixed;inset:0;background:url(foto-aluna.jpg) right 4vw top/auto 100% no-repeat;filter:grayscale(.5);opacity:.8;-webkit-mask-image:linear-gradient(to right,transparent 30%,#000 62%);mask-image:linear-gradient(to right,transparent 30%,#000 62%);pointer-events:none;z-index:0}
+a{text-decoration:none;color:inherit}
+header,main,footer{position:relative;z-index:1}
+header{background:rgba(255,255,255,.92);border-bottom:1px solid var(--line);padding:16px 24px;display:flex;align-items:center;gap:10px}
+header b{font-family:Georgia,'Times New Roman',serif;font-size:19px;color:var(--azul)}
+main{flex:1;display:flex;align-items:center;justify-content:flex-start;padding:36px 20px 36px 8vw}
+.card{background:rgba(255,255,255,.94);border:1px solid #E5E7EB;border-radius:20px;padding:38px 32px;max-width:480px;width:100%;text-align:center;box-shadow:0 20px 45px -20px rgba(31,56,100,.3)}
+.tag{display:inline-block;border-left:3px solid var(--dour);background:var(--soft);padding:6px 12px;border-radius:6px;font-size:12px;font-weight:800;color:var(--azul);text-transform:uppercase;letter-spacing:.04em}
+h1{font-size:clamp(24px,5vw,30px);line-height:1.25;margin:16px 0 10px;color:var(--azul)}
+p{color:var(--grey);margin:0 0 22px;font-size:15.5px}
+ul{list-style:none;padding:0;margin:0 0 26px;text-align:left;display:inline-block;font-size:15px}
+li{margin:6px 0}li:before{content:"✓";color:var(--dour);font-weight:800;margin-right:9px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border-radius:12px;padding:16px 22px;font-size:16px;font-weight:800;transition:transform .1s,background .15s;margin-top:12px}
+.btn:hover{transform:translateY(-1px)}
+.buy{background:var(--azul);color:#fff}.buy:hover{background:var(--azul2)}
+.ask{background:#fff;color:#176b39;border:2px solid #25D366}.ask:hover{background:#eafbf0}
+.small{font-size:12.5px;color:var(--grey);margin-top:16px}
+footer{background:var(--azul);color:#c3cde3;text-align:center;padding:18px;font-size:13px}
+#stats{display:none;position:fixed;bottom:60px;left:10px;z-index:5;background:#fff;border:1px solid var(--line);padding:10px 14px;border-radius:8px;font-size:13px}
+@media(max-width:780px){
+body:before{-webkit-mask-image:none;mask-image:none;background-size:cover;inset:auto;top:-90px;left:0;right:0;height:calc(100vh + 90px);background-position:80% 0}
+header{padding:10px 16px}
+main{align-items:flex-start;justify-content:center;padding:27vh 14px 22px}
+.card{padding:22px 20px}
+h1{font-size:23px;margin:12px 0 8px}
+p{font-size:14.5px;margin-bottom:14px}
+ul{font-size:14.5px;margin-bottom:14px}li{margin:3px 0}
+.btn{padding:14px 18px;font-size:15.5px;margin-top:9px}
+.small{margin-top:10px}
+}
+</style>
+</head>
+<body>
+<header>
+<svg viewBox="0 0 100 100" width="30" height="30" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="48" fill="#1F3864"/><circle cx="50" cy="21" r="4" fill="#BF9000"/><text x="50" y="53" text-anchor="middle" dominant-baseline="central" font-family="Georgia,serif" font-size="50" font-weight="700" fill="#fff">K</text></svg>
+<b>Knowledge Angola</b>
+</header>
+<main>
+<div class="card">
+<span class="tag">Curso online</span>
+<h1>Excel Profissional: do Zero ao Intermédio</h1>
+<p>Aprende o Excel que o mercado de trabalho pede, passo a passo, mesmo que nunca o tenhas usado.</p>
+<ul>
+<li>Começas do zero, ao teu ritmo</li>
+<li>Acesso vitalício</li>
+<li>Acesso em desktop, telemóvel e TV</li>
+<li>Certificado de conclusão</li>
+</ul>
+<a class="btn buy" id="b_buy" href="https://kubeta.ao/cursos/excel-profissional-do-zero-ao-interm-dio-18332" target="_blank" rel="noopener">Começar agora →</a>
+<a class="btn ask" id="b_ask" href="#" target="_blank" rel="noopener">💬 Tenho algumas dúvidas</a>
+<div class="small">Resposta rápida no WhatsApp.</div>
+</div>
+</main>
+<footer>© Knowledge Angola · Luanda</footer>
+<div id="stats"></div>
+<script>
+var DB="https://knowledge-angola-default-rtdb.firebaseio.com/publico/hits/curso";
+function track(k){try{fetch(DB+".json",{method:"POST",keepalive:true,body:JSON.stringify({d:new Date().toISOString(),k:k})});}catch(e){}}
+var msg="Olá! Vi o curso Excel Profissional do Zero ao Intermédio e tenho uma dúvida: ";
+document.getElementById("b_ask").href="https://wa.me/244939845313?text="+encodeURIComponent(msg);
+document.getElementById("b_buy").addEventListener("click",function(){track("comprar")});
+document.getElementById("b_ask").addEventListener("click",function(){track("duvidas")});
+if(location.hash==="#stats"){
+fetch(DB+".json").then(function(r){return r.json()}).then(function(o){
+var c={visita:0,comprar:0,duvidas:0};for(var i in o||{}){c[o[i].k]=(c[o[i].k]||0)+1}
+var s=document.getElementById("stats");s.style.display="block";
+s.innerHTML="Visitas: <b>"+c.visita+"</b> · Começar agora: <b>"+c.comprar+"</b> · Dúvidas: <b>"+c.duvidas+"</b>";});
+}else{track("visita");}
+</script>
+</body>
+</html>
