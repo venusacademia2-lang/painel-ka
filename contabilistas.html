@@ -52,6 +52,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--azul);bo
 .bankbox .bt{font-weight:800;color:var(--azul);text-transform:uppercase;letter-spacing:.05em;font-size:12px;margin-bottom:7px}
 .bankbox .iban{font-family:ui-monospace,Consolas,monospace;font-size:15px;font-weight:700;color:var(--txt)}
 .copybtn{margin-top:8px;background:#fff;border:1.5px solid var(--azul);color:var(--azul);font-weight:700;font-size:12.5px;border-radius:8px;padding:6px 12px;cursor:pointer}
+.copiado{margin-top:6px;font-family:ui-monospace,Consolas,monospace;font-size:12.5px;color:#176b39;word-break:break-all}
 .wa-note{background:#eafbf0;border:1px solid #bfe8ce;border-radius:6px;padding:13px 15px;font-size:13.5px;color:#176b39;margin-top:14px}
 .wa-btn{display:inline-flex;gap:8px;align-items:center;background:#25D366;color:#fff;font-weight:700;border-radius:6px;padding:12px 18px;margin-top:8px;border:none;cursor:pointer;font-size:14px}
 .ok{background:#e5f4ec;border:1px solid #9dd8b6;border-radius:6px;padding:24px;text-align:center;color:#176b39}
@@ -66,6 +67,11 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--azul);bo
 .tipo span{display:block;text-align:center;border:1.5px solid #E5E7EB;border-radius:10px;padding:12px 8px;font-weight:700;font-size:14px;color:var(--grey)}
 .tipo span small{display:block;font-weight:500;font-size:11.5px}
 .tipo input:checked+span{border-color:var(--azul);background:#eef2fa;color:var(--azul);box-shadow:0 0 0 3px rgba(31,56,100,.12)}
+.addbtn{width:100%;margin-top:14px;background:#fff;border:1.5px dashed var(--azul);color:var(--azul);font-weight:800;font-size:14px;border-radius:10px;padding:12px;cursor:pointer}
+.addbtn:hover{background:#eef2fa}
+.partbox{margin-top:16px;padding:4px 16px 16px;border:1px solid var(--line);border-left:3px solid var(--dour);border-radius:10px;background:var(--soft)}
+.parthead{display:flex;align-items:center;justify-content:space-between;margin-top:12px;color:var(--azul)}
+.rembtn{background:#fff;border:1.5px solid #e1b4b0;color:#a3382e;font-weight:800;border-radius:8px;width:32px;height:32px;cursor:pointer;line-height:1}
 footer{background:var(--azul);color:#c3cde3;padding:30px 0;font-size:13.5px}
 footer b{color:#fff}
 .fl{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
@@ -104,14 +110,19 @@ footer b{color:#fff}
 <div id="corpwrap" style="display:none">
 <label>Nome da Empresa *</label><input id="i_empresa" placeholder="Nome da empresa">
 <label>NIF da Empresa *</label><input id="i_nif" placeholder="Número de contribuinte">
+<label>Localização da Empresa *</label><input id="i_empresa_local" placeholder="Endereço: bairro, município, Luanda">
 </div>
 
-<label>Nome Completo do Participante *</label><input id="i_nome" placeholder="O teu nome">
-<label>B.I. ou Passaporte (opcional — podes enviar depois por WhatsApp)</label><input id="i_bi" placeholder="Número do documento">
-<label>Data de Nascimento</label><input id="i_nasc" type="date">
-<label>Contacto Telefónico / WhatsApp *</label><input id="i_tel" placeholder="9XX XXX XXX">
-<label>E-mail</label><input id="i_email" type="email" placeholder="oteu@email.com">
-<label>Dispões de um computador portátil?</label>
+<label id="l_nome">Nome Completo do Participante *</label><input id="i_nome" placeholder="O teu nome">
+<label id="l_bi">B.I. ou Passaporte (opcional — podes enviar depois por WhatsApp)</label><input id="i_bi" placeholder="Número do documento">
+<label id="l_nasc">Data de Nascimento</label><input id="i_nasc" type="date">
+<label id="l_tel">Contacto Telefónico / WhatsApp *</label><input id="i_tel" placeholder="9XX XXX XXX">
+<label id="l_email">E-mail</label><input id="i_email" type="email" placeholder="oteu@email.com">
+<div id="extrawrap" style="display:none">
+<div id="extras"></div>
+<button type="button" class="addbtn" onclick="addPart()">+ Adicionar participante</button>
+</div>
+<label id="l_pc">Dispões de um computador portátil?</label>
 <div class="radio-row">
 <label><input type="radio" name="i_pc" value="Sim" checked>Sim</label>
 <label><input type="radio" name="i_pc" value="Não">Não</label>
@@ -120,6 +131,7 @@ footer b{color:#fff}
 <select id="i_pag"><option>Pagamento a pronto</option><option>Em 2 prestações</option></select>
 <label>Valor pago (Kz)</label><input id="i_valor" type="text" inputmode="numeric" placeholder="ex.: 100.000" oninput="maskMil(this)">
 <label>O que esperas aprender (opcional)</label><textarea id="i_exp" rows="3" placeholder="Conta-nos rapidamente o que procuras…"></textarea>
+<label id="l_dif">Principais dificuldades que enfrentas no Excel (opcional)</label><textarea id="i_dif" rows="3" placeholder="Ex.: reconciliações demoradas, fórmulas, tabelas dinâmicas…"></textarea>
 <label>Comprovativo de pagamento (opcional)</label>
 <input id="i_comp" type="file" accept="image/*" style="display:none" onchange="onComp(this)">
 <div class="file" onclick="document.getElementById('i_comp').click()" id="i_complabel">📎 Carregar comprovativo</div>
@@ -217,18 +229,40 @@ function bankHtml(tipo,comTitulo){
  return '<div class="bankbox">'+(comTitulo!==false?'<div class="bt">Dados para pagamento — '+(tipo==="Corporativa"?"inscrição corporativa":"inscrição individual")+'</div>':'')+
  (c.iban?'<div><b>IBAN:</b></div><div class="iban">'+esc(c.iban)+'</div>':'')+
  (c.titular?'<div style="margin-top:6px"><b>Beneficiário:</b> '+esc(c.titular)+'</div>':'')+
- (c.iban?'<button type="button" class="copybtn" onclick="copiarIban(\''+tipo+'\',this)">Copiar IBAN</button>':'')+'</div>';
+ (c.iban?'<button type="button" class="copybtn" onclick="copiarIban(\''+tipo+'\',this)">Copiar IBAN</button><div class="copiado"></div>':'')+'</div>';
 }
 function copiarIban(tipo,btn){
  var c=(CONFIG.contas||{})[tipo]||{};var txt=(c.iban||"").replace(/\s/g,"");
- function feito(){btn.textContent="IBAN copiado ✓";setTimeout(function(){btn.textContent="Copiar IBAN";},2000);}
+ function feito(){btn.textContent="IBAN copiado ✓";var s=btn.nextElementSibling;if(s)s.textContent="Copiado, sem espaços: "+txt;setTimeout(function(){btn.textContent="Copiar IBAN";},2000);}
  try{navigator.clipboard.writeText(txt).then(feito,function(){window.prompt("Copia o IBAN:",txt);});}catch(e){window.prompt("Copia o IBAN:",txt);}
 }
 function tipoChg(){
- var t=tipoSel();
+ var t=tipoSel(),c=(t==="Corporativa");
  document.getElementById("bankbox").innerHTML=bankHtml(t);
- document.getElementById("corpwrap").style.display=(t==="Corporativa")?"block":"none";
+ document.getElementById("corpwrap").style.display=c?"block":"none";
+ document.getElementById("extrawrap").style.display=c?"block":"none";
+ function L(id,corp,ind){document.getElementById(id).textContent=c?corp:ind;}
+ L("l_nome","Nome completo do participante 1 *","Nome Completo do Participante *");
+ L("l_bi","B.I. ou Passaporte do participante 1 (opcional — podes enviar depois por WhatsApp)","B.I. ou Passaporte (opcional — podes enviar depois por WhatsApp)");
+ L("l_nasc","Data de nascimento do participante 1","Data de Nascimento");
+ L("l_tel","Contacto telefónico / WhatsApp do participante 1 *","Contacto Telefónico / WhatsApp *");
+ L("l_email","E-mail do participante 1","E-mail");
+ L("l_pc","Todos os participantes dispõem de computador portátil?","Dispões de um computador portátil?");
+ L("l_dif","Principais dificuldades da equipa com o Excel (opcional)","Principais dificuldades que enfrentas no Excel (opcional)");
 }
+var MAX_PART=20;
+function partHtml(){return '<div class="partbox"><div class="parthead"><b>Participante <span class="pn"></span></b><button type="button" class="rembtn" onclick="remPart(this)" aria-label="Remover participante">✕</button></div>'+
+ '<label>Nome completo do participante <span class="pn"></span> *</label><input class="pnome" placeholder="Nome completo">'+
+ '<label>Contacto telefónico / WhatsApp do participante <span class="pn"></span> *</label><input class="ptel" placeholder="9XX XXX XXX">'+
+ '<label>E-mail do participante <span class="pn"></span></label><input class="pmail" type="email" placeholder="email@empresa.com"></div>';}
+function renumber(){document.querySelectorAll("#extras .partbox").forEach(function(b,i){b.querySelectorAll(".pn").forEach(function(s){s.textContent=i+2;});});}
+function addPart(){
+ var box=document.getElementById("extras");
+ if(box.children.length+1>=MAX_PART){alert("O máximo é de "+MAX_PART+" participantes por inscrição.");return;}
+ var w=document.createElement("div");w.innerHTML=partHtml();var el=w.firstChild;box.appendChild(el);renumber();
+ try{el.querySelector(".pnome").focus();}catch(e){}
+}
+function remPart(btn){btn.closest(".partbox").remove();renumber();}
 
 function render(){
  document.title=CONFIG.curso+" — Knowledge Angola";
@@ -272,20 +306,36 @@ function enviar(){
  const tipo=tipoSel();
  const nome=val("i_nome"),tel=val("i_tel");
  if(!nome||!tel){alert("Falta o nome e o WhatsApp.");return;}
- if(tipo==="Corporativa"&&(!val("i_empresa")||!val("i_nif"))){alert("Na inscrição corporativa, indica o nome da empresa e o NIF.");return;}
+ if(tipo==="Corporativa"&&(!val("i_empresa")||!val("i_nif")||!val("i_empresa_local"))){alert("Na inscrição corporativa, indica o nome, o NIF e a localização da empresa.");return;}
  const pcEl=document.querySelector('input[name="i_pc"]:checked');
- const rec={quando:new Date().toISOString(),tipo:(COMP_B64?"Pagamento":"Interesse"),nome:nome,tel:tel,email:val("i_email"),bi:val("i_bi"),nascimento:val("i_nasc"),temComputador:pcEl?pcEl.value:"",curso:CONFIG.curso,modalidade:"Presencial",periodo:"Sábados",horario:CONFIG.horario,turma:"",edicao:"1",valorPago:numVal("i_valor"),formaPagamento:val("i_pag"),tipoInscricao:tipo,empresa:(tipo==="Corporativa"?val("i_empresa"):""),nif:(tipo==="Corporativa"?val("i_nif"):""),expectativas:val("i_exp"),comprovativo:COMP_B64||"",viaWhatsapp:!COMP_B64,estado:"Nova",fonte:FONTE_TRAFEGO,origem:"Landing-Contabilistas"};
+ const corp=(tipo==="Corporativa");
+ const parts=[{nome:nome,tel:tel,email:val("i_email"),bi:val("i_bi"),nascimento:val("i_nasc")}];
+ if(corp){
+  const bs=document.querySelectorAll("#extras .partbox");
+  for(let i=0;i<bs.length;i++){
+   const pn=bs[i].querySelector(".pnome").value.trim(),pt=bs[i].querySelector(".ptel").value.trim(),pm=bs[i].querySelector(".pmail").value.trim();
+   if(!pn||!pt){alert("Participante "+(i+2)+": falta o nome e o contacto.");return;}
+   parts.push({nome:pn,tel:pt,email:pm,bi:"",nascimento:""});
+  }
+ }
+ const grupo="G"+Date.now().toString(36);
+ const quando=new Date().toISOString();
+ const comum={quando:quando,temComputador:pcEl?pcEl.value:"",curso:CONFIG.curso,modalidade:"Presencial",periodo:"Sábados",horario:CONFIG.horario,turma:"",edicao:"1",formaPagamento:val("i_pag"),tipoInscricao:tipo,empresa:(corp?val("i_empresa"):""),nif:(corp?val("i_nif"):""),empresaLocal:(corp?val("i_empresa_local"):""),expectativas:val("i_exp"),dificuldades:val("i_dif"),fonte:FONTE_TRAFEGO,origem:"Landing-Contabilistas",estado:"Nova"};
+ /* Um registo por participante (para as vagas e os inscritos baterem certo no painel).
+    O valor pago e o comprovativo ficam só no 1.º registo do grupo. */
+ const recs=parts.map(function(p,i){return Object.assign({},comum,{tipo:(COMP_B64?"Pagamento":"Interesse"),nome:p.nome,tel:p.tel,email:p.email,bi:p.bi,nascimento:p.nascimento,valorPago:(i===0?numVal("i_valor"):0),comprovativo:(i===0?(COMP_B64||""):""),viaWhatsapp:!COMP_B64,grupo:(corp?grupo:""),participanteNum:i+1,totalParticipantes:parts.length});});
+ const rec=recs[0];
  const btn=document.getElementById("i_btn");btn.textContent="A enviar…";btn.disabled=true;
  function resumoWA(falhou){
   var l=[(falhou?"⚠️ FALHA AO GRAVAR — registar à mão":"Nova inscrição")+" — "+nome];
   l.push("Formação: "+CONFIG.curso+" ("+CONFIG.edicao+") — Inscrição "+tipo);
-  if(rec.empresa)l.push("Empresa: "+rec.empresa+" · NIF: "+rec.nif);
-  l.push("Contacto: "+tel);
-  if(rec.email)l.push("E-mail: "+rec.email);
+  if(rec.empresa){l.push("Empresa: "+rec.empresa+" · NIF: "+rec.nif);l.push("Localização: "+rec.empresaLocal);l.push("Participantes: "+parts.length);}
+  parts.forEach(function(p,i){l.push((corp?("Participante "+(i+1)+": "+p.nome+" · "):"")+"Contacto: "+p.tel+(p.email?" · E-mail: "+p.email:""));});
   if(rec.bi)l.push("BI: "+rec.bi);
   if(rec.nascimento)l.push("Nascimento: "+rec.nascimento);
   l.push("Pagamento: "+rec.formaPagamento+(rec.valorPago?(" · Valor pago: "+fmtMil(rec.valorPago)+" Kz"):""));
   if(rec.expectativas)l.push("Espera aprender: "+rec.expectativas);
+  if(rec.dificuldades)l.push("Principais dificuldades: "+rec.dificuldades);
   if(rec.fonte)l.push("Fonte: "+rec.fonte);
   return l.join("\n");
  }
@@ -295,7 +345,7 @@ function enviar(){
   document.getElementById("formfields").style.display="none";const ok=document.getElementById("okbox");ok.style.display="block";
   var linkEquipa=waLink(resumoWA(false));
   try{window.open(linkEquipa,"_blank");}catch(e){}
-  ok.innerHTML='<div class="ok"><div style="font-size:34px">🎉</div><h3 style="color:#176b39;margin:6px 0">Inscrição recebida!</h3><p>Obrigado, '+esc(nome)+'. Para garantir a vaga, faz o pagamento de <b>'+fmtMil(CONFIG.preco)+' Kz</b> (ou da 1.ª prestação) para a conta abaixo e envia o comprovativo pelo WhatsApp.</p>'+bankHtml(tipo,false)+(CONFIG.observacao?'<p style="font-size:13px;margin-top:12px;color:#4a3b00"><b>Nota:</b> '+esc(CONFIG.observacao)+'</p>':'')+'<a class="wa-btn" target="_blank" href="'+esc(linkEquipa)+'">Enviar comprovativo pelo WhatsApp</a></div>';
+  ok.innerHTML='<div class="ok"><div style="font-size:34px">🎉</div><h3 style="color:#176b39;margin:6px 0">Inscrição recebida!</h3><p>Obrigado, '+esc(nome)+'.'+(corp&&parts.length>1?' Recebemos a inscrição de '+parts.length+' participantes.':'')+' Para garantir '+(parts.length>1?'as vagas':'a vaga')+', faz o pagamento de <b>'+fmtMil(CONFIG.preco*parts.length)+' Kz</b> ('+(parts.length>1?'total para '+parts.length+' participantes, ou da 1.ª prestação':'ou da 1.ª prestação')+') para a conta abaixo e envia o comprovativo pelo WhatsApp.</p>'+bankHtml(tipo,false)+(CONFIG.observacao?'<p style="font-size:13px;margin-top:12px;color:#4a3b00"><b>Nota:</b> '+esc(CONFIG.observacao)+'</p>':'')+'<a class="wa-btn" target="_blank" href="'+esc(linkEquipa)+'">Enviar comprovativo pelo WhatsApp</a></div>';
  }
  function doneErro(porTempo){if(!porTempo){if(_jaRespondeu)return;_jaRespondeu=true;}clearTimeout(_tempoLimite);
   btn.textContent="Tentar novamente";btn.disabled=false;
@@ -305,7 +355,7 @@ function enviar(){
    ? "A tua ligação à internet está muito lenta e não conseguimos confirmar a inscrição. Já abrimos o WhatsApp com os teus dados para a nossa equipa te inscrever à mão — envia essa mensagem, por favor. Assim não perdes a vaga."
    : "Não conseguimos guardar a tua inscrição agora (falha de ligação). Já abrimos o WhatsApp com os teus dados para a nossa equipa registar à mão — ou tenta enviar de novo daqui a pouco.");
  }
- if(_db){_db.ref("inscricoes").push(rec).then(doneOk).catch(doneErro);}else{doneErro();}
+ if(_db){Promise.all(recs.map(function(r){return _db.ref("inscricoes").push(r);})).then(doneOk).catch(doneErro);}else{doneErro();}
 }
 </script>
 </body>
