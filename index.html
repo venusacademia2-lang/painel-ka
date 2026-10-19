@@ -434,6 +434,7 @@ function migrarNomesCursos(){var ren=CURSO_RENOME;
  [data.trafego,].concat(Object.keys(data.trafegoPorMes||{}).map(function(m){return data.trafegoPorMes[m];})).forEach(function(T){if(!T)return;Object.keys(T).forEach(function(fonte){var areas=T[fonte];if(!areas)return;Object.keys(ren).forEach(function(old){if(areas[old]!==undefined){var nv=ren[old];areas[nv]=(+areas[nv]||0)+(+areas[old]||0);delete areas[old];}});});});
  if(!data.precos)data.precos={};
  if(data.precos["Excel do Zero ao Fundamental"]===undefined)data.precos["Excel do Zero ao Fundamental"]=24500;
+ if(data.precos["Excel para Contabilistas"]===undefined)data.precos["Excel para Contabilistas"]=100000;
 }
 function cursosLista(){var oc=(data&&data.cursosOcultos)||[];var base=CURSOS_BASE.slice();Object.keys((data&&data.precos)||{}).forEach(function(c){if(base.indexOf(c)<0)base.push(c);});return base.filter(function(c){return oc.indexOf(c)<0;});}
 function podeCursos(){return role==="admin"||(currentUser&&currentUser.gereCursos===true);}
@@ -3455,6 +3456,7 @@ function _cursoCodAbrev(curso){var c=(curso||"").trim();
  if(c==="Power BI")return"PBI";
  if(c==="Excel do Zero ao Fundamental")return"EXCZ";
  if(c==="Excel do Básico ao Avançado")return"EXC";
+ if(c==="Excel para Contabilistas")return"EXCC";
  var stop=["do","da","de","dos","das","ao","aos","a","o","e"];
  var letras=c.normalize("NFD").replace(/[̀-ͯ]/g,"").split(/\s+/).filter(function(w){return w&&stop.indexOf(w.toLowerCase())<0;}).map(function(w){return w[0]||"";}).join("").toUpperCase().slice(0,4);
  return letras||"CRS";}

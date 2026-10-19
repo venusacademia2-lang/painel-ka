@@ -291,7 +291,7 @@ const PERIODO_UNICO={"Excel do Zero ao Fundamental":"Dias de semana"};
 function _cursosOnlineList(){return (CFG.cursosOnline&&CFG.cursosOnline.length)?CFG.cursosOnline:["Excel do Básico ao Avançado"];}
 function cursosParaModalidade(online){
  const _base=(CFG.cursos&&CFG.cursos.length?CFG.cursos:DEF.cursos);
- var cs=_base.filter(function(c){return !CFG.cursosAtivos||CFG.cursosAtivos[c]!==false;}).filter(function(c){return !/power\s*bi/i.test(c);});
+ var cs=_base.filter(function(c){return !CFG.cursosAtivos||CFG.cursosAtivos[c]!==false;}).filter(function(c){return !/power\s*bi/i.test(c);}).filter(function(c){return !/contabilistas/i.test(c);});
  if(online){var onl=_cursosOnlineList();cs=cs.filter(function(c){return onl.some(function(n){return _matchCurso(n,c)||_matchCurso(c,n)||n===c;});});}
  return cs;
 }
